@@ -74,15 +74,17 @@ manifests are in place.
 
 The SDK surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, and native bridge prototyping.
-It is not yet a full native virtual controller driver stack. The current
+It is not yet a full cross-platform native virtual controller driver stack. The current
 emulation boundary is the adapter layer, XInput-compatible binary report
-encoding, and a versioned JSONL protocol for native bridge processes. The next
-milestone is platform bridge packages for Linux `uinput`, Windows virtual
-gamepad/HID, and macOS DriverKit-compatible flows.
+encoding, a versioned JSONL protocol for native bridge processes, and the first
+Linux `uinput` bridge package. The next milestone is hardening Linux install
+diagnostics and adding Windows virtual gamepad/HID plus macOS DriverKit-compatible
+flows.
 
 If you are evaluating it for another project, use it now for controller-state
-or command-stream integrations. Wait for the native bridge packages if your
-project requires the operating system to see a real virtual gamepad device.
+or command-stream integrations. Linux users can start testing the `uinput`
+bridge; Windows and macOS still need native bridge packages before the operating
+system can see a real virtual gamepad device.
 
 ## Try Agent Fighter
 
@@ -122,6 +124,7 @@ channels, so the demo still works offline.
 | `@opencontroller/core` | Controller runtime, profiles, adapters, safety, state, replay logs |
 | `@opencontroller/overlay` | React overlays, canvas rendering helpers, OBS browser-source server |
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
+| `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
 
 ## Install
 
@@ -146,6 +149,12 @@ For CLI workflows:
 npm install -D @opencontroller/cli
 ```
 
+For Linux native bridge work:
+
+```bash
+npm install @opencontroller/core @opencontroller/native-linux-uinput
+```
+
 Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
@@ -163,6 +172,12 @@ The core package exports:
 - XInput report helpers from `@opencontroller/core/hid`
 - bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
+
+The Linux native package adds:
+
+- OpenController JSONL to Linux event mapping
+- C helper source for `/dev/uinput`
+- build helper for producing `opencontroller-uinput-bridge`
 
 ### Core API
 
@@ -260,6 +275,19 @@ diagnostic report fields, and base64-encoded XInput report bytes. Native bridge
 processes can consume the same stream over stdio, pipes, sockets, or any ordered
 byte transport.
 
+### Linux uinput
+
+```bash
+bun --cwd packages/native-linux-uinput build
+bun packages/native-linux-uinput/dist/bin/build-helper.js
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
+```
+
+The Linux helper reads the native bridge JSONL stream, creates an
+`OpenController Virtual Gamepad` through `/dev/uinput`, emits Linux gamepad
+events, and destroys the device when the stream closes. It requires Linux and
+write access to `/dev/uinput`.
+
 ### React Overlay
 
 ```tsx
@@ -355,6 +383,7 @@ bun run build
 npm pack --workspace packages/core --dry-run
 npm pack --workspace packages/overlay --dry-run
 npm pack --workspace packages/cli --dry-run
+npm pack --workspace packages/native-linux-uinput --dry-run
 ```
 
 Then confirm:
@@ -380,6 +409,7 @@ Included:
 - dry-run and WebSocket adapters
 - XInput binary report bridge
 - native bridge JSONL protocol
+- Linux `uinput` bridge package and helper source
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
@@ -388,7 +418,7 @@ Included:
 
 Not included yet:
 
-- native virtual HID drivers
+- Windows/macOS native virtual HID drivers
 - game-specific perception
 - headless match runner
 - npm publication
@@ -398,8 +428,8 @@ Not included yet:
 ## Roadmap
 
 - Publish npm packages under a confirmed scope
-- Add native virtual controller adapters where platform permissions allow them
-- Add Linux `uinput`, Windows ViGEm/virtual HID, and macOS DriverKit bridge packages
+- Harden Linux `uinput` packaging, diagnostics, and install guidance
+- Add Windows ViGEm/virtual HID and macOS DriverKit bridge packages
 - Add native bridge daemon templates with install and permission diagnostics
 - Add a headless match runner for repeated agent duels
 - Export replay data to JSON, CSV, and training-friendly formats

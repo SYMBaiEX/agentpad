@@ -11,9 +11,12 @@ The current protocol is intentionally small:
 - report payload: 12-byte XInput-compatible report encoded as base64
 - lifecycle: state messages followed by an optional disconnect message
 
-This protocol is the contract for future Linux `uinput`, Windows virtual
-gamepad/HID, and macOS bridge packages. The TypeScript SDK does not install a
-driver by itself.
+This protocol is the contract for Linux `uinput`, Windows virtual gamepad/HID,
+and macOS bridge packages. The TypeScript SDK does not install a driver by
+itself.
+
+The first platform consumer is documented in
+[Linux uinput Bridge](linux-uinput.md).
 
 ## Emit JSONL
 

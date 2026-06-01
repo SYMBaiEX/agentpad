@@ -18,3 +18,4 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
+      - run: cc -fsyntax-only -Wall -Wextra packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c

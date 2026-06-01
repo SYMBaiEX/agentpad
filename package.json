@@ -16,6 +16,7 @@
     "packages/core",
     "packages/overlay",
     "packages/cli",
+    "packages/native-linux-uinput",
     "examples/*"
   ],
   "scripts": {
@@ -23,7 +24,7 @@
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo examples/*/dist examples/*/tsconfig.tsbuildinfo .turbo output",
     "dev:fighter": "bun --cwd examples/agent-fighter dev",
     "dev:overlay": "bun --cwd examples/obs-overlay dev",
-    "test": "bun test packages/core/src/__tests__/controller.test.ts",
+    "test": "bun test packages/core/src/__tests__/controller.test.ts packages/native-linux-uinput/src/__tests__/mapping.test.ts",
     "typecheck": "tsc -b",
     "lint": "biome check .",
     "format": "biome check --write ."

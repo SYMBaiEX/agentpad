@@ -12,6 +12,9 @@
       "path": "./packages/cli"
     },
     {
+      "path": "./packages/native-linux-uinput"
+    },
+    {
       "path": "./examples/agent-fighter"
     }
   ]

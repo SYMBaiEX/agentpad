@@ -1,0 +1,51 @@
+{
+  "name": "@opencontroller/native-linux-uinput",
+  "version": "0.1.0",
+  "description": "Linux uinput bridge for OpenController native virtual gamepad emulation.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SYMBaiEX/OpenController.git",
+    "directory": "packages/native-linux-uinput"
+  },
+  "keywords": [
+    "ai",
+    "controller",
+    "gamepad",
+    "linux",
+    "uinput",
+    "opencontroller"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "import": "./dist/events.js"
+    }
+  },
+  "bin": {
+    "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js"
+  },
+  "files": ["dist", "src/helper/opencontroller-uinput-bridge.c", "README.md"],
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/bin/build-helper.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test src/__tests__/mapping.test.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@opencontroller/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.15",
+    "typescript": "^5.8.3"
+  }
+}
