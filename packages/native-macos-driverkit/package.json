@@ -1,0 +1,58 @@
+{
+  "name": "@opencontroller/native-macos-driverkit",
+  "version": "0.1.0",
+  "description": "macOS DriverKit HID virtual gamepad assets, diagnostics, and bridge helpers for OpenController.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SYMBaiEX/OpenController.git",
+    "directory": "packages/native-macos-driverkit"
+  },
+  "keywords": [
+    "ai",
+    "controller",
+    "gamepad",
+    "macos",
+    "driverkit",
+    "hid",
+    "system-extension",
+    "opencontroller"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics.d.ts",
+      "import": "./dist/diagnostics.js"
+    },
+    "./driverkit": {
+      "types": "./dist/driverkit.d.ts",
+      "import": "./dist/driverkit.js"
+    }
+  },
+  "bin": {
+    "opencontroller-macos-driverkit-assets": "./dist/bin/assets.js",
+    "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/bin/*.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test src/__tests__"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@opencontroller/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.15",
+    "typescript": "^5.8.3"
+  }
+}

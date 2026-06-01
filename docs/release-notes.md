@@ -19,6 +19,8 @@
   virtual device backends
 - Windows VHF helpers added for HID descriptor/report bytes, C-array assets,
   and a VHF lower-filter INF template
+- `@opencontroller/native-macos-driverkit` package added with DriverKit HID
+  assets, plist/entitlement templates, and local authoring diagnostics
 
 ## v0.1.0
 

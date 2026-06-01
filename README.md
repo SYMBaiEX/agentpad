@@ -128,6 +128,7 @@ channels, so the demo still works offline.
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
 | `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
 | `@opencontroller/native-windows-virtual-gamepad` | Windows VHF/HID assets, XUSB helpers, and legacy ViGEmBus diagnostics |
+| `@opencontroller/native-macos-driverkit` | macOS DriverKit HID assets and local authoring diagnostics |
 
 ## Install
 
@@ -164,6 +165,12 @@ For Windows virtual gamepad compatibility work:
 npm install @opencontroller/core @opencontroller/native-windows-virtual-gamepad
 ```
 
+For macOS DriverKit virtual HID work:
+
+```bash
+npm install @opencontroller/core @opencontroller/native-macos-driverkit
+```
+
 Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
@@ -198,6 +205,13 @@ The Windows native package adds:
 - XUSB report helpers
 - legacy ViGEmBus service diagnostics
 - `opencontroller-windows-gamepad-doctor`
+
+The macOS native package adds:
+
+- DriverKit-ready HID descriptor and input report helpers
+- Info.plist and entitlement templates for a virtual HID gamepad dext
+- C++ byte-array asset generation for DriverKit source
+- `opencontroller-macos-driverkit-doctor`
 
 ### Core API
 
@@ -448,6 +462,7 @@ npm pack --workspace packages/overlay --dry-run
 npm pack --workspace packages/cli --dry-run
 npm pack --workspace packages/native-linux-uinput --dry-run
 npm pack --workspace packages/native-windows-virtual-gamepad --dry-run
+npm pack --workspace packages/native-macos-driverkit --dry-run
 ```
 
 Then confirm:
@@ -476,6 +491,7 @@ Included:
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
 - Windows VHF/HID virtual gamepad asset helpers
+- macOS DriverKit virtual HID asset helpers
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
@@ -484,7 +500,7 @@ Included:
 
 Not included yet:
 
-- Windows/macOS native virtual HID drivers
+- signed Windows/macOS native virtual HID drivers
 - game-specific perception
 - headless match runner
 - npm publication
@@ -495,7 +511,7 @@ Not included yet:
 
 - Publish npm packages under a confirmed scope
 - Harden Linux `uinput` packaging, diagnostics, and install guidance
-- Add maintained Windows virtual HID and macOS DriverKit bridge packages
+- Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics
 - Add a headless match runner for repeated agent duels
 - Export replay data to JSON, CSV, and training-friendly formats

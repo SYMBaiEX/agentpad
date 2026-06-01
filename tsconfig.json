@@ -18,6 +18,9 @@
       "path": "./packages/native-windows-virtual-gamepad"
     },
     {
+      "path": "./packages/native-macos-driverkit"
+    },
+    {
       "path": "./examples/agent-fighter"
     }
   ]

@@ -98,6 +98,21 @@
         "typescript": "^5.8.3",
       },
     },
+    "packages/native-macos-driverkit": {
+      "name": "@opencontroller/native-macos-driverkit",
+      "version": "0.1.0",
+      "bin": {
+        "opencontroller-macos-driverkit-assets": "./dist/bin/assets.js",
+        "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js",
+      },
+      "dependencies": {
+        "@opencontroller/core": "^0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.2.15",
+        "typescript": "^5.8.3",
+      },
+    },
     "packages/native-windows-virtual-gamepad": {
       "name": "@opencontroller/native-windows-virtual-gamepad",
       "version": "0.1.0",
@@ -147,6 +162,8 @@
     "@opencontroller/example-websocket-bridge": ["@opencontroller/example-websocket-bridge@workspace:examples/websocket-bridge"],
 
     "@opencontroller/native-linux-uinput": ["@opencontroller/native-linux-uinput@workspace:packages/native-linux-uinput"],
+
+    "@opencontroller/native-macos-driverkit": ["@opencontroller/native-macos-driverkit@workspace:packages/native-macos-driverkit"],
 
     "@opencontroller/native-windows-virtual-gamepad": ["@opencontroller/native-windows-virtual-gamepad@workspace:packages/native-windows-virtual-gamepad"],
 
