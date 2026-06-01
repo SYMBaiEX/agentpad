@@ -38,7 +38,8 @@ static const struct oc_button_map button_map[] = {
     {0x4000, BTN_WEST},       {0x8000, BTN_NORTH},
     {0x0100, BTN_TL},         {0x0200, BTN_TR},
     {0x0020, BTN_SELECT},     {0x0010, BTN_START},
-    {0x0040, BTN_THUMBL},     {0x0080, BTN_THUMBR},
+    {0x0400, BTN_MODE},       {0x0040, BTN_THUMBL},
+    {0x0080, BTN_THUMBR},
     {0x0001, BTN_DPAD_UP},    {0x0002, BTN_DPAD_DOWN},
     {0x0004, BTN_DPAD_LEFT},  {0x0008, BTN_DPAD_RIGHT},
 };

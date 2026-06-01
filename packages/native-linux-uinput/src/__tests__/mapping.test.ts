@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ControllerState } from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
+import { hidGamepadButtonBits } from "@opencontroller/core/hid";
 import {
   linuxEventsFromHidGamepadReport,
   linuxEventsFromNativeBridgeMessage,
@@ -99,7 +100,7 @@ describe("linux uinput event mapping", () => {
   test("maps descriptor-backed HID gamepad reports to Linux events", () => {
     const events = linuxEventsFromHidGamepadReport({
       reportId: 1,
-      buttons: 0x4000 | 0x0008,
+      buttons: 0x4000 | 0x0008 | hidGamepadButtonBits.HOME,
       leftTrigger: 32,
       rightTrigger: 64,
       leftStickX: -1234,
@@ -110,6 +111,7 @@ describe("linux uinput event mapping", () => {
 
     expect(find(events, "BTN_WEST")).toBe(1);
     expect(find(events, "BTN_DPAD_RIGHT")).toBe(1);
+    expect(find(events, "BTN_MODE")).toBe(1);
     expect(find(events, "ABS_Z")).toBe(32);
     expect(find(events, "ABS_RZ")).toBe(64);
     expect(find(events, "ABS_X")).toBe(-1234);

@@ -46,6 +46,18 @@ Button bits match the existing XInput button mapping. D-pad directions are
 represented as buttons so the same report can be derived from every current
 OpenController profile.
 
+Descriptor-backed HID reports also reserve the two XInput-compatible unused
+button bits for system controls:
+
+| Bit | Control |
+| --- | --- |
+| `0x0400` | Home / Guide / PS |
+| `0x0800` | Capture or Touchpad auxiliary control |
+
+These bits are intentionally HID-only. The 12-byte XInput compatibility payload
+keeps the standard XInput button mask and does not carry Home, Capture, or
+Touchpad.
+
 ## Native Bridge Conversion
 
 ```ts

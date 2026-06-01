@@ -1,6 +1,7 @@
 import type { NativeBridgeStateMessage } from "../bridge/native";
 import { nativeBridgeMessageToHidGamepadReportBytes } from "../bridge/native";
 import type { ControllerState } from "../types";
+import { createHidGamepadButtonMask } from "./hid-buttons";
 import { type XInputGamepadReport, createXInputReport } from "./xinput";
 
 export const hidGamepadReportId = 1;
@@ -92,7 +93,10 @@ export function createHidGamepadReport(
 
   return {
     reportId: hidGamepadReportId,
-    buttons: report.buttons,
+    buttons:
+      "connected" in stateOrReport
+        ? createHidGamepadButtonMask(stateOrReport)
+        : report.buttons,
     leftTrigger: report.leftTrigger,
     rightTrigger: report.rightTrigger,
     leftStickX: report.leftStickX,

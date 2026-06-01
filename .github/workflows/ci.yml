@@ -120,6 +120,10 @@ jobs:
           bun packages/cli/dist/index.js bridge --id ci |
             /tmp/opencontroller-uinput-bridge --dry-run |
             tee /tmp/opencontroller-uinput-dry-run.txt
+          printf '%s\n' '{"hidReportBase64":"AQAEAAAAAAAAAAAAAA=="}' |
+            /tmp/opencontroller-uinput-bridge --dry-run |
+            tee /tmp/opencontroller-uinput-home-dry-run.txt
           grep -q "state buttons=0x1000" /tmp/opencontroller-uinput-dry-run.txt
           grep -q "state buttons=0x0000 lt=0 rt=128 lx=0 ly=0 rx=0 ry=0" /tmp/opencontroller-uinput-dry-run.txt
           grep -q "disconnect buttons=0x0000" /tmp/opencontroller-uinput-dry-run.txt
+          grep -q "state buttons=0x0400" /tmp/opencontroller-uinput-home-dry-run.txt

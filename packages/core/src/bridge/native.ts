@@ -1,3 +1,4 @@
+import { createHidGamepadButtonMask } from "../hid/hid-buttons";
 import {
   type XInputGamepadReport,
   createXInputReport,
@@ -60,7 +61,7 @@ export function createNativeBridgeStateMessage(
   const includeState = options.includeState ?? true;
   const report = createXInputReport(state);
   const bytes = encodeXInputReport(report);
-  const hidReport = xInputReportToHidGamepadReport(report);
+  const hidReport = xInputReportToHidGamepadReport(report, state);
   const hidBytes = encodeNativeBridgeHidGamepadReport(hidReport);
 
   return {
@@ -225,10 +226,11 @@ function isHidGamepadReport(
 
 function xInputReportToHidGamepadReport(
   report: XInputGamepadReport,
+  state?: ControllerState,
 ): NativeBridgeHidGamepadReport {
   return {
     reportId: 1,
-    buttons: report.buttons,
+    buttons: state ? createHidGamepadButtonMask(state) : report.buttons,
     leftTrigger: report.leftTrigger,
     rightTrigger: report.rightTrigger,
     leftStickX: report.leftStickX,

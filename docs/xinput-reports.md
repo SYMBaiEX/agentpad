@@ -56,3 +56,7 @@ The encoded report is 12 bytes:
 Stick values are normalized from OpenController's `-1..1` range into XInput's
 signed 16-bit range. OpenController uses `y = -1` for up, so Y axes are inverted
 when encoded into XInput's positive-up convention.
+
+The XInput compatibility report keeps the standard XInput button mask. System
+controls such as Home/Guide/PS, Capture, and Touchpad are available through the
+descriptor-backed HID gamepad report instead.

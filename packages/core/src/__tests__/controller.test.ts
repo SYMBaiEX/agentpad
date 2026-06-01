@@ -13,6 +13,7 @@ import {
   decodeHidGamepadReport,
   decodeXInputReport,
   encodeHidGamepadReport,
+  hidGamepadButtonBits,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
   hidGamepadReportFromNativeBridgeMessage,
@@ -145,6 +146,48 @@ describe("controller runtime", () => {
     expect(report.rightTrigger).toBe(128);
     expect(report.leftStickX).toBe(32767);
     expect(report.leftStickY).toBe(32767);
+
+    await controller.disconnect();
+  });
+
+  test("encodes system buttons in HID gamepad reports without changing XInput reports", async () => {
+    const lines: string[] = [];
+    const adapter = new NativeBridgeAdapter({
+      includeState: false,
+      write(line) {
+        lines.push(line);
+      },
+    });
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+      safety: {
+        disabledButtons: [],
+        allowGuideButton: true,
+      },
+    });
+
+    await controller.press("GUIDE", 0);
+
+    const bytes = encodeHidGamepadReport(controller.getState());
+    const report = decodeHidGamepadReport(bytes);
+    const messages = lines.map(parseNativeBridgeMessage);
+    const guidePressed = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        (message.hidReport?.buttons ?? 0) & hidGamepadButtonBits.HOME,
+    );
+
+    expect(report.buttons & hidGamepadButtonBits.HOME).toBe(
+      hidGamepadButtonBits.HOME,
+    );
+    expect(guidePressed?.type).toBe("opencontroller.bridge.state");
+    if (!guidePressed || guidePressed.type !== "opencontroller.bridge.state") {
+      throw new Error("Expected a GUIDE-pressed native bridge state message");
+    }
+    expect(guidePressed.report.buttons & hidGamepadButtonBits.HOME).toBe(0);
+    expect(guidePressed.hidReport?.buttons).toBe(hidGamepadButtonBits.HOME);
 
     await controller.disconnect();
   });

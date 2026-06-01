@@ -57,6 +57,7 @@ The helper creates an OpenController virtual gamepad, applies each state report,
 neutralizes on disconnect, and destroys the virtual device when the stream ends.
 It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
 legacy XInput-compatible `reportBase64` payload for older bridge streams.
+Descriptor-backed payloads map Home/Guide/PS to Linux `BTN_MODE`.
 
 Use dry-run mode to verify the stream without opening `/dev/uinput`:
 

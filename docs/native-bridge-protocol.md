@@ -149,4 +149,6 @@ Platform packages can either consume the XInput bytes directly or convert them
 to a descriptor-backed HID report. New descriptor-backed bridges should consume
 `hidReportBase64` directly. The Windows VHF helpers generate a host bridge C
 template that reads this JSONL stream from stdin and submits HID reports to the
-VHF driver with `DeviceIoControl`.
+VHF driver with `DeviceIoControl`. The HID payload also carries Home/Guide/PS
+and auxiliary Capture/Touchpad controls; the XInput compatibility payload keeps
+the standard XInput button mask and omits those system controls.

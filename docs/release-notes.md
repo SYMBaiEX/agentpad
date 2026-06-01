@@ -9,6 +9,8 @@
 - native bridge JSONL protocol added for platform driver processes
 - native bridge JSONL state messages now include descriptor-backed
   `hidReportBase64` payloads alongside XInput compatibility payloads
+- descriptor-backed HID reports now carry Home/Guide/PS through bit `0x0400`
+  while preserving standard XInput compatibility reports
 - `native-bridge` adapter and CLI sample stream added
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping

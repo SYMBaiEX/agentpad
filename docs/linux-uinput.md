@@ -136,6 +136,7 @@ same report contract used by the Windows VHF and macOS DriverKit directions.
 | Y | `BTN_NORTH` |
 | LB/RB | `BTN_TL` / `BTN_TR` |
 | Back/Start | `BTN_SELECT` / `BTN_START` |
+| Guide/Home/PS | `BTN_MODE` |
 | LS/RS | `BTN_THUMBL` / `BTN_THUMBR` |
 | D-pad | `BTN_DPAD_*` |
 | Left stick | `ABS_X` / `ABS_Y` |

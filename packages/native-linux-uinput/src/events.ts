@@ -5,6 +5,7 @@ import {
   type XInputGamepadReport,
   createHidGamepadReport,
   decodeHidGamepadReport,
+  hidGamepadButtonBits,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 
@@ -28,6 +29,7 @@ export const linuxUinputButtonMap: Array<{
   { xInputBit: xInputButtonBits.RB, linuxCode: "BTN_TR" },
   { xInputBit: xInputButtonBits.BACK, linuxCode: "BTN_SELECT" },
   { xInputBit: xInputButtonBits.START, linuxCode: "BTN_START" },
+  { xInputBit: hidGamepadButtonBits.HOME, linuxCode: "BTN_MODE" },
   { xInputBit: xInputButtonBits.LS, linuxCode: "BTN_THUMBL" },
   { xInputBit: xInputButtonBits.RS, linuxCode: "BTN_THUMBR" },
   { xInputBit: xInputButtonBits.DPAD_UP, linuxCode: "BTN_DPAD_UP" },
