@@ -4,9 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   DryRunAdapter,
+  XInputReportAdapter,
   createActionMap,
   createController,
   createControllerHub,
+  decodeXInputReport,
+  xInputButtonBits,
 } from "../index";
 
 const cleanupDirs: string[] = [];
@@ -80,6 +83,34 @@ describe("controller runtime", () => {
     await expect(controller.press("GUIDE", 5)).rejects.toThrow(
       "disabled by safety config",
     );
+
+    await controller.disconnect();
+  });
+
+  test("encodes controller state as XInput reports", async () => {
+    const adapter = new XInputReportAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("A", 5);
+    await controller.trigger("RT", 0.5, 0);
+    await controller.moveStick("LEFT", { x: 1, y: -1 }, 0);
+
+    const reports = adapter.reports.map((entry) =>
+      decodeXInputReport(entry.bytes),
+    );
+    const aPressed = reports.find(
+      (report) => (report.buttons & xInputButtonBits.A) !== 0,
+    );
+    const latest = reports.at(-1);
+
+    expect(aPressed?.buttons).toBe(xInputButtonBits.A);
+    expect(latest?.rightTrigger).toBe(128);
+    expect(latest?.leftStickX).toBe(32767);
+    expect(latest?.leftStickY).toBe(32767);
 
     await controller.disconnect();
   });

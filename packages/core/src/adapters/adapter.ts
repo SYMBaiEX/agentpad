@@ -1,5 +1,6 @@
 import type {
   ControllerAdapterCapabilities,
+  ControllerState,
   NormalizedControllerCommand,
 } from "../types";
 
@@ -8,6 +9,7 @@ export interface ControllerAdapter {
   platform: "all" | "linux" | "windows" | "macos" | "browser";
   connect(): Promise<void>;
   send(command: NormalizedControllerCommand): Promise<void>;
+  syncState?(state: ControllerState): Promise<void>;
   neutral(command?: NormalizedControllerCommand): Promise<void>;
   disconnect(): Promise<void>;
   capabilities(): ControllerAdapterCapabilities;
@@ -21,6 +23,8 @@ export const baseCapabilities: ControllerAdapterCapabilities = {
   supportsRumble: false,
   supportsTouchpad: false,
   supportsGyro: false,
+  supportsStateSync: false,
+  supportsXInputReports: false,
   supportsMultipleControllers: true,
   supportsVirtualDevice: false,
   requiresNativeInstall: false,

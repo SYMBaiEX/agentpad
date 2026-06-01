@@ -53,6 +53,7 @@ export class ControllerRuntime {
     const next = this.state.setConnected(true);
     await this.replay?.start();
     await this.replay?.state(next);
+    await this.syncState(next);
   }
 
   async send(
@@ -156,6 +157,7 @@ export class ControllerRuntime {
       normalized.command.pressure,
     );
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
 
     if (
       normalized.command.durationMs !== undefined &&
@@ -182,6 +184,7 @@ export class ControllerRuntime {
     await this.adapter.send(normalized);
     const after = this.state.setButton(normalized.command.button, false, 0);
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
   }
 
   private async runStick(
@@ -201,6 +204,7 @@ export class ControllerRuntime {
       normalized.command.y,
     );
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
 
     if (
       normalized.command.durationMs !== undefined &&
@@ -235,6 +239,7 @@ export class ControllerRuntime {
       normalized.command.value,
     );
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
 
     if (
       normalized.command.durationMs !== undefined &&
@@ -265,6 +270,7 @@ export class ControllerRuntime {
     await this.adapter.send(normalized);
     const after = this.state.setDpad(normalized.command.direction, true);
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
 
     if (
       normalized.command.durationMs !== undefined &&
@@ -292,6 +298,7 @@ export class ControllerRuntime {
         releaseAfter,
         context,
       );
+      await this.syncState(releaseAfter);
     }
   }
 
@@ -329,6 +336,7 @@ export class ControllerRuntime {
     await this.adapter.neutral(normalized);
     const after = this.state.neutral();
     await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
   }
 
   private async logCommand(
@@ -338,6 +346,10 @@ export class ControllerRuntime {
     context: CommandContext,
   ): Promise<void> {
     await this.replay?.command(command, stateBefore, stateAfter, context);
+  }
+
+  private async syncState(state: ControllerState): Promise<void> {
+    await this.adapter.syncState?.(state);
   }
 }
 

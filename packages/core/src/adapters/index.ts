@@ -3,6 +3,7 @@ import type { CreateControllerOptions } from "../types";
 import type { ControllerAdapter } from "./adapter";
 import { DryRunAdapter } from "./dry-run";
 import { WebSocketAdapter } from "./websocket";
+import { XInputReportAdapter } from "./xinput-report";
 
 export async function resolveAdapter(
   options: CreateControllerOptions,
@@ -22,9 +23,12 @@ export async function resolveAdapter(
         );
       }
       return new WebSocketAdapter({ url: options.url });
+    case "xinput-report":
+      return new XInputReportAdapter();
   }
 }
 
 export * from "./adapter";
 export * from "./dry-run";
 export * from "./websocket";
+export * from "./xinput-report";

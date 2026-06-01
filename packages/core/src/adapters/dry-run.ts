@@ -1,10 +1,11 @@
-import type { NormalizedControllerCommand } from "../types";
+import type { ControllerState, NormalizedControllerCommand } from "../types";
 import { type ControllerAdapter, baseCapabilities } from "./adapter";
 
 export class DryRunAdapter implements ControllerAdapter {
   readonly name = "dry-run";
   readonly platform = "all" as const;
   readonly history: NormalizedControllerCommand[] = [];
+  readonly stateHistory: ControllerState[] = [];
   private connected = false;
 
   async connect(): Promise<void> {
@@ -14,6 +15,11 @@ export class DryRunAdapter implements ControllerAdapter {
   async send(command: NormalizedControllerCommand): Promise<void> {
     this.assertConnected();
     this.history.push(command);
+  }
+
+  async syncState(state: ControllerState): Promise<void> {
+    this.assertConnected();
+    this.stateHistory.push(state);
   }
 
   async neutral(): Promise<void> {
@@ -27,6 +33,7 @@ export class DryRunAdapter implements ControllerAdapter {
   capabilities() {
     return {
       ...baseCapabilities,
+      supportsStateSync: true,
       supportsVirtualDevice: false,
     };
   }

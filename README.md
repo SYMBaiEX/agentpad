@@ -4,8 +4,8 @@
 [![Release](https://img.shields.io/github/v/release/SYMBaiEX/OpenController)](https://github.com/SYMBaiEX/OpenController/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-OpenController is a Bun-first TypeScript SDK for giving AI agents a real controller
-interface.
+OpenController is a Bun-first TypeScript SDK for giving AI agents a real
+controller interface.
 
 Instead of building one-off tools for every game, simulator, overlay, emulator,
 or browser app, OpenController exposes a small typed API that feels like a gamepad:
@@ -30,12 +30,31 @@ await controller.neutral();
 await controller.disconnect();
 ```
 
+## Why This Exists
+
+AI agents need a better input layer than brittle app-specific scripts. A
+controller is already the shared language for games, emulators, robotics
+simulators, browser experiments, overlays, accessibility tooling, and testing
+harnesses.
+
+OpenController turns that language into an SDK:
+
+- agent code can express intent as controller actions
+- apps can consume input through a stable state stream
+- replays can show exactly what the agent did
+- safety policies can constrain dangerous or repetitive input
+- native bridge processes can translate state into virtual device reports
+
+The long-term aim is full virtual controller emulation with a clean TypeScript
+developer experience on top.
+
 ## What You Get
 
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
-- Adapter model with dry-run and WebSocket output backends
+- Adapter model with dry-run, WebSocket, and XInput report output backends
+- XInput-compatible binary report encoding for native virtual-device bridges
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, test, overlay, replay, and starter action maps
@@ -45,6 +64,23 @@ OpenController is designed for local agents, accessibility tooling, testing,
 research, plugins, emulators, stream overlays, and controlled single-player
 experiments. It is not intended for anti-cheat bypasses, stealth automation, or
 online competitive game automation.
+
+## Where It Stands
+
+OpenController is ready to use as a source SDK today. The core runtime, package
+layout, CLI, overlays, examples, docs, CI, release notes, and npm package
+manifests are in place.
+
+The SDK surface is complete enough for local builds, demos, browser games,
+WebSocket integrations, overlays, replay capture, and native bridge prototyping.
+It is not yet a full native virtual controller driver stack. The current
+emulation boundary is the adapter layer plus XInput-compatible binary report
+encoding; the next milestone is platform bridge packages for Linux `uinput`,
+Windows virtual gamepad/HID, and macOS DriverKit-compatible flows.
+
+If you are evaluating it for another project, use it now for controller-state
+or command-stream integrations. Wait for the native bridge packages if your
+project requires the operating system to see a real virtual gamepad device.
 
 ## Try Agent Fighter
 
@@ -112,7 +148,19 @@ Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
 
-## Core API
+## SDK Surface
+
+The core package exports:
+
+- `createController` for a single virtual controller runtime
+- `createControllerHub` for multi-controller sessions
+- built-in profiles for common controller families
+- dry-run, WebSocket, and XInput report adapters
+- safety policies and replay logging
+- XInput report helpers from `@opencontroller/core/hid`
+- profile, action-map, and browser-friendly entry points
+
+### Core API
 
 ```ts
 const controller = await createController({
@@ -137,7 +185,7 @@ await controller.moveStick("LEFT", { x: 1, y: 0 }, 250);
 await controller.neutral();
 ```
 
-## Multiple Controllers
+### Multiple Controllers
 
 ```ts
 import { createControllerHub } from "@opencontroller/core";
@@ -156,7 +204,31 @@ console.log(hub.states());
 await hub.disconnectAll();
 ```
 
-## React Overlay
+### XInput Reports
+
+```ts
+import {
+  XInputReportAdapter,
+  createController,
+  decodeXInputReport
+} from "@opencontroller/core";
+
+const adapter = new XInputReportAdapter({
+  onReport(report) {
+    const decoded = decodeXInputReport(report.bytes);
+    console.log(decoded);
+  }
+});
+
+const controller = await createController({ profile: "xbox", adapter });
+await controller.press("A", 80);
+```
+
+XInput reports are the handoff point for native bridge processes. They do not
+install a driver by themselves, but they provide the packed state a driver or
+local bridge needs.
+
+### React Overlay
 
 ```tsx
 import { ControllerOverlay } from "@opencontroller/overlay";
@@ -166,7 +238,7 @@ export function GamepadHud({ state }) {
 }
 ```
 
-## CLI
+### CLI
 
 ```bash
 opencontroller doctor
@@ -197,6 +269,11 @@ Current adapters:
 
 - `dry-run`: updates state, safety, and replay logs without touching a real device
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
+- `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
+
+Runtime adapters can also opt into full state synchronization. This is the
+important boundary for virtual controller emulation: native drivers generally
+want the current complete gamepad state, not only an event like "A was pressed."
 
 ## Examples
 
@@ -251,10 +328,11 @@ Then confirm:
 - `dist` files are built from the current source
 - examples still run from a fresh install
 - GitHub Actions is green
+- release tags and notes match the package version
 
-## v0.1.0 Status
+## Current Status
 
-This release is ready for local experiments, demos, package hardening, and
+The main branch is ready for local experiments, demos, package hardening, and
 integration work.
 
 Included:
@@ -264,6 +342,7 @@ Included:
 - safety checks
 - replay logs
 - dry-run and WebSocket adapters
+- XInput binary report bridge
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
@@ -282,7 +361,8 @@ Not included yet:
 ## Roadmap
 
 - Publish npm packages under a confirmed scope
-- Add a native virtual controller adapter where platform permissions allow it
+- Add native virtual controller adapters where platform permissions allow them
+- Add Linux `uinput`, Windows ViGEm/virtual HID, and macOS DriverKit bridge packages
 - Add a headless match runner for repeated agent duels
 - Export replay data to JSON, CSV, and training-friendly formats
 - Add richer telemetry dashboards for agents and controller state

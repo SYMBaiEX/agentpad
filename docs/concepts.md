@@ -14,7 +14,8 @@ Controller API
   -> Command queue
   -> Safety guard
   -> Profile normalization
+  -> Adapter command event
   -> State store
   -> Replay logger
-  -> Adapter
+  -> Adapter state sync
 ```

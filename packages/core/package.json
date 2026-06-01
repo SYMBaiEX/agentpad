@@ -29,6 +29,10 @@
       "types": "./dist/actions/index.d.ts",
       "import": "./dist/actions/index.js"
     },
+    "./hid": {
+      "types": "./dist/hid/index.d.ts",
+      "import": "./dist/hid/index.js"
+    },
     "./browser": {
       "types": "./dist/browser.d.ts",
       "import": "./dist/browser.js"

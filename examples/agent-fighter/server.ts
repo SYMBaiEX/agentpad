@@ -436,6 +436,17 @@ function receiveControllerMessage(playerId: PlayerId, message: unknown): void {
   if (message.type === "controller.command" && isRecord(message.command)) {
     applyCommand(playerId, message.command as ControllerCommand);
     broadcastControllerStates();
+    return;
+  }
+  if (message.type === "controller.state" && isControllerState(message.state)) {
+    controllerStates[playerId] = {
+      ...message.state,
+      id: playerId,
+      connected: true,
+      updatedAt: Date.now(),
+    };
+    broadcastControllerStates();
+    return;
   }
   if (message.type === "controller.neutral") {
     applyCommand(playerId, { type: "neutral" });
@@ -451,6 +462,20 @@ function playerIdFromControllerMessage(message: unknown): PlayerId | undefined {
   return controllerId === "player-1" || controllerId === "player-2"
     ? controllerId
     : undefined;
+}
+
+function isControllerState(value: unknown): value is ControllerState {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.profile === "string" &&
+    typeof value.connected === "boolean" &&
+    isRecord(value.buttons) &&
+    isRecord(value.analogButtons) &&
+    isRecord(value.sticks) &&
+    isRecord(value.dpad) &&
+    typeof value.updatedAt === "number"
+  );
 }
 
 function applyCommand(playerId: PlayerId, command: ControllerCommand): void {

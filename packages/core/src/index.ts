@@ -5,6 +5,7 @@ export * from "./types";
 export * from "./profiles";
 export * from "./adapters";
 export * from "./actions";
+export * from "./hid";
 export * from "./events";
 export * from "./errors";
 export * from "./queue";

@@ -1,5 +1,5 @@
 import { AdapterError } from "../errors";
-import type { NormalizedControllerCommand } from "../types";
+import type { ControllerState, NormalizedControllerCommand } from "../types";
 import { type ControllerAdapter, baseCapabilities } from "./adapter";
 
 export type WebSocketAdapterOptions = {
@@ -84,6 +84,22 @@ export class WebSocketAdapter implements ControllerAdapter {
     );
   }
 
+  async syncState(state: ControllerState): Promise<void> {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.socket.send(
+      JSON.stringify({
+        type: "controller.state",
+        controllerId: state.id,
+        profile: state.profile,
+        state,
+        timestamp: Date.now(),
+      }),
+    );
+  }
+
   async disconnect(): Promise<void> {
     this.socket?.close();
     this.socket = undefined;
@@ -92,6 +108,7 @@ export class WebSocketAdapter implements ControllerAdapter {
   capabilities() {
     return {
       ...baseCapabilities,
+      supportsStateSync: true,
       supportsVirtualDevice: false,
     };
   }

@@ -104,6 +104,8 @@ export type ControllerAdapterCapabilities = {
   supportsRumble: boolean;
   supportsTouchpad: boolean;
   supportsGyro: boolean;
+  supportsStateSync: boolean;
+  supportsXInputReports: boolean;
   supportsMultipleControllers: boolean;
   supportsVirtualDevice: boolean;
   requiresNativeInstall: boolean;
@@ -163,7 +165,7 @@ export type ReplayEvent =
       data?: Record<string, unknown>;
     };
 
-export type AdapterName = "dry-run" | "websocket";
+export type AdapterName = "dry-run" | "websocket" | "xinput-report";
 
 export type CreateControllerOptions = {
   id?: string;
