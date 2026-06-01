@@ -6,7 +6,11 @@ import {
   serializeNativeBridgeMessage,
 } from "../bridge";
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
+import {
+  type ControllerAdapter,
+  controllerCommandTypes,
+  createAdapterCapabilities,
+} from "./adapter";
 
 export type NativeBridgeWrite = (
   line: string,
@@ -17,6 +21,7 @@ export type NativeBridgeAdapterOptions = {
   write?: NativeBridgeWrite;
   includeState?: boolean;
   includeExtensions?: boolean;
+  includeProfileHidReport?: boolean;
 };
 
 export class NativeBridgeAdapter implements ControllerAdapter {
@@ -60,13 +65,16 @@ export class NativeBridgeAdapter implements ControllerAdapter {
       supportsStateSync: true,
       supportsXInputReports: true,
       supportsNativeBridge: true,
+      supportsTouchpad: true,
+      supportsGyro: true,
+      supportedCommands: controllerCommandTypes,
       outputFormats: [
         "controller-state",
         "xinput-report",
         "hid-gamepad-report",
         "native-bridge-jsonl",
       ],
-      reportFormats: ["xinput", "hid-gamepad"],
+      reportFormats: ["xinput", "hid-gamepad", "hid-playstation-extended"],
       transport: "callback",
     });
   }
@@ -90,6 +98,9 @@ export class NativeBridgeAdapter implements ControllerAdapter {
         : {}),
       ...(this.options.includeExtensions !== undefined
         ? { includeExtensions: this.options.includeExtensions }
+        : {}),
+      ...(this.options.includeProfileHidReport !== undefined
+        ? { includeProfileHidReport: this.options.includeProfileHidReport }
         : {}),
     };
   }

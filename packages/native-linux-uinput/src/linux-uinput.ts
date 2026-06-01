@@ -50,6 +50,7 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "env"
   | "includeState"
   | "includeExtensions"
+  | "includeProfileHidReport"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -215,6 +216,7 @@ export function createLinuxUinputBridgeAdapter(
     env: createLinuxUinputBridgeEnv(options),
     includeState: options.includeState ?? false,
     includeExtensions: options.includeExtensions ?? true,
+    includeProfileHidReport: options.includeProfileHidReport ?? true,
     ...(options.waitForExitMs !== undefined
       ? { waitForExitMs: options.waitForExitMs }
       : {}),

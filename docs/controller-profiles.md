@@ -43,8 +43,10 @@ Touchpad coordinates and pressure are normalized to `0..1`. Touchpad input is
 enabled for the `playstation` profile. Motion input is enabled for
 `playstation` and `switch`.
 
-Dry-run and WebSocket adapters can carry these commands and state snapshots
-today. Current XInput and generic HID native bridge reports still encode the
-common gamepad subset, so native adapters report `supportsTouchpad` and
-`supportsGyro` as `false` until their platform descriptors include those
-channels.
+Dry-run and WebSocket adapters can carry these commands and state snapshots.
+Native bridge adapters also advertise touchpad and gyro support because
+PlayStation state messages include a `hid-playstation-extended` profile HID
+payload with packed touch contacts and motion vectors. The compatibility XInput
+payload and generic `hid-gamepad` payload still encode the common gamepad
+subset, so platform helpers should consume the profile HID payload when they
+need those richer channels.

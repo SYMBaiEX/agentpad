@@ -57,8 +57,9 @@ developer experience on top.
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
 - Canonical HID gamepad report descriptor and input report encoder
+- PlayStation extended HID report bytes for touchpad contacts and motion vectors
 - Versioned JSONL native bridge protocol with XInput/HID payloads and optional
-  touchpad/motion extensions
+  profile-specific HID payloads plus touchpad/motion extensions
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, native backend doctor, native bridge smoke tests, dry-run tests, overlay, replay, and starter action maps
@@ -80,14 +81,14 @@ WebSocket integrations, overlays, replay capture, touchpad/motion state, and
 native bridge prototyping. It is not yet a full cross-platform native virtual
 controller driver stack. The current emulation boundary is the adapter layer,
 XInput-compatible binary report encoding, a descriptor-backed HID gamepad report
-format, a versioned JSONL protocol for native bridge processes, the first Linux
-`uinput` bridge package, Windows VHF host bridge helpers, and macOS DriverKit
-host bridge helpers. Touchpad and motion commands flow through the runtime,
-replay logs, dry-run, and WebSocket state stream today; the current XInput/HID
-native bridge reports still encode the common gamepad subset. The next milestone
-is turning those host bridge surfaces into signed, installable native device
-flows and expanding native report descriptors for richer profile-specific
-features.
+format, PlayStation extended HID report bytes for touchpad/motion data, a
+versioned JSONL protocol for native bridge processes, the first Linux `uinput`
+bridge package, Windows VHF host bridge helpers, and macOS DriverKit host bridge
+helpers. Touchpad and motion commands flow through the runtime, replay logs,
+dry-run, WebSocket state stream, native bridge extensions, and PlayStation
+profile HID payloads today. The next milestone is turning those host bridge
+surfaces into signed, installable native device flows and teaching native helper
+templates to consume richer profile-specific reports directly.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
@@ -202,6 +203,7 @@ The core package exports:
 - safety policies and replay logging
 - XInput report helpers from `@opencontroller/core/hid`
 - HID gamepad report descriptor and report helpers from `@opencontroller/core/hid`
+- PlayStation extended HID report descriptor and report helpers from `@opencontroller/core/hid`
 - bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
 
@@ -550,7 +552,7 @@ Current adapters:
 - `dry-run`: updates state, safety, and replay logs without touching a real device
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
-- `native-bridge`: emits versioned JSONL messages with XInput and HID report payloads for native bridge processes
+- `native-bridge`: emits versioned JSONL messages with XInput, generic HID, and profile HID report payloads for native bridge processes
 - `NativeProcessBridgeAdapter`: streams JSONL directly to a helper process stdin
 
 Runtime adapters can also opt into full state synchronization. This is the

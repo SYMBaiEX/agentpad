@@ -1,5 +1,13 @@
 import { createHidGamepadButtonMask } from "../hid/hid-buttons";
 import {
+  type HidPlayStationExtendedReport,
+  createHidPlayStationExtendedReport,
+  decodeHidPlayStationExtendedReport,
+  encodeHidPlayStationExtendedReport,
+  hidPlayStationExtendedReportsEqual,
+  isHidPlayStationExtendedReport,
+} from "../hid/playstation";
+import {
   type XInputGamepadReport,
   createXInputReport,
   decodeXInputReport,
@@ -19,6 +27,7 @@ export const nativeBridgeHidGamepadRumbleReportByteLength = 5;
 
 export type NativeBridgeReportFormat = "xinput";
 export type NativeBridgeHidReportFormat = "hid-gamepad";
+export type NativeBridgeProfileHidReportFormat = "hid-playstation-extended";
 export type NativeBridgeFeedbackType = "rumble";
 export type NativeBridgeFeedbackReportFormat = "hid-gamepad-rumble";
 
@@ -49,6 +58,12 @@ export type NativeBridgeStateExtensions = {
   motion?: NativeBridgeMotionExtension;
 };
 
+export type NativeBridgeProfileHidReportPayload = {
+  profileHidReportFormat: NativeBridgeProfileHidReportFormat;
+  profileHidReport: HidPlayStationExtendedReport;
+  profileHidReportBase64: string;
+};
+
 export type NativeBridgeStateMessage = {
   type: "opencontroller.bridge.state";
   version: typeof nativeBridgeProtocolVersion;
@@ -61,6 +76,9 @@ export type NativeBridgeStateMessage = {
   hidReportFormat?: NativeBridgeHidReportFormat;
   hidReport?: NativeBridgeHidGamepadReport;
   hidReportBase64?: string;
+  profileHidReportFormat?: NativeBridgeProfileHidReportFormat;
+  profileHidReport?: HidPlayStationExtendedReport;
+  profileHidReportBase64?: string;
   extensions?: NativeBridgeStateExtensions;
   state?: ControllerState;
 };
@@ -98,6 +116,7 @@ export type NativeBridgeMessage =
 export type CreateNativeBridgeStateMessageOptions = {
   includeState?: boolean;
   includeExtensions?: boolean;
+  includeProfileHidReport?: boolean;
   timestamp?: number;
 };
 
@@ -124,6 +143,10 @@ export function createNativeBridgeStateMessage(
     options.includeExtensions === false
       ? undefined
       : createNativeBridgeStateExtensions(state);
+  const profileHidReport =
+    options.includeProfileHidReport === false
+      ? undefined
+      : createNativeBridgeProfileHidReportPayload(state);
 
   return {
     type: "opencontroller.bridge.state",
@@ -137,8 +160,27 @@ export function createNativeBridgeStateMessage(
     hidReportFormat: "hid-gamepad",
     hidReport,
     hidReportBase64: bytesToBase64(hidBytes),
+    ...(profileHidReport ?? {}),
     ...(extensions ? { extensions } : {}),
     ...(includeState ? { state } : {}),
+  };
+}
+
+export function createNativeBridgeProfileHidReportPayload(
+  state: ControllerState,
+): NativeBridgeProfileHidReportPayload | undefined {
+  if (state.profile !== "playstation") {
+    return undefined;
+  }
+
+  const profileHidReport = createHidPlayStationExtendedReport(state);
+  const profileHidReportBytes =
+    encodeHidPlayStationExtendedReport(profileHidReport);
+
+  return {
+    profileHidReportFormat: "hid-playstation-extended",
+    profileHidReport,
+    profileHidReportBase64: bytesToBase64(profileHidReportBytes),
   };
 }
 
@@ -271,6 +313,34 @@ export function nativeBridgeMessageToHidGamepadReportBytes(
   );
 }
 
+export function nativeBridgeMessageToProfileHidReportBytes(
+  message: NativeBridgeStateMessage,
+): Uint8Array | undefined {
+  if (
+    !message.profileHidReportFormat ||
+    !message.profileHidReport ||
+    !message.profileHidReportBase64
+  ) {
+    return undefined;
+  }
+
+  if (message.profileHidReportFormat !== "hid-playstation-extended") {
+    throw new TypeError(
+      `Unsupported native bridge profile HID report format: ${message.profileHidReportFormat}`,
+    );
+  }
+
+  const bytes = base64ToBytes(message.profileHidReportBase64);
+  const decoded = decodeHidPlayStationExtendedReport(bytes);
+  if (!hidPlayStationExtendedReportsEqual(decoded, message.profileHidReport)) {
+    throw new TypeError(
+      "Native bridge profile HID report bytes do not match profile HID report JSON",
+    );
+  }
+
+  return bytes;
+}
+
 export function nativeBridgeFeedbackMessageToRumbleReportBytes(
   message: NativeBridgeRumbleFeedbackMessage,
 ): Uint8Array {
@@ -340,6 +410,7 @@ export function isNativeBridgeMessage(
     typeof value.reportBase64 === "string" &&
     isXInputReport(value.report) &&
     hasValidOptionalHidReport(value) &&
+    hasValidOptionalProfileHidReport(value) &&
     hasValidOptionalStateExtensions(value)
   );
 }
@@ -392,6 +463,26 @@ function hasValidOptionalHidReport(value: Record<string, unknown>): boolean {
     value.hidReportFormat === "hid-gamepad" &&
     typeof value.hidReportBase64 === "string" &&
     isHidGamepadReport(value.hidReport)
+  );
+}
+
+function hasValidOptionalProfileHidReport(
+  value: Record<string, unknown>,
+): boolean {
+  const hasAnyProfileHidReportField =
+    "profileHidReportFormat" in value ||
+    "profileHidReport" in value ||
+    "profileHidReportBase64" in value;
+
+  if (!hasAnyProfileHidReportField) {
+    return true;
+  }
+
+  return (
+    value.profile === "playstation" &&
+    value.profileHidReportFormat === "hid-playstation-extended" &&
+    typeof value.profileHidReportBase64 === "string" &&
+    isHidPlayStationExtendedReport(value.profileHidReport)
   );
 }
 

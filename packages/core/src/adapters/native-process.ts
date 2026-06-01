@@ -18,7 +18,11 @@ import type {
   FeedbackListener,
   NormalizedControllerCommand,
 } from "../types";
-import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
+import {
+  type ControllerAdapter,
+  controllerCommandTypes,
+  createAdapterCapabilities,
+} from "./adapter";
 
 export type NativeProcessBridgeWritable = {
   write(chunk: string): number | Promise<number>;
@@ -52,6 +56,7 @@ export type NativeProcessBridgeAdapterOptions = {
   env?: Record<string, string | undefined>;
   includeState?: boolean;
   includeExtensions?: boolean;
+  includeProfileHidReport?: boolean;
   waitForExitMs?: number;
   killSignal?: number | NodeJS.Signals;
   spawn?: NativeProcessBridgeSpawner;
@@ -155,7 +160,10 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
       supportsXInputReports: true,
       supportsNativeBridge: true,
       supportsRumble,
+      supportsTouchpad: true,
+      supportsGyro: true,
       supportsVirtualDevice,
+      supportedCommands: controllerCommandTypes,
       requiresNativeInstall: this.options.requiresNativeInstall ?? true,
       requiresElevatedPermissions:
         this.options.requiresElevatedPermissions ?? false,
@@ -166,8 +174,13 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         "native-bridge-jsonl",
       ],
       reportFormats: supportsRumble
-        ? ["xinput", "hid-gamepad", "hid-gamepad-rumble"]
-        : ["xinput", "hid-gamepad"],
+        ? [
+            "xinput",
+            "hid-gamepad",
+            "hid-playstation-extended",
+            "hid-gamepad-rumble",
+          ]
+        : ["xinput", "hid-gamepad", "hid-playstation-extended"],
       feedbackTypes: supportsRumble ? ["rumble"] : [],
       transport: "native-process",
       virtualDeviceKind:
@@ -260,6 +273,9 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         : {}),
       ...(this.options.includeExtensions !== undefined
         ? { includeExtensions: this.options.includeExtensions }
+        : {}),
+      ...(this.options.includeProfileHidReport !== undefined
+        ? { includeProfileHidReport: this.options.includeProfileHidReport }
         : {}),
     };
   }

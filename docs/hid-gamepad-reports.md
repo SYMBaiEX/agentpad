@@ -7,6 +7,10 @@ This is the bridge contract for maintained Windows virtual HID backends, macOS
 DriverKit experiments, and any future platform bridge that wants a generic HID
 gamepad instead of an XInput-shaped report.
 
+OpenController also includes a profile-specific PlayStation extended input
+report for bridge authors who need packed touchpad and motion bytes instead of
+JSON-only extensions.
+
 ## Report Descriptor
 
 ```ts
@@ -83,6 +87,45 @@ descriptor-backed HID input. New native bridge messages also include
 `hidReportBase64`, so descriptor-backed drivers can consume the packed 13-byte
 report directly and use `hidGamepadReportFromNativeBridgeMessage` as a checked
 fallback.
+
+## PlayStation Extended Input Report
+
+```ts
+import {
+  decodeHidPlayStationExtendedReport,
+  encodeHidPlayStationExtendedReport,
+  hidPlayStationExtendedReportDescriptor
+} from "@opencontroller/core/hid";
+
+const bytes = encodeHidPlayStationExtendedReport(controller.getState());
+const report = decodeHidPlayStationExtendedReport(bytes);
+```
+
+The PlayStation extended report uses report id `3` and is 47 bytes. The first
+13 bytes mirror the common HID gamepad report layout. The remaining bytes carry
+two touchpad contacts plus signed motion vectors:
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| `0` | 1 byte | report id `3` |
+| `1` | 12 bytes | common gamepad payload: buttons, sticks, triggers |
+| `13` | 1 byte | touchpad pressed flag |
+| `14` | 1 byte | active touch contact count, max `2` |
+| `15` | 7 bytes | contact 0: id, active, x uint16, y uint16, pressure |
+| `22` | 7 bytes | contact 1: id, active, x uint16, y uint16, pressure |
+| `29` | 6 bytes | acceleration X/Y/Z signed int16 |
+| `35` | 6 bytes | gyroscope X/Y/Z signed int16 |
+| `41` | 6 bytes | orientation X/Y/Z signed int16 |
+
+Touch coordinates are normalized from `0` to `1` into unsigned 16-bit values.
+Touch pressure is normalized from `0` to `1` into an unsigned byte. Motion
+vectors are clamped to `-1` through `1` and encoded as signed 16-bit values.
+
+Native bridge state messages for PlayStation profiles include
+`profileHidReportFormat: "hid-playstation-extended"` and
+`profileHidReportBase64` by default. Set `includeProfileHidReport: false` on
+`NativeBridgeAdapter` or `NativeProcessBridgeAdapter` to keep a legacy compact
+stream.
 
 ## Rumble Output Report
 

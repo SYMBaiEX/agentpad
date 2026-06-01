@@ -42,6 +42,7 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "env"
   | "includeState"
   | "includeExtensions"
+  | "includeProfileHidReport"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -216,6 +217,9 @@ function commonNativeProcessBridgeOptions(
   }
   if (options.includeExtensions !== undefined) {
     common.includeExtensions = options.includeExtensions;
+  }
+  if (options.includeProfileHidReport !== undefined) {
+    common.includeProfileHidReport = options.includeProfileHidReport;
   }
   if (options.waitForExitMs !== undefined) {
     common.waitForExitMs = options.waitForExitMs;

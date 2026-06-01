@@ -172,6 +172,7 @@ export type ControllerAdapterOutputFormat =
 export type ControllerAdapterReportFormat =
   | "xinput"
   | "hid-gamepad"
+  | "hid-playstation-extended"
   | "hid-gamepad-rumble";
 
 export type ControllerAdapterFeedbackType = ControllerFeedbackEvent["type"];

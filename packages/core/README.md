@@ -114,9 +114,10 @@ channels they can surface back to agents.
 
 The native bridge helpers emit JSONL messages such as
 `opencontroller.bridge.state`, `opencontroller.bridge.feedback`, and
-`opencontroller.bridge.disconnect`. State messages include XInput/HID payloads
-and optional touchpad/motion `extensions`. Platform packages consume those
-messages to drive Linux `uinput`, Windows VHF, or macOS DriverKit host bridges.
+`opencontroller.bridge.disconnect`. State messages include XInput/HID payloads,
+PlayStation profile HID payloads for touchpad/motion data, and optional
+touchpad/motion `extensions`. Platform packages consume those messages to drive
+Linux `uinput`, Windows VHF, or macOS DriverKit host bridges.
 
 OpenController keeps privileged driver installation outside the core runtime.
 The core package focuses on deterministic controller state, command safety,

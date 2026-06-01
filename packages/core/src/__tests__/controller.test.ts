@@ -16,9 +16,11 @@ import {
   createNativeBridgeStateMessage,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
+  decodeHidPlayStationExtendedReport,
   decodeXInputReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
+  encodeHidPlayStationExtendedReport,
   hidGamepadButtonBits,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
@@ -27,9 +29,14 @@ import {
   hidGamepadRumbleOutputReportDescriptor,
   hidGamepadRumbleReportByteLength,
   hidGamepadRumbleReportId,
+  hidPlayStationExtendedReportByteLength,
+  hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithRumble,
+  hidPlayStationExtendedReportId,
   nativeBridgeFeedbackMessageToControllerFeedback,
   nativeBridgeFeedbackMessageToRumbleReportBytes,
   nativeBridgeMessageToHidGamepadReportBytes,
+  nativeBridgeMessageToProfileHidReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage,
   serializeNativeBridgeMessage,
@@ -148,14 +155,19 @@ describe("controller runtime", () => {
     expect(xinput.outputFormats).toContain("xinput-report");
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
-    expect(nativeBridge.reportFormats).toEqual(["xinput", "hid-gamepad"]);
-    expect(nativeBridge.supportedCommands).not.toContain("touchpad");
-    expect(nativeBridge.supportedCommands).not.toContain("motion");
-    expect(nativeBridge.supportsTouchpad).toBe(false);
-    expect(nativeBridge.supportsGyro).toBe(false);
+    expect(nativeBridge.reportFormats).toEqual([
+      "xinput",
+      "hid-gamepad",
+      "hid-playstation-extended",
+    ]);
+    expect(nativeBridge.supportedCommands).toContain("touchpad");
+    expect(nativeBridge.supportedCommands).toContain("motion");
+    expect(nativeBridge.supportsTouchpad).toBe(true);
+    expect(nativeBridge.supportsGyro).toBe(true);
 
     expect(nativeProcess.supportsVirtualDevice).toBe(true);
     expect(nativeProcess.supportsRumble).toBe(true);
+    expect(nativeProcess.reportFormats).toContain("hid-playstation-extended");
     expect(nativeProcess.feedbackTypes).toEqual(["rumble"]);
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
     expect(nativeProcess.transport).toBe("native-process");
@@ -335,6 +347,67 @@ describe("controller runtime", () => {
     );
   });
 
+  test("encodes PlayStation extended HID reports with touchpad and motion", async () => {
+    const controller = await createController({
+      profile: "playstation",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await controller.touchpad(
+      {
+        pressed: true,
+        contacts: [
+          { id: 2, x: 0.25, y: 0.75, pressure: 0.5 },
+          { id: 3, x: 1, y: 0, pressure: 1 },
+        ],
+      },
+      0,
+    );
+    await controller.motion(
+      {
+        acceleration: { x: 0, y: 0, z: 1 },
+        gyroscope: { x: -1, y: 0.5, z: 0 },
+        orientation: { x: 0.5, y: -0.5, z: 0 },
+      },
+      0,
+    );
+
+    const bytes = encodeHidPlayStationExtendedReport(controller.getState());
+    const report = decodeHidPlayStationExtendedReport(bytes);
+
+    expect(bytes.byteLength).toBe(hidPlayStationExtendedReportByteLength);
+    expect(hidPlayStationExtendedReportDescriptor.byteLength).toBeGreaterThan(
+      0,
+    );
+    expect(
+      hidPlayStationExtendedReportDescriptorWithRumble.byteLength,
+    ).toBeGreaterThan(hidPlayStationExtendedReportDescriptor.byteLength);
+    expect(report.reportId).toBe(hidPlayStationExtendedReportId);
+    expect(report.touchpadPressed).toBe(true);
+    expect(report.touchpadContacts[0]).toEqual({
+      id: 2,
+      active: true,
+      x: 16384,
+      y: 49151,
+      pressure: 128,
+    });
+    expect(report.touchpadContacts[1]).toEqual({
+      id: 3,
+      active: true,
+      x: 65535,
+      y: 0,
+      pressure: 255,
+    });
+    expect(report.accelerationZ).toBe(32767);
+    expect(report.gyroscopeX).toBe(-32768);
+    expect(report.gyroscopeY).toBe(16384);
+    expect(report.orientationX).toBe(16384);
+    expect(report.orientationY).toBe(-16384);
+
+    await controller.disconnect();
+  });
+
   test("round-trips native bridge rumble feedback messages", () => {
     const message = createNativeBridgeRumbleFeedbackMessage({
       controllerId: "player-1",
@@ -420,6 +493,12 @@ describe("controller runtime", () => {
         message.type === "opencontroller.bridge.state" &&
         message.extensions?.motion,
     );
+    const profileHidMessage = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        message.profileHidReportFormat === "hid-playstation-extended" &&
+        message.profileHidReport?.touchpadContacts[0]?.active,
+    );
 
     expect(touchpadMessage?.type).toBe("opencontroller.bridge.state");
     if (
@@ -461,19 +540,45 @@ describe("controller runtime", () => {
       orientation: { x: 0, y: 0, z: 0 },
     });
 
+    expect(profileHidMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !profileHidMessage ||
+      profileHidMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a native bridge profile HID report message");
+    }
+    const profileHidBytes =
+      nativeBridgeMessageToProfileHidReportBytes(profileHidMessage);
+    expect(profileHidBytes?.byteLength).toBe(
+      hidPlayStationExtendedReportByteLength,
+    );
+    expect(profileHidMessage.profileHidReport?.touchpadContacts[0]).toEqual({
+      id: 2,
+      active: true,
+      x: 16384,
+      y: 49151,
+      pressure: 128,
+    });
+    expect(
+      decodeHidPlayStationExtendedReport(profileHidBytes ?? new Uint8Array()),
+    ).toEqual(profileHidMessage.profileHidReport);
+
     const legacyMessage = createNativeBridgeStateMessage(
       controller.getState(),
       {
         includeExtensions: false,
+        includeProfileHidReport: false,
         includeState: false,
       },
     );
     expect(legacyMessage.extensions).toBeUndefined();
+    expect(legacyMessage.profileHidReport).toBeUndefined();
 
     const legacyLines: string[] = [];
     const legacyAdapter = new NativeBridgeAdapter({
       includeState: false,
       includeExtensions: false,
+      includeProfileHidReport: false,
       write(line) {
         legacyLines.push(line);
       },
@@ -505,6 +610,7 @@ describe("controller runtime", () => {
     }
     expect(legacyStateMessage.state).toBeUndefined();
     expect(legacyStateMessage.extensions).toBeUndefined();
+    expect(legacyStateMessage.profileHidReport).toBeUndefined();
 
     await legacyController.disconnect();
     await controller.disconnect();

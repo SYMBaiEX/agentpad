@@ -57,6 +57,7 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
   | "env"
   | "includeState"
   | "includeExtensions"
+  | "includeProfileHidReport"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -285,6 +286,7 @@ export function createMacosDriverKitHostBridgeAdapter(
     env: createMacosDriverKitHostBridgeEnv(options),
     includeState: options.includeState ?? false,
     includeExtensions: options.includeExtensions ?? true,
+    includeProfileHidReport: options.includeProfileHidReport ?? true,
     ...(options.waitForExitMs !== undefined
       ? { waitForExitMs: options.waitForExitMs }
       : {}),

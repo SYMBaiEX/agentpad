@@ -9,6 +9,9 @@
 - native bridge JSONL protocol added for platform driver processes
 - native bridge JSONL state messages now include descriptor-backed
   `hidReportBase64` payloads alongside XInput compatibility payloads
+- native bridge JSONL state messages now include PlayStation
+  `hid-playstation-extended` profile HID payloads for touchpad contacts and
+  motion vectors
 - native bridge JSONL state messages now include optional `extensions` for
   touchpad and motion state without requiring the full state payload
 - descriptor-backed HID reports now carry Home/Guide/PS through bit `0x0400`

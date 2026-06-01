@@ -27,7 +27,7 @@ new metadata fields make backend selection easier for agents and host apps:
 - `supportedProfiles`: profiles accepted by the adapter
 - `supportedCommands`: command types accepted by the runtime/adapter path
 - `outputFormats`: normalized command, state, WebSocket, XInput, HID, or JSONL outputs
-- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, and `hid-gamepad-rumble`
+- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, `hid-playstation-extended`, and `hid-gamepad-rumble`
 - `feedbackTypes`: host feedback channels such as `rumble`
 - `transport`: memory, callback, WebSocket, or native process
 - `virtualDeviceKind`: none, native helper, or OS virtual gamepad

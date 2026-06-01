@@ -121,6 +121,46 @@ each message. `reportBase64` remains the compatibility XInput payload.
 Descriptor-backed native drivers should prefer `hidReportBase64`, which is the
 13-byte OpenController HID gamepad report matching the shared descriptor.
 
+For PlayStation profiles, state messages also include a profile-specific HID
+payload by default:
+
+```json
+{
+  "profileHidReportFormat": "hid-playstation-extended",
+  "profileHidReport": {
+    "reportId": 3,
+    "buttons": 0,
+    "leftTrigger": 0,
+    "rightTrigger": 0,
+    "leftStickX": 0,
+    "leftStickY": 0,
+    "rightStickX": 0,
+    "rightStickY": 0,
+    "touchpadPressed": true,
+    "touchpadContacts": [
+      { "id": 0, "active": true, "x": 32768, "y": 22937, "pressure": 204 },
+      { "id": 0, "active": false, "x": 0, "y": 0, "pressure": 0 }
+    ],
+    "accelerationX": 0,
+    "accelerationY": 0,
+    "accelerationZ": 32767,
+    "gyroscopeX": 3277,
+    "gyroscopeY": 0,
+    "gyroscopeZ": 0,
+    "orientationX": 0,
+    "orientationY": 0,
+    "orientationZ": 0
+  },
+  "profileHidReportBase64": "AwAAAAAAAAAAAAAAAAEBAAEAgJlZzAAAAAAAAAAAAAAA/3/NDAAAAAAAAAAAAAA="
+}
+```
+
+Use `nativeBridgeMessageToProfileHidReportBytes(message)` to validate and
+decode `profileHidReportBase64`. The current profile payload is
+`hid-playstation-extended`, a 47-byte report containing the common gamepad
+fields plus two touch contacts and signed acceleration, gyroscope, and
+orientation vectors.
+
 When richer profile-specific state is active, state messages may also include an
 `extensions` object. This side channel is for bridge authors who want touchpad
 or motion data without enabling the full `state` payload:
@@ -150,9 +190,11 @@ or motion data without enabling the full `state` payload:
 ```
 
 Set `includeExtensions: false` when constructing a `NativeBridgeAdapter` or
-`NativeProcessBridgeAdapter` if a legacy helper expects only the compact
-XInput/HID payload fields. Current Linux, Windows, and macOS helper templates
-ignore unknown JSON fields, so `extensions` is backward compatible with the
+`NativeProcessBridgeAdapter` to suppress JSON touchpad/motion extensions. Set
+`includeProfileHidReport: false` to suppress profile-specific HID payloads if a
+legacy helper expects only the compact XInput/HID fields. Current Linux,
+Windows, and macOS helper templates ignore unknown JSON fields, so both
+`extensions` and `profileHidReport*` fields are backward compatible with the
 existing bridge stream.
 
 ## Disconnect Message
