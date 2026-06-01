@@ -6,7 +6,7 @@ This package provides:
 
 - a pure TypeScript event mapper for tests and diagnostics
 - a Linux uinput doctor for device, module, and permission checks
-- a build helper for the native C bridge
+- build and setup helpers for the native C bridge
 - a C helper that reads OpenController native bridge JSONL from stdin and emits
   Linux gamepad events through `/dev/uinput`
 
@@ -22,6 +22,18 @@ bun packages/native-linux-uinput/dist/bin/build-helper.js
 ```
 
 The build command prints the compiled helper path.
+
+## Prepare A Host
+
+```bash
+opencontroller-linux-uinput-setup
+opencontroller-linux-uinput-setup --udev-group input
+opencontroller-linux-uinput-setup --json
+```
+
+Setup compiles the helper, prints the default bridge commands, and prints
+reviewable udev-rule install commands. It does not run `sudo` or install
+permission rules automatically.
 
 ## Diagnose The Host
 
@@ -59,8 +71,12 @@ SDK code can also spawn the helper directly:
 ```ts
 import { createController } from "@opencontroller/core";
 import {
-  createLinuxUinputBridgeAdapter
+  createLinuxUinputBridgeAdapter,
+  prepareLinuxUinputSetup
 } from "@opencontroller/native-linux-uinput";
+
+const setup = await prepareLinuxUinputSetup();
+console.log(setup.helperPath);
 
 const controller = await createController({
   id: "player-1",
@@ -77,5 +93,5 @@ const controller = await createController({
 Most Linux systems require either root, membership in an input-related group, or
 a udev rule that grants the current user access to `/dev/uinput`.
 
-The helper intentionally does not install udev rules. OpenController should make
-permission changes explicit and inspectable.
+The setup command intentionally does not install udev rules. OpenController
+should make permission changes explicit and inspectable.

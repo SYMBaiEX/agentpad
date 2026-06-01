@@ -213,6 +213,7 @@ The Linux native package adds:
 - host diagnostics for `/dev/uinput`, module, and permission readiness
 - C helper source for `/dev/uinput`
 - build helper for producing `opencontroller-uinput-bridge`
+- setup helper for compiling the bridge and printing reviewed udev-rule commands
 
 The Windows native package adds:
 
@@ -427,6 +428,7 @@ const controller = await createController({
 ```bash
 bun --cwd packages/native-linux-uinput build
 bun packages/native-linux-uinput/dist/bin/build-helper.js
+opencontroller-linux-uinput-setup
 opencontroller-linux-uinput-doctor
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --dry-run

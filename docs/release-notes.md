@@ -19,6 +19,9 @@
   and smoke-tests the real C helper parser
 - Linux package now exports `createLinuxUinputBridgeAdapter` for SDK-owned
   helper processes with default helper path, device naming, and dry-run options
+- Linux package now exports `prepareLinuxUinputSetup` and
+  `opencontroller-linux-uinput-setup` for compiling the helper and printing
+  reviewed udev-rule commands without making privileged changes
 - package builds now rewrite emitted relative ESM imports for Node-compatible
   npm consumption
 - `NativeProcessBridgeAdapter` now falls back to Node `child_process` when Bun

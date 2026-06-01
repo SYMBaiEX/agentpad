@@ -39,7 +39,8 @@
   },
   "bin": {
     "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js",
-    "opencontroller-linux-uinput-doctor": "./dist/bin/doctor.js"
+    "opencontroller-linux-uinput-doctor": "./dist/bin/doctor.js",
+    "opencontroller-linux-uinput-setup": "./dist/bin/setup.js"
   },
   "files": ["dist", "src/helper/opencontroller-uinput-bridge.c", "README.md"],
   "scripts": {

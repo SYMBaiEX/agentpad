@@ -6,6 +6,8 @@ import {
 import {
   createLinuxUinputBridgeAdapter,
   defaultLinuxUinputHelperPath,
+  formatLinuxUinputSetupPlan,
+  prepareLinuxUinputSetup,
 } from "../linux-uinput";
 
 describe("linux uinput adapter helpers", () => {
@@ -78,5 +80,44 @@ describe("linux uinput adapter helpers", () => {
       true,
     );
     expect(writes.at(-1)).toContain("opencontroller.bridge.disconnect");
+  });
+
+  test("prepares a safe Linux helper setup plan", async () => {
+    const buildOptions: unknown[] = [];
+    const plan = await prepareLinuxUinputSetup({
+      platform: "linux",
+      cc: "clang",
+      outputPath: "/tmp/opencontroller-uinput-bridge",
+      udevGroup: "plugdev",
+      buildHelper: async (options) => {
+        buildOptions.push(options);
+        return "/tmp/opencontroller-uinput-bridge";
+      },
+    });
+    const formatted = formatLinuxUinputSetupPlan(plan);
+
+    expect(buildOptions).toEqual([
+      {
+        cc: "clang",
+        outputPath: "/tmp/opencontroller-uinput-bridge",
+      },
+    ]);
+    expect(plan.helperPath).toBe("/tmp/opencontroller-uinput-bridge");
+    expect(plan.dryRunCommand).toContain("--dry-run");
+    expect(plan.bridgeCommand).toContain("'/tmp/opencontroller-uinput-bridge'");
+    expect(plan.udevRules[1]?.rule).toContain('GROUP="plugdev"');
+    expect(formatted).toContain("No privileged system changes were made.");
+    expect(formatted).toContain("sudo modprobe uinput");
+    expect(formatted).toContain("sudo tee");
+    expect(formatted).toContain("opencontroller-linux-uinput-doctor --check");
+  });
+
+  test("does not prepare Linux setup on non-Linux hosts", async () => {
+    await expect(
+      prepareLinuxUinputSetup({
+        platform: "darwin",
+        buildHelper: async () => "/tmp/opencontroller-uinput-bridge",
+      }),
+    ).rejects.toThrow("Linux uinput setup can only be prepared on Linux");
   });
 });

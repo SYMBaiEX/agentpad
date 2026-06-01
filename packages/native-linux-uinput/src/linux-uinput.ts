@@ -5,6 +5,10 @@ import {
   NativeProcessBridgeAdapter,
   type NativeProcessBridgeAdapterOptions,
 } from "@opencontroller/core";
+import {
+  type LinuxUinputUdevRule,
+  createLinuxUinputUdevRules,
+} from "./diagnostics";
 
 export const linuxUinputHelperSourcePath = new URL(
   "../src/helper/opencontroller-uinput-bridge.c",
@@ -14,6 +18,21 @@ export const linuxUinputHelperSourcePath = new URL(
 export type BuildLinuxUinputHelperOptions = {
   cc?: string;
   outputPath?: string;
+};
+
+export type PrepareLinuxUinputSetupOptions = BuildLinuxUinputHelperOptions & {
+  platform?: NodeJS.Platform;
+  udevGroup?: string;
+  buildHelper?: (options: BuildLinuxUinputHelperOptions) => Promise<string>;
+};
+
+export type LinuxUinputSetupPlan = {
+  platform: NodeJS.Platform;
+  helperPath: string;
+  udevRules: LinuxUinputUdevRule[];
+  doctorCommand: string;
+  dryRunCommand: string;
+  bridgeCommand: string;
 };
 
 export type LinuxUinputBridgeProcessOptions = {
@@ -98,6 +117,74 @@ export async function buildLinuxUinputHelper(
   return outputPath;
 }
 
+export async function prepareLinuxUinputSetup(
+  options: PrepareLinuxUinputSetupOptions = {},
+): Promise<LinuxUinputSetupPlan> {
+  const platform = options.platform ?? process.platform;
+  if (platform !== "linux") {
+    throw new Error("Linux uinput setup can only be prepared on Linux");
+  }
+
+  const buildOptions: BuildLinuxUinputHelperOptions = {};
+  if (options.cc !== undefined) {
+    buildOptions.cc = options.cc;
+  }
+  if (options.outputPath !== undefined) {
+    buildOptions.outputPath = options.outputPath;
+  }
+
+  const helperPath = await (options.buildHelper ?? buildLinuxUinputHelper)(
+    buildOptions,
+  );
+  const udevRules = createLinuxUinputUdevRules(
+    options.udevGroup === undefined ? {} : { group: options.udevGroup },
+  );
+
+  return {
+    platform,
+    helperPath,
+    udevRules,
+    doctorCommand: "opencontroller-linux-uinput-doctor --check",
+    dryRunCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)} --dry-run`,
+    bridgeCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)}`,
+  };
+}
+
+export function formatLinuxUinputSetupPlan(plan: LinuxUinputSetupPlan): string {
+  const lines = [
+    "OpenController Linux uinput Setup",
+    "",
+    `Helper built: ${plan.helperPath}`,
+    "",
+    "No privileged system changes were made.",
+    "",
+    "Verify the host:",
+    `  ${plan.doctorCommand}`,
+    "",
+    "Dry-run the bridge stream:",
+    `  ${plan.dryRunCommand}`,
+    "",
+    "Run against /dev/uinput after permissions are ready:",
+    `  ${plan.bridgeCommand}`,
+    "",
+    "Optional reviewed udev rules:",
+  ];
+
+  for (const rule of plan.udevRules) {
+    lines.push(
+      "",
+      `${rule.name}:`,
+      `  ${rule.description}`,
+      `  ${formatInstallUdevRuleCommand(rule)}`,
+      "  sudo modprobe uinput",
+      "  sudo udevadm control --reload-rules",
+      "  sudo udevadm trigger --subsystem-match=misc",
+    );
+  }
+
+  return lines.join("\n");
+}
+
 export function createLinuxUinputBridgeAdapter(
   options: LinuxUinputBridgeAdapterOptions = {},
 ): NativeProcessBridgeAdapter {
@@ -163,4 +250,14 @@ function createLinuxUinputBridgeEnv(
       : {}),
     ...(options.dryRun ? { OPENCONTROLLER_UINPUT_DRY_RUN: "1" } : {}),
   };
+}
+
+function formatInstallUdevRuleCommand(rule: LinuxUinputUdevRule): string {
+  return `printf '%s\\n' ${quoteShell(rule.rule)} | sudo tee ${quoteShell(
+    rule.path,
+  )} >/dev/null`;
+}
+
+function quoteShell(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }

@@ -31,6 +31,7 @@ jobs:
           } from "./packages/native/dist/index.js";
           import {
             createLinuxUinputBridgeAdapter,
+            formatLinuxUinputSetupPlan,
             defaultLinuxUinputHelperPath
           } from "./packages/native-linux-uinput/dist/index.js";
           import {
@@ -47,6 +48,16 @@ jobs:
           }
           if (!defaultLinuxUinputHelperPath("/tmp/home").endsWith("opencontroller-uinput-bridge")) {
             throw new Error("Linux uinput helper path export is invalid");
+          }
+          if (!formatLinuxUinputSetupPlan({
+            platform: "linux",
+            helperPath: "/tmp/opencontroller-uinput-bridge",
+            udevRules: [],
+            doctorCommand: "opencontroller-linux-uinput-doctor --check",
+            dryRunCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --dry-run",
+            bridgeCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge"
+          }).includes("No privileged system changes were made.")) {
+            throw new Error("Linux uinput setup formatter is invalid");
           }
           if (typeof createWindowsVhfHostBridgeAdapter !== "function") {
             throw new Error("Windows VHF host bridge adapter factory is not exported");
@@ -97,6 +108,14 @@ jobs:
           EOF
       - run: cc -fsyntax-only -Wall -Wextra packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
       - run: cc -O2 -Wall -Wextra -o /tmp/opencontroller-uinput-bridge packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
+      - run: |
+          bun packages/native-linux-uinput/dist/bin/setup.js \
+            --output /tmp/opencontroller-uinput-bridge-setup \
+            --json |
+            tee /tmp/opencontroller-uinput-setup.json
+          grep -q '"helperPath": "/tmp/opencontroller-uinput-bridge-setup"' /tmp/opencontroller-uinput-setup.json
+          grep -q '"doctorCommand": "opencontroller-linux-uinput-doctor --check"' /tmp/opencontroller-uinput-setup.json
+          test -x /tmp/opencontroller-uinput-bridge-setup
       - run: |
           bun packages/cli/dist/index.js bridge --id ci |
             /tmp/opencontroller-uinput-bridge --dry-run |

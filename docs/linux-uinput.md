@@ -26,6 +26,19 @@ That prints the compiled helper path, normally:
 ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 
+The setup command wraps the same build step and prints the exact permission
+commands to review:
+
+```bash
+opencontroller-linux-uinput-setup
+opencontroller-linux-uinput-setup --udev-group input
+opencontroller-linux-uinput-setup --json
+```
+
+It does not run `sudo`, write `/etc/udev/rules.d`, reload udev, or change group
+membership. Virtual input devices can control real applications, so
+OpenController keeps those steps explicit.
+
 ## Run
 
 Check the host first:
@@ -64,13 +77,18 @@ Or let the SDK own the helper process:
 ```ts
 import { createController } from "@opencontroller/core";
 import {
-  createLinuxUinputBridgeAdapter
+  createLinuxUinputBridgeAdapter,
+  prepareLinuxUinputSetup
 } from "@opencontroller/native-linux-uinput";
+
+const setup = await prepareLinuxUinputSetup();
 
 const controller = await createController({
   id: "player-1",
   profile: "xbox",
-  adapter: createLinuxUinputBridgeAdapter(),
+  adapter: createLinuxUinputBridgeAdapter({
+    helperPath: setup.helperPath
+  }),
   replay: false
 });
 ```
@@ -131,7 +149,6 @@ axes use negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 
 - Linux only
 - no rumble or force feedback yet
-- no installer or udev-rule generator yet
 - no automatic permission changes
 - helper source is included and buildable, but not prebuilt
 - CI validates TypeScript mapping, package builds, C syntax, and helper dry-run
