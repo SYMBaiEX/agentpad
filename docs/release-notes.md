@@ -17,6 +17,8 @@
   for repeatable agent duels, telemetry polling, aggregate win/decision
   scoring, HP damage metrics, configurable quality gates, summary JSON, and
   local smoke checks
+- npm pack checks now verify every publishable workspace includes package-local
+  docs, built entrypoints, exports, executable bins, and clean tarball contents
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
 - Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`

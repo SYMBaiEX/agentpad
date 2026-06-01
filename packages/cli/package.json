@@ -21,7 +21,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "README.md"],
   "scripts": {
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist && chmod +x dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"

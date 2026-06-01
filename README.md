@@ -585,6 +585,7 @@ bun run typecheck
 bun run lint
 bun test
 bun run build
+bun run pack:check
 ```
 
 Clean generated files:
@@ -600,20 +601,15 @@ Before publishing packages to npm:
 ```bash
 bun run clean
 bun run build
-npm pack --workspace packages/core --dry-run
-npm pack --workspace packages/overlay --dry-run
-npm pack --workspace packages/cli --dry-run
-npm pack --workspace packages/native --dry-run
-npm pack --workspace packages/native-linux-uinput --dry-run
-npm pack --workspace packages/native-windows-virtual-gamepad --dry-run
-npm pack --workspace packages/native-macos-driverkit --dry-run
+bun run pack:check
 ```
 
 Then confirm:
 
 - npm scope ownership is settled
 - package names are final
-- `dist` files are built from the current source
+- `dist` files are built from the current source and included in pack output
+- package-local READMEs, bins, exports, and type declarations are present
 - examples still run from a fresh install
 - GitHub Actions is green
 - release tags and notes match the package version

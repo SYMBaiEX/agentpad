@@ -18,6 +18,7 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
+      - run: bun run pack:check
       - run: |
           node --input-type=module <<'EOF'
           import {
