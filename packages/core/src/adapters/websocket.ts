@@ -1,6 +1,10 @@
 import { AdapterError } from "../errors";
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
+import {
+  type ControllerAdapter,
+  controllerCommandTypes,
+  createAdapterCapabilities,
+} from "./adapter";
 
 export type WebSocketAdapterOptions = {
   url: string;
@@ -108,7 +112,10 @@ export class WebSocketAdapter implements ControllerAdapter {
   capabilities() {
     return createAdapterCapabilities({
       supportsStateSync: true,
+      supportsTouchpad: true,
+      supportsGyro: true,
       supportsVirtualDevice: false,
+      supportedCommands: controllerCommandTypes,
       outputFormats: [
         "normalized-command",
         "controller-state",

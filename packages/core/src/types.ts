@@ -10,6 +10,28 @@ export type ControllerProfileName =
 export type StickName = "LEFT" | "RIGHT";
 export type DpadDirection = "UP" | "DOWN" | "LEFT" | "RIGHT";
 
+export type ControllerVector3 = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type ControllerTouchpadContact = {
+  id: number;
+  x: number;
+  y: number;
+  active: boolean;
+  pressure: number;
+};
+
+export type ControllerTouchpadContactInput = {
+  id?: number;
+  x: number;
+  y: number;
+  active?: boolean;
+  pressure?: number;
+};
+
 export type ControllerCommand =
   | {
       type: "press";
@@ -54,6 +76,19 @@ export type ControllerCommand =
       ms: number;
     }
   | {
+      type: "touchpad";
+      contacts?: ControllerTouchpadContactInput[];
+      pressed?: boolean;
+      durationMs?: number;
+    }
+  | {
+      type: "motion";
+      acceleration?: ControllerVector3;
+      gyroscope?: ControllerVector3;
+      orientation?: ControllerVector3;
+      durationMs?: number;
+    }
+  | {
       type: "neutral";
     };
 
@@ -94,6 +129,15 @@ export type ControllerState = {
     down: boolean;
     left: boolean;
     right: boolean;
+  };
+  touchpad: {
+    pressed: boolean;
+    contacts: ControllerTouchpadContact[];
+  };
+  motion: {
+    acceleration: ControllerVector3;
+    gyroscope: ControllerVector3;
+    orientation: ControllerVector3;
   };
   updatedAt: number;
 };

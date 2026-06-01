@@ -1,5 +1,9 @@
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
+import {
+  type ControllerAdapter,
+  controllerCommandTypes,
+  createAdapterCapabilities,
+} from "./adapter";
 
 export class DryRunAdapter implements ControllerAdapter {
   readonly name = "dry-run";
@@ -33,7 +37,10 @@ export class DryRunAdapter implements ControllerAdapter {
   capabilities() {
     return createAdapterCapabilities({
       supportsStateSync: true,
+      supportsTouchpad: true,
+      supportsGyro: true,
       supportsVirtualDevice: false,
+      supportedCommands: controllerCommandTypes,
       outputFormats: ["normalized-command", "controller-state"],
       transport: "memory",
       virtualDeviceKind: "none",

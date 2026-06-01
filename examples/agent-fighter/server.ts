@@ -474,6 +474,8 @@ function isControllerState(value: unknown): value is ControllerState {
     isRecord(value.analogButtons) &&
     isRecord(value.sticks) &&
     isRecord(value.dpad) &&
+    isRecord(value.touchpad) &&
+    isRecord(value.motion) &&
     typeof value.updatedAt === "number"
   );
 }
@@ -526,6 +528,28 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
       scheduleDpadRelease(playerId, command.direction, command.durationMs);
       return;
     }
+    case "touchpad":
+      state.touchpad.pressed = command.pressed ?? false;
+      state.touchpad.contacts =
+        command.contacts?.map((contact, index) => ({
+          id: contact.id ?? index,
+          x: contact.x,
+          y: contact.y,
+          active: contact.active ?? true,
+          pressure: contact.pressure ?? 1,
+        })) ?? [];
+      return;
+    case "motion":
+      if (command.acceleration) {
+        state.motion.acceleration = { ...command.acceleration };
+      }
+      if (command.gyroscope) {
+        state.motion.gyroscope = { ...command.gyroscope };
+      }
+      if (command.orientation) {
+        state.motion.orientation = { ...command.orientation };
+      }
+      return;
     case "neutral":
       neutralize(state);
       return;
@@ -546,6 +570,12 @@ function neutralize(state: ControllerState): void {
   state.sticks.left = { x: 0, y: 0 };
   state.sticks.right = { x: 0, y: 0 };
   state.dpad = { up: false, down: false, left: false, right: false };
+  state.touchpad = { pressed: false, contacts: [] };
+  state.motion = {
+    acceleration: { x: 0, y: 0, z: 0 },
+    gyroscope: { x: 0, y: 0, z: 0 },
+    orientation: { x: 0, y: 0, z: 0 },
+  };
 }
 
 function scheduleRelease(
@@ -1173,6 +1203,12 @@ async function performAction(
       case "dpad":
         await controller.dpad(command.direction, command.durationMs);
         break;
+      case "touchpad":
+        await controller.touchpad(touchpadInput(command), command.durationMs);
+        break;
+      case "motion":
+        await controller.motion(motionInput(command), command.durationMs);
+        break;
       case "combo":
         await controller.combo(
           command.buttons,
@@ -1191,6 +1227,23 @@ async function performAction(
         break;
     }
   }
+}
+
+function touchpadInput(
+  command: Extract<ControllerCommand, { type: "touchpad" }>,
+) {
+  return {
+    ...(command.contacts ? { contacts: command.contacts } : {}),
+    ...(command.pressed !== undefined ? { pressed: command.pressed } : {}),
+  };
+}
+
+function motionInput(command: Extract<ControllerCommand, { type: "motion" }>) {
+  return {
+    ...(command.acceleration ? { acceleration: command.acceleration } : {}),
+    ...(command.gyroscope ? { gyroscope: command.gyroscope } : {}),
+    ...(command.orientation ? { orientation: command.orientation } : {}),
+  };
 }
 
 function isFighterAction(value: unknown): value is FighterAction {

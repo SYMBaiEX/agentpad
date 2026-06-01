@@ -140,6 +140,12 @@ export class ControllerRuntime {
       case "trigger":
         await this.runTrigger(command, context);
         return;
+      case "touchpad":
+        await this.runTouchpad(command, context);
+        return;
+      case "motion":
+        await this.runMotion(command, context);
+        return;
       case "dpad":
         await this.runDpad(command, context);
         return;
@@ -305,6 +311,72 @@ export class ControllerRuntime {
         context,
       );
       await this.syncState(releaseAfter);
+    }
+  }
+
+  private async runTouchpad(
+    command: Extract<ControllerCommand, { type: "touchpad" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "touchpad") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setTouchpad(
+      normalized.command.contacts ?? [],
+      normalized.command.pressed ?? false,
+    );
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+
+    if (
+      normalized.command.durationMs !== undefined &&
+      normalized.command.durationMs > 0
+    ) {
+      await sleep(normalized.command.durationMs);
+      await this.runTouchpad(
+        {
+          type: "touchpad",
+          contacts: [],
+          pressed: false,
+        },
+        context,
+      );
+    }
+  }
+
+  private async runMotion(
+    command: Extract<ControllerCommand, { type: "motion" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "motion") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setMotion(normalized.command);
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+
+    if (
+      normalized.command.durationMs !== undefined &&
+      normalized.command.durationMs > 0
+    ) {
+      await sleep(normalized.command.durationMs);
+      await this.runMotion(
+        {
+          type: "motion",
+          acceleration: { x: 0, y: 0, z: 0 },
+          gyroscope: { x: 0, y: 0, z: 0 },
+          orientation: { x: 0, y: 0, z: 0 },
+        },
+        context,
+      );
     }
   }
 

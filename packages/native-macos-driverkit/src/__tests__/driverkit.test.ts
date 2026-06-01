@@ -88,6 +88,15 @@ describe("macOS DriverKit helpers", () => {
         left: false,
         right: false,
       },
+      touchpad: {
+        pressed: false,
+        contacts: [],
+      },
+      motion: {
+        acceleration: { x: 0, y: 0, z: 0 },
+        gyroscope: { x: 0, y: 0, z: 0 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
       updatedAt: 1,
     };
 

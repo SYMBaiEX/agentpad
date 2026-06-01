@@ -52,6 +52,8 @@ function applyDuration(
     case "press":
     case "stick":
     case "trigger":
+    case "touchpad":
+    case "motion":
     case "dpad":
     case "combo":
       return {

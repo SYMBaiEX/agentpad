@@ -3,6 +3,8 @@ import { ControllerRuntime } from "./runtime";
 import type {
   CommandContext,
   ControllerCommand,
+  ControllerTouchpadContactInput,
+  ControllerVector3,
   CreateControllerOptions,
   DpadDirection,
   FeedbackListener,
@@ -94,6 +96,43 @@ export class Controller {
 
   async wait(ms: number, context?: CommandContext): Promise<void> {
     await this.runtime.send({ type: "wait", ms }, context);
+  }
+
+  async touchpad(
+    input: {
+      contacts?: ControllerTouchpadContactInput[];
+      pressed?: boolean;
+    },
+    durationMs = 120,
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send(
+      {
+        type: "touchpad",
+        ...input,
+        durationMs,
+      },
+      context,
+    );
+  }
+
+  async motion(
+    input: {
+      acceleration?: ControllerVector3;
+      gyroscope?: ControllerVector3;
+      orientation?: ControllerVector3;
+    },
+    durationMs = 0,
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send(
+      {
+        type: "motion",
+        ...input,
+        durationMs,
+      },
+      context,
+    );
   }
 
   async neutral(context?: CommandContext): Promise<void> {

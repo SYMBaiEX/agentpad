@@ -51,6 +51,7 @@ developer experience on top.
 ## What You Get
 
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
+- PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
@@ -74,14 +75,18 @@ layout, CLI, overlays, examples, docs, CI, release notes, and npm package
 manifests are in place.
 
 The SDK surface is complete enough for local builds, demos, browser games,
-WebSocket integrations, overlays, replay capture, and native bridge prototyping.
-It is not yet a full cross-platform native virtual controller driver stack. The
-current emulation boundary is the adapter layer, XInput-compatible binary report
-encoding, a descriptor-backed HID gamepad report format, a versioned JSONL
-protocol for native bridge processes, the first Linux `uinput` bridge package,
-Windows VHF host bridge helpers, and macOS DriverKit host bridge helpers. The
-next milestone is turning those host bridge surfaces into signed, installable
-native device flows.
+WebSocket integrations, overlays, replay capture, touchpad/motion state, and
+native bridge prototyping. It is not yet a full cross-platform native virtual
+controller driver stack. The current emulation boundary is the adapter layer,
+XInput-compatible binary report encoding, a descriptor-backed HID gamepad report
+format, a versioned JSONL protocol for native bridge processes, the first Linux
+`uinput` bridge package, Windows VHF host bridge helpers, and macOS DriverKit
+host bridge helpers. Touchpad and motion commands flow through the runtime,
+replay logs, dry-run, and WebSocket state stream today; the current XInput/HID
+native bridge reports still encode the common gamepad subset. The next milestone
+is turning those host bridge surfaces into signed, installable native device
+flows and expanding native report descriptors for richer profile-specific
+features.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
@@ -555,8 +560,8 @@ and host drivers can send haptics back to AI agents.
 
 Every adapter exposes capability metadata through `controller.capabilities()`.
 Agents can inspect supported profiles, command types, output formats, report
-formats, feedback types, transport, and virtual-device kind before selecting a
-backend:
+formats, touchpad/motion support, feedback types, transport, and virtual-device
+kind before selecting a backend:
 
 ```ts
 const capabilities = controller.capabilities();

@@ -53,6 +53,32 @@ await playerTwo.press("B", 0.1);
 await hub.disconnectAll();
 ```
 
+## Touchpad And Motion
+
+```ts
+const playstation = await createController({
+  id: "ps-agent",
+  profile: "playstation",
+  adapter: "websocket",
+  url: "ws://localhost:7777/controller",
+});
+
+await playstation.touchpad({
+  pressed: true,
+  contacts: [{ id: 0, x: 0.5, y: 0.25 }],
+});
+
+await playstation.motion({
+  acceleration: { x: 0, y: 0, z: 1 },
+  gyroscope: { x: 0, y: 0.1, z: 0 },
+});
+```
+
+Touchpad and motion state are available to dry-run and WebSocket integrations.
+The current native XInput/HID report helpers still encode the common gamepad
+subset, so inspect `controller.capabilities()` before assuming a backend carries
+touch or sensor channels.
+
 ## Capability Metadata
 
 ```ts

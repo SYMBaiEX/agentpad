@@ -1,6 +1,11 @@
 import { EventEmitter, type Unsubscribe } from "./events";
 import type { ControllerProfile } from "./profiles";
-import type { ControllerState, StateListener } from "./types";
+import type {
+  ControllerState,
+  ControllerTouchpadContactInput,
+  ControllerVector3,
+  StateListener,
+} from "./types";
 
 type StateEvents = {
   change: ControllerState;
@@ -63,6 +68,38 @@ export class ControllerStateStore {
     return this.commit();
   }
 
+  setTouchpad(
+    contacts: ControllerTouchpadContactInput[] = [],
+    pressed = false,
+  ): ControllerState {
+    this.state.touchpad.pressed = pressed;
+    this.state.touchpad.contacts = contacts.map((contact, index) => ({
+      id: contact.id ?? index,
+      x: contact.x,
+      y: contact.y,
+      active: contact.active ?? true,
+      pressure: contact.pressure ?? 1,
+    }));
+    return this.commit();
+  }
+
+  setMotion(motion: {
+    acceleration?: ControllerVector3;
+    gyroscope?: ControllerVector3;
+    orientation?: ControllerVector3;
+  }): ControllerState {
+    if (motion.acceleration) {
+      this.state.motion.acceleration = { ...motion.acceleration };
+    }
+    if (motion.gyroscope) {
+      this.state.motion.gyroscope = { ...motion.gyroscope };
+    }
+    if (motion.orientation) {
+      this.state.motion.orientation = { ...motion.orientation };
+    }
+    return this.commit();
+  }
+
   neutral(): ControllerState {
     for (const button of Object.keys(this.state.buttons)) {
       this.state.buttons[button] = false;
@@ -79,6 +116,11 @@ export class ControllerStateStore {
     this.state.dpad.down = false;
     this.state.dpad.left = false;
     this.state.dpad.right = false;
+    this.state.touchpad.pressed = false;
+    this.state.touchpad.contacts = [];
+    this.state.motion.acceleration = neutralVector3();
+    this.state.motion.gyroscope = neutralVector3();
+    this.state.motion.orientation = neutralVector3();
 
     return this.commit();
   }
@@ -127,6 +169,15 @@ export function createInitialControllerState(
       left: false,
       right: false,
     },
+    touchpad: {
+      pressed: false,
+      contacts: [],
+    },
+    motion: {
+      acceleration: neutralVector3(),
+      gyroscope: neutralVector3(),
+      orientation: neutralVector3(),
+    },
     updatedAt: Date.now(),
   };
 }
@@ -151,5 +202,28 @@ export function cloneState(state: ControllerState): ControllerState {
     dpad: {
       ...state.dpad,
     },
+    touchpad: {
+      pressed: state.touchpad.pressed,
+      contacts: state.touchpad.contacts.map((contact) => ({ ...contact })),
+    },
+    motion: {
+      acceleration: {
+        ...state.motion.acceleration,
+      },
+      gyroscope: {
+        ...state.motion.gyroscope,
+      },
+      orientation: {
+        ...state.motion.orientation,
+      },
+    },
+  };
+}
+
+function neutralVector3(): ControllerVector3 {
+  return {
+    x: 0,
+    y: 0,
+    z: 0,
   };
 }

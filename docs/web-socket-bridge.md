@@ -51,8 +51,22 @@ changes:
       "left": false,
       "right": false
     },
+    "touchpad": {
+      "pressed": false,
+      "contacts": []
+    },
+    "motion": {
+      "acceleration": { "x": 0, "y": 0, "z": 0 },
+      "gyroscope": { "x": 0, "y": 0, "z": 0 },
+      "orientation": { "x": 0, "y": 0, "z": 0 }
+    },
     "updatedAt": 1770000000000
   },
   "timestamp": 1770000000000
 }
 ```
+
+WebSocket is the first integration path for richer profile-specific channels.
+It carries `touchpad` commands for PlayStation and `motion` commands for
+PlayStation/Switch in both `controller.command` messages and full
+`controller.state` snapshots.

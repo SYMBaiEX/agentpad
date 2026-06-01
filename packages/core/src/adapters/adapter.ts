@@ -37,6 +37,20 @@ export const controllerCommandTypes = [
   "combo",
   "sequence",
   "wait",
+  "touchpad",
+  "motion",
+  "neutral",
+] as const satisfies readonly ControllerCommandType[];
+
+export const gamepadCommandTypes = [
+  "press",
+  "release",
+  "stick",
+  "trigger",
+  "dpad",
+  "combo",
+  "sequence",
+  "wait",
   "neutral",
 ] as const satisfies readonly ControllerCommandType[];
 
@@ -56,7 +70,7 @@ export const baseCapabilities: ControllerAdapterCapabilities = {
   requiresNativeInstall: false,
   requiresElevatedPermissions: false,
   supportedProfiles: controllerProfileNames,
-  supportedCommands: controllerCommandTypes,
+  supportedCommands: gamepadCommandTypes,
   outputFormats: ["normalized-command"],
   reportFormats: [],
   feedbackTypes: [],

@@ -86,10 +86,15 @@ export class SafetyGuard {
       }
     }
 
-    if (command.type === "stick" && command.durationMs) {
+    if (
+      (command.type === "stick" ||
+        command.type === "touchpad" ||
+        command.type === "motion") &&
+      command.durationMs
+    ) {
       if (command.durationMs > this.config.maxStickHoldMs) {
         throw new SafetyError(
-          `Stick hold duration ${command.durationMs}ms exceeds ${this.config.maxStickHoldMs}ms`,
+          `Analog hold duration ${command.durationMs}ms exceeds ${this.config.maxStickHoldMs}ms`,
         );
       }
     }
@@ -123,6 +128,8 @@ export class SafetyGuard {
         return;
       case "dpad":
       case "stick":
+      case "touchpad":
+      case "motion":
       case "wait":
       case "neutral":
         return;

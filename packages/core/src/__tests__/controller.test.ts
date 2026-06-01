@@ -125,6 +125,10 @@ describe("controller runtime", () => {
 
     expect(dryRun.supportedProfiles).toContain("keyboard-mouse");
     expect(dryRun.supportedCommands).toContain("combo");
+    expect(dryRun.supportedCommands).toContain("touchpad");
+    expect(dryRun.supportedCommands).toContain("motion");
+    expect(dryRun.supportsTouchpad).toBe(true);
+    expect(dryRun.supportsGyro).toBe(true);
     expect(dryRun.outputFormats).toEqual([
       "normalized-command",
       "controller-state",
@@ -133,13 +137,21 @@ describe("controller runtime", () => {
     expect(dryRun.virtualDeviceKind).toBe("none");
 
     expect(websocket.outputFormats).toContain("websocket-json");
+    expect(websocket.supportsTouchpad).toBe(true);
+    expect(websocket.supportsGyro).toBe(true);
     expect(websocket.transport).toBe("websocket");
 
     expect(xinput.reportFormats).toEqual(["xinput"]);
+    expect(xinput.supportsTouchpad).toBe(false);
+    expect(xinput.supportsGyro).toBe(false);
     expect(xinput.outputFormats).toContain("xinput-report");
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
     expect(nativeBridge.reportFormats).toEqual(["xinput", "hid-gamepad"]);
+    expect(nativeBridge.supportedCommands).not.toContain("touchpad");
+    expect(nativeBridge.supportedCommands).not.toContain("motion");
+    expect(nativeBridge.supportsTouchpad).toBe(false);
+    expect(nativeBridge.supportsGyro).toBe(false);
 
     expect(nativeProcess.supportsVirtualDevice).toBe(true);
     expect(nativeProcess.supportsRumble).toBe(true);
@@ -147,6 +159,104 @@ describe("controller runtime", () => {
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
     expect(nativeProcess.transport).toBe("native-process");
     expect(nativeProcess.virtualDeviceKind).toBe("os-virtual-gamepad");
+  });
+
+  test("tracks PlayStation touchpad and motion state", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "playstation",
+      adapter,
+      replay: false,
+    });
+
+    await controller.touchpad(
+      {
+        pressed: true,
+        contacts: [
+          {
+            id: 7,
+            x: 2,
+            y: -1,
+            pressure: 2,
+          },
+        ],
+      },
+      0,
+    );
+    await controller.motion(
+      {
+        acceleration: { x: 0.1, y: -0.2, z: 0.98 },
+        gyroscope: { x: 1, y: 2, z: 3 },
+        orientation: { x: 4, y: 5, z: 6 },
+      },
+      0,
+    );
+
+    const state = controller.getState();
+    expect(state.touchpad).toEqual({
+      pressed: true,
+      contacts: [
+        {
+          id: 7,
+          x: 1,
+          y: 0,
+          active: true,
+          pressure: 1,
+        },
+      ],
+    });
+    expect(state.motion).toEqual({
+      acceleration: { x: 0.1, y: -0.2, z: 0.98 },
+      gyroscope: { x: 1, y: 2, z: 3 },
+      orientation: { x: 4, y: 5, z: 6 },
+    });
+    expect(adapter.history.at(-2)?.command.type).toBe("touchpad");
+    expect(adapter.history.at(-1)?.command.type).toBe("motion");
+
+    await controller.neutral();
+    expect(controller.getState().touchpad).toEqual({
+      pressed: false,
+      contacts: [],
+    });
+    expect(controller.getState().motion).toEqual({
+      acceleration: { x: 0, y: 0, z: 0 },
+      gyroscope: { x: 0, y: 0, z: 0 },
+      orientation: { x: 0, y: 0, z: 0 },
+    });
+
+    await controller.disconnect();
+  });
+
+  test("rejects touchpad input for profiles without touchpads", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await expect(
+      controller.touchpad({ pressed: true, contacts: [{ x: 0.5, y: 0.5 }] }),
+    ).rejects.toThrow("Touchpad input is not supported by xbox");
+
+    await controller.disconnect();
+  });
+
+  test("tracks Switch motion state", async () => {
+    const controller = await createController({
+      profile: "switch",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await controller.motion({ gyroscope: { x: 10, y: 20, z: 30 } }, 0);
+
+    expect(controller.getState().motion.gyroscope).toEqual({
+      x: 10,
+      y: 20,
+      z: 30,
+    });
+
+    await controller.disconnect();
   });
 
   test("encodes controller state as XInput reports", async () => {

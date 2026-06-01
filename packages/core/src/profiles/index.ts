@@ -16,6 +16,10 @@ export type ControllerProfile = {
   name: ControllerProfileName;
   buttons: readonly string[];
   triggers: readonly string[];
+  features?: {
+    touchpad?: boolean;
+    motion?: boolean;
+  };
   aliases: Record<string, string>;
   toUniversal: Record<string, UniversalControl>;
 };
@@ -157,6 +161,62 @@ export function normalizeCommand(
           stick: command.stick,
         },
       };
+    case "touchpad": {
+      if (!profile.features?.touchpad) {
+        throw new ProfileError(
+          `Touchpad input is not supported by ${profile.name}`,
+        );
+      }
+
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          ...(command.contacts
+            ? {
+                contacts: command.contacts.map((contact, index) => ({
+                  id: contact.id ?? index,
+                  x: clamp(contact.x, 0, 1),
+                  y: clamp(contact.y, 0, 1),
+                  active: contact.active ?? true,
+                  pressure: clamp(contact.pressure ?? 1, 0, 1),
+                })),
+              }
+            : {}),
+        },
+        timestamp,
+        universal: {
+          buttons: ["TOUCHPAD"],
+        },
+      };
+    }
+    case "motion":
+      if (!profile.features?.motion) {
+        throw new ProfileError(
+          `Motion input is not supported by ${profile.name}`,
+        );
+      }
+
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          ...(command.acceleration
+            ? { acceleration: normalizeVector3(command.acceleration) }
+            : {}),
+          ...(command.gyroscope
+            ? { gyroscope: normalizeVector3(command.gyroscope) }
+            : {}),
+          ...(command.orientation
+            ? { orientation: normalizeVector3(command.orientation) }
+            : {}),
+        },
+        timestamp,
+      };
     case "dpad": {
       const button = resolveButton(profile, dpadButton(command.direction));
       const universal = toUniversal(profile, button);
@@ -212,6 +272,23 @@ function clamp(value: number, min: number, max: number): number {
   }
 
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeVector3<T extends { x: number; y: number; z: number }>(
+  value: T,
+): T {
+  assertFinite(value.x);
+  assertFinite(value.y);
+  assertFinite(value.z);
+  return value;
+}
+
+function assertFinite(value: number): void {
+  if (!Number.isFinite(value)) {
+    throw new ProfileError(
+      `Expected a finite number, received ${String(value)}`,
+    );
+  }
 }
 
 export * from "./universal";

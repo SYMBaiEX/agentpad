@@ -15,6 +15,8 @@
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
 - adapter capabilities now describe supported profiles, command types, output
   formats, report formats, feedback channels, transport, and virtual-device kind
+- controller runtime now tracks PlayStation touchpad and PlayStation/Switch
+  motion commands for dry-run, replay, and WebSocket integrations
 - Agent Fighter example now includes a headless Chromium match-series runner
   for repeatable agent duels, telemetry polling, aggregate win/decision
   scoring, HP damage metrics, configurable quality gates, summary JSON, and

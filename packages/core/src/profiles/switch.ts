@@ -25,6 +25,9 @@ export const switchProfile: ControllerProfile = {
   name: "switch",
   buttons: switchButtons,
   triggers: ["ZL", "ZR"],
+  features: {
+    motion: true,
+  },
   aliases: {},
   toUniversal: {
     B: "SOUTH",

@@ -25,6 +25,10 @@ export const playstationProfile: ControllerProfile = {
   name: "playstation",
   buttons: playstationButtons,
   triggers: ["L2", "R2"],
+  features: {
+    touchpad: true,
+    motion: true,
+  },
   aliases: {
     X: "CROSS",
     O: "CIRCLE",
