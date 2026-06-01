@@ -69,6 +69,9 @@
       },
       "dependencies": {
         "@opencontroller/core": "workspace:*",
+        "@opencontroller/native-linux-uinput": "workspace:*",
+        "@opencontroller/native-macos-driverkit": "workspace:*",
+        "@opencontroller/native-windows-virtual-gamepad": "workspace:*",
         "@opencontroller/overlay": "workspace:*",
       },
       "devDependencies": {

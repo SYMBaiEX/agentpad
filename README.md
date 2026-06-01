@@ -59,7 +59,7 @@ developer experience on top.
 - Versioned JSONL native bridge protocol for driver and daemon integrations
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
-- CLI commands for doctor, test, overlay, replay, and starter action maps
+- CLI commands for doctor, native backend doctor, test, overlay, replay, and starter action maps
 - A playable two-agent browser fighting game demo
 
 OpenController is designed for local agents, accessibility tooling, testing,
@@ -85,8 +85,9 @@ flows.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
-bridge. Windows users can inspect legacy ViGEmBus compatibility and XUSB report
-mapping while a maintained Windows backend is evaluated.
+bridge. Windows users can inspect VHF/HID assets, legacy ViGEmBus compatibility,
+and XUSB report mapping. macOS users can generate DriverKit HID assets and check
+local signing/tool readiness.
 
 ## Try Agent Fighter
 
@@ -382,8 +383,15 @@ opencontroller test --profile xbox --adapter dry-run
 opencontroller overlay --profile xbox --port 4317
 opencontroller replay ./replays/session/events.jsonl
 opencontroller bridge --id player-1
+opencontroller native doctor --backend current
+opencontroller native doctor --backend all --json
 opencontroller init
 ```
+
+Use `opencontroller native doctor --backend current --check` in setup scripts
+when you want a non-zero exit code unless the host's native backend is ready.
+The command can also target `linux-uinput`, `windows-virtual-gamepad`, or
+`macos-driverkit` directly.
 
 ## Architecture
 

@@ -31,6 +31,9 @@
   },
   "dependencies": {
     "@opencontroller/core": "^0.1.0",
+    "@opencontroller/native-linux-uinput": "^0.1.0",
+    "@opencontroller/native-macos-driverkit": "^0.1.0",
+    "@opencontroller/native-windows-virtual-gamepad": "^0.1.0",
     "@opencontroller/overlay": "^0.1.0"
   },
   "devDependencies": {

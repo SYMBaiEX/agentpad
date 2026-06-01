@@ -21,6 +21,8 @@
   and a VHF lower-filter INF template
 - `@opencontroller/native-macos-driverkit` package added with DriverKit HID
   assets, plist/entitlement templates, and local authoring diagnostics
+- `opencontroller native doctor` added as a unified CLI readiness check for
+  Linux `uinput`, Windows virtual gamepad, and macOS DriverKit backends
 
 ## v0.1.0
 

@@ -2,6 +2,7 @@
 import { bridgeCommand } from "./commands/bridge";
 import { doctorCommand } from "./commands/doctor";
 import { initCommand } from "./commands/init";
+import { nativeCommand } from "./commands/native";
 import { overlayCommand } from "./commands/overlay";
 import { replayCommand } from "./commands/replay";
 import { testCommand } from "./commands/test";
@@ -33,6 +34,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case "bridge":
       await bridgeCommand(stringFlags(flags));
+      return;
+    case "native":
+      await nativeCommand(rest, flags);
       return;
     case "help":
     case "--help":
@@ -91,6 +95,7 @@ Usage:
   opencontroller overlay --profile xbox --port 4317
   opencontroller replay ./replays/session/events.jsonl
   opencontroller bridge --id player-1
+  opencontroller native doctor --backend current
   opencontroller adapters
 `);
 }

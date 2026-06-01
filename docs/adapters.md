@@ -26,3 +26,13 @@ Use `NativeProcessBridgeAdapter` when OpenController should spawn and own a
 helper process such as `opencontroller-uinput-bridge`. It writes the same JSONL
 protocol to helper stdin, sends a disconnect message, closes stdin, and reports
 non-zero helper exits as adapter errors.
+
+Before wiring a helper into an app, run the unified native doctor:
+
+```bash
+opencontroller native doctor --backend current
+opencontroller native doctor --backend all --json
+```
+
+The `--check` flag sets a non-zero exit code when the selected backend is not
+ready, which makes it useful in local setup scripts and CI smoke checks.
