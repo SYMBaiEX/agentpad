@@ -6,6 +6,8 @@ type PlayerId = "player-1" | "player-2";
 
 type RunnerOptions = {
   durationMs: number;
+  matches: number;
+  matchGapMs: number;
   pollMs: number;
   startupTimeoutMs: number;
   port: number;
@@ -40,6 +42,7 @@ type TelemetryPayload = {
 };
 
 type MatchSummary = {
+  matchIndex: number;
   baseUrl: string;
   durationMs: number;
   pollMs: number;
@@ -51,6 +54,25 @@ type MatchSummary = {
     byPlayer: Record<PlayerId, number>;
     bySource: Record<string, number>;
   };
+  finalArena?: ArenaSnapshot;
+  management?: Record<string, unknown>;
+};
+
+type SeriesSummary = {
+  baseUrl: string;
+  matchCount: number;
+  matchDurationMs: number;
+  pollMs: number;
+  startedServer: boolean;
+  totalDurationMs: number;
+  aggregate: {
+    roundsCompleted: number;
+    winners: Record<PlayerId, number>;
+    winRate: Record<PlayerId, number>;
+    decisions: MatchSummary["decisions"];
+    averageDecisionsPerMatch: number;
+  };
+  matches: MatchSummary[];
   finalArena?: ArenaSnapshot;
   management?: Record<string, unknown>;
 };
@@ -80,24 +102,7 @@ try {
       "function",
   );
 
-  await postJson(`${baseUrl}/management/reset`);
-  await postJson(`${baseUrl}/management/start`);
-  agentsStarted = true;
-
-  let summary = await runMatch(baseUrl, options);
-  await postJson(`${baseUrl}/management/stop`);
-  agentsStarted = false;
-
-  const stoppedTelemetry = await getJson<TelemetryPayload>(
-    `${baseUrl}/telemetry`,
-  );
-  summary = {
-    ...summary,
-    ...(stoppedTelemetry.arena ? { finalArena: stoppedTelemetry.arena } : {}),
-    ...(stoppedTelemetry.management
-      ? { management: stoppedTelemetry.management }
-      : {}),
-  };
+  const summary = await runSeries(baseUrl, options);
 
   const json = `${JSON.stringify(summary, null, 2)}\n`;
   if (options.output) {
@@ -119,9 +124,58 @@ try {
   }
 }
 
+async function runSeries(
+  baseUrl: string,
+  options: RunnerOptions,
+): Promise<SeriesSummary> {
+  const startedAt = Date.now();
+  const matches: MatchSummary[] = [];
+
+  for (let index = 0; index < options.matches; index += 1) {
+    await postJson(`${baseUrl}/management/reset`);
+    await postJson(`${baseUrl}/management/start`);
+    agentsStarted = true;
+
+    const match = await runMatch(baseUrl, options, index + 1);
+    await postJson(`${baseUrl}/management/stop`);
+    agentsStarted = false;
+
+    const stoppedTelemetry = await getJson<TelemetryPayload>(
+      `${baseUrl}/telemetry`,
+    );
+    matches.push({
+      ...match,
+      ...(stoppedTelemetry.arena ? { finalArena: stoppedTelemetry.arena } : {}),
+      ...(stoppedTelemetry.management
+        ? { management: stoppedTelemetry.management }
+        : {}),
+    });
+
+    if (index + 1 < options.matches && options.matchGapMs > 0) {
+      await sleep(options.matchGapMs);
+    }
+  }
+
+  const aggregate = aggregateMatches(matches);
+  const latest = matches.at(-1);
+  return {
+    baseUrl,
+    matchCount: options.matches,
+    matchDurationMs: options.durationMs,
+    pollMs: options.pollMs,
+    startedServer: !options.url,
+    totalDurationMs: Date.now() - startedAt,
+    aggregate,
+    matches,
+    ...(latest?.finalArena ? { finalArena: latest.finalArena } : {}),
+    ...(latest?.management ? { management: latest.management } : {}),
+  };
+}
+
 async function runMatch(
   baseUrl: string,
   options: RunnerOptions,
+  matchIndex: number,
 ): Promise<MatchSummary> {
   const startedAt = Date.now();
   const winners: Record<PlayerId, number> = {
@@ -153,6 +207,7 @@ async function runMatch(
   );
 
   return {
+    matchIndex,
     baseUrl,
     durationMs: Date.now() - startedAt,
     pollMs: options.pollMs,
@@ -166,6 +221,48 @@ async function runMatch(
     },
     ...(latest.arena ? { finalArena: latest.arena } : {}),
     ...(latest.management ? { management: latest.management } : {}),
+  };
+}
+
+function aggregateMatches(matches: MatchSummary[]): SeriesSummary["aggregate"] {
+  const winners: Record<PlayerId, number> = { "player-1": 0, "player-2": 0 };
+  const decisionsByPlayer: Record<PlayerId, number> = {
+    "player-1": 0,
+    "player-2": 0,
+  };
+  const decisionsBySource: Record<string, number> = {};
+  let roundsCompleted = 0;
+  let totalDecisions = 0;
+
+  for (const match of matches) {
+    roundsCompleted += match.roundsCompleted;
+    winners["player-1"] += match.winners["player-1"];
+    winners["player-2"] += match.winners["player-2"];
+    decisionsByPlayer["player-1"] += match.decisions.byPlayer["player-1"];
+    decisionsByPlayer["player-2"] += match.decisions.byPlayer["player-2"];
+    totalDecisions += match.decisions.total;
+
+    for (const [source, count] of Object.entries(match.decisions.bySource)) {
+      decisionsBySource[source] = (decisionsBySource[source] ?? 0) + count;
+    }
+  }
+
+  return {
+    roundsCompleted,
+    winners,
+    winRate: {
+      "player-1":
+        roundsCompleted === 0 ? 0 : winners["player-1"] / roundsCompleted,
+      "player-2":
+        roundsCompleted === 0 ? 0 : winners["player-2"] / roundsCompleted,
+    },
+    decisions: {
+      total: totalDecisions,
+      byPlayer: decisionsByPlayer,
+      bySource: decisionsBySource,
+    },
+    averageDecisionsPerMatch:
+      matches.length === 0 ? 0 : totalDecisions / matches.length,
   };
 }
 
@@ -307,6 +404,8 @@ function normalizeWinner(value: unknown): PlayerId | null {
 function parseArgs(args: string[]): RunnerOptions {
   const options: RunnerOptions = {
     durationMs: 15_000,
+    matches: 1,
+    matchGapMs: 250,
     pollMs: 250,
     startupTimeoutMs: 6_000,
     port: 5173,
@@ -319,6 +418,12 @@ function parseArgs(args: string[]): RunnerOptions {
     switch (arg) {
       case "--duration-ms":
         options.durationMs = readPositiveNumber(args[++index], arg);
+        break;
+      case "--matches":
+        options.matches = readPositiveNumber(args[++index], arg);
+        break;
+      case "--match-gap-ms":
+        options.matchGapMs = readNonNegativeNumber(args[++index], arg);
         break;
       case "--poll-ms":
         options.pollMs = readPositiveNumber(args[++index], arg);
@@ -361,6 +466,17 @@ function readPositiveNumber(value: string | undefined, option: string): number {
   return Math.round(parsed);
 }
 
+function readNonNegativeNumber(
+  value: string | undefined,
+  option: string,
+): number {
+  const parsed = Number(readRequiredValue(value, option));
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${option} must be zero or a positive number`);
+  }
+  return Math.round(parsed);
+}
+
 function readRequiredValue(value: string | undefined, option: string): string {
   if (!value || value.startsWith("--")) {
     throw new Error(`${option} requires a value`);
@@ -376,6 +492,8 @@ Usage:
 
 Options:
   --duration-ms <ms>          Match runtime before summarizing (default: 15000)
+  --matches <count>           Number of matches in the series (default: 1)
+  --match-gap-ms <ms>         Delay between matches (default: 250)
   --poll-ms <ms>              Telemetry polling interval (default: 250)
   --startup-timeout-ms <ms>   Time to wait for spawned server (default: 6000)
   --port <port>               Port for spawned server (default: 5173)

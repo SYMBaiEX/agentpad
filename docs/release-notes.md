@@ -13,9 +13,9 @@
   while preserving standard XInput compatibility reports
 - `native-bridge` adapter and CLI sample stream added
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
-- Agent Fighter example now includes a headless Chromium match runner for
-  repeatable agent duels, telemetry polling, summary JSON, and local smoke
-  checks
+- Agent Fighter example now includes a headless Chromium match-series runner
+  for repeatable agent duels, telemetry polling, aggregate win/decision
+  scoring, summary JSON, and local smoke checks
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
 - Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`
