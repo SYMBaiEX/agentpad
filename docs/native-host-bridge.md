@@ -58,6 +58,35 @@ Backend-specific options are passed to the underlying platform package. Common
 native process options such as `env`, `cwd`, `waitForExitMs`, and output hooks
 can be passed at the top level.
 
+## Smoke Test A Native Bridge
+
+The CLI can send a short button, stick, trigger, and neutral sequence through
+the selected native host bridge:
+
+```bash
+opencontroller native test --backend current
+```
+
+Linux bridge authors can start with dry-run mode before touching `/dev/uinput`:
+
+```bash
+opencontroller native test \
+  --backend linux-uinput \
+  --dry-run \
+  --helper-path ~/.opencontroller/bin/opencontroller-uinput-bridge
+```
+
+Windows and macOS host bridge paths can be supplied explicitly:
+
+```bash
+opencontroller native test \
+  --backend windows-vhf \
+  --host-bridge-path ./OpenControllerVhfHostBridge.exe
+```
+
+The command prints the final controller state and returns a non-zero exit if the
+helper process cannot start or exits unsuccessfully.
+
 ## Resolve A Target Backend
 
 ```ts

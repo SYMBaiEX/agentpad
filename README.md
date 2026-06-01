@@ -59,7 +59,7 @@ developer experience on top.
 - Versioned JSONL native bridge protocol with XInput and HID report payloads
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
-- CLI commands for doctor, native backend doctor, test, overlay, replay, and starter action maps
+- CLI commands for doctor, native backend doctor, native bridge smoke tests, dry-run tests, overlay, replay, and starter action maps
 - A playable two-agent browser fighting game demo
 
 OpenController is designed for local agents, accessibility tooling, testing,
@@ -461,6 +461,8 @@ opencontroller replay ./replays/session/events.jsonl
 opencontroller bridge --id player-1
 opencontroller native doctor --backend current
 opencontroller native doctor --backend all --json
+opencontroller native test --backend linux-uinput --dry-run
+opencontroller native test --backend current
 opencontroller init
 ```
 
@@ -468,6 +470,11 @@ Use `opencontroller native doctor --backend current --check` in setup scripts
 when you want a non-zero exit code unless the host's native backend is ready.
 The command can also target `linux-uinput`, `windows-virtual-gamepad`, or
 `macos-driverkit` directly.
+
+Use `opencontroller native test` after a backend is installed to push a small
+button, stick, trigger, and neutral sequence through the selected native host
+bridge. On Linux, add `--dry-run` to validate JSONL/HID decoding before opening
+`/dev/uinput`.
 
 ## Architecture
 

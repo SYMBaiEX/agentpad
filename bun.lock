@@ -69,6 +69,7 @@
       },
       "dependencies": {
         "@opencontroller/core": "workspace:*",
+        "@opencontroller/native": "workspace:*",
         "@opencontroller/native-linux-uinput": "workspace:*",
         "@opencontroller/native-macos-driverkit": "workspace:*",
         "@opencontroller/native-windows-virtual-gamepad": "workspace:*",
@@ -107,6 +108,7 @@
       "bin": {
         "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js",
         "opencontroller-linux-uinput-doctor": "./dist/bin/doctor.js",
+        "opencontroller-linux-uinput-setup": "./dist/bin/setup.js",
       },
       "dependencies": {
         "@opencontroller/core": "^0.1.0",

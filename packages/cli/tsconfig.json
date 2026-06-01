@@ -8,6 +8,8 @@
     "paths": {
       "@opencontroller/core": ["packages/core/src/index.ts"],
       "@opencontroller/core/*": ["packages/core/src/*"],
+      "@opencontroller/native": ["packages/native/src/index.ts"],
+      "@opencontroller/native/*": ["packages/native/src/*"],
       "@opencontroller/native-linux-uinput": [
         "packages/native-linux-uinput/src/index.ts"
       ],
@@ -35,6 +37,9 @@
   "references": [
     {
       "path": "../core"
+    },
+    {
+      "path": "../native"
     },
     {
       "path": "../native-linux-uinput"

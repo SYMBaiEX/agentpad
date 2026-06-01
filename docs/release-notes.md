@@ -52,6 +52,8 @@
   for SDK-owned host bridge processes after a signed host app is built
 - `@opencontroller/native` package added with `createNativeHostBridgeAdapter`
   for selecting Linux `uinput`, Windows VHF, or macOS DriverKit from one import
+- `opencontroller native test` added to smoke-test a selected native host
+  bridge from the CLI, including Linux `--dry-run` support
 
 ## v0.1.0
 

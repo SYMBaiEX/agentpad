@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   type NativeBackendId,
   type NativeBackendReport,
+  createNativeTestPlan,
   diagnoseNativeBackends,
   formatNativeDoctor,
   normalizeNativeBackendSelection,
@@ -69,6 +70,61 @@ describe("native backend diagnostics", () => {
     expect(output).toContain("Linux uinput");
     expect(output).toContain("ready: yes");
     expect(output).toContain("fake linux-uinput report");
+  });
+});
+
+describe("native backend test plan", () => {
+  test("creates a Linux dry-run plan with helper options", () => {
+    const plan = createNativeTestPlan(
+      {
+        backend: "linux-uinput",
+        "dry-run": true,
+        "helper-path": "/tmp/opencontroller-uinput-bridge",
+        "device-name": "OpenController Test Gamepad",
+        profile: "switch",
+        id: "player-test",
+        "wait-for-exit-ms": "250",
+      },
+      "darwin",
+    );
+
+    expect(plan).toMatchObject({
+      id: "player-test",
+      profile: "switch",
+      backend: "linux-uinput",
+      dryRun: true,
+      action: {
+        button: "B",
+        trigger: "ZR",
+      },
+      adapterOptions: {
+        backend: "linux-uinput",
+        waitForExitMs: 250,
+        linux: {
+          helperPath: "/tmp/opencontroller-uinput-bridge",
+          deviceName: "OpenController Test Gamepad",
+          dryRun: true,
+        },
+      },
+    });
+  });
+
+  test("normalizes Windows aliases for native tests", () => {
+    const plan = createNativeTestPlan({
+      backend: "vhf",
+      "helper-path": "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+    });
+
+    expect(plan.backend).toBe("windows-vhf");
+    expect(plan.adapterOptions.windows?.hostBridgePath).toBe(
+      "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+    );
+  });
+
+  test("rejects all-backend native tests", () => {
+    expect(() => createNativeTestPlan({ backend: "all" })).toThrow(
+      "Native test runs one backend",
+    );
   });
 });
 

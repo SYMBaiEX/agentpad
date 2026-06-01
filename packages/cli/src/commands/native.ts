@@ -1,3 +1,11 @@
+import type { ControllerProfileName } from "@opencontroller/core";
+import { createController } from "@opencontroller/core";
+import {
+  type NativeHostBridgeAdapterOptions,
+  type NativeHostBridgeBackendId,
+  createNativeHostBridgeAdapter,
+  resolveNativeHostBridgeBackend,
+} from "@opencontroller/native";
 import {
   type LinuxUinputDiagnostics,
   diagnoseLinuxUinput,
@@ -48,6 +56,20 @@ export type DiagnoseNativeBackendsOptions = {
   diagnoseBackend?: (backend: NativeBackendId) => Promise<NativeBackendReport>;
 };
 
+export type NativeTestPlan = {
+  id: string;
+  profile: ControllerProfileName;
+  backend: NativeHostBridgeBackendId;
+  adapterOptions: NativeHostBridgeAdapterOptions;
+  dryRun: boolean;
+  action: NativeTestAction;
+};
+
+export type NativeTestAction = {
+  button: string;
+  trigger: string;
+};
+
 const backendIds = [
   "linux-uinput",
   "windows-virtual-gamepad",
@@ -64,6 +86,9 @@ export async function nativeCommand(
     case "doctor":
       await nativeDoctorCommand(flags);
       return;
+    case "test":
+      await nativeTestCommand(flags);
+      return;
     case "help":
     case "--help":
     case "-h":
@@ -72,6 +97,100 @@ export async function nativeCommand(
     default:
       throw new Error(`Unknown native command: ${subcommand}`);
   }
+}
+
+export async function nativeTestCommand(
+  flags: NativeCommandFlags,
+): Promise<void> {
+  const plan = createNativeTestPlan(flags);
+  const adapter = createNativeHostBridgeAdapter({
+    ...plan.adapterOptions,
+    onStdout(chunk) {
+      process.stdout.write(chunk);
+    },
+    onStderr(chunk) {
+      process.stderr.write(chunk);
+    },
+  });
+  const controller = await createController({
+    id: plan.id,
+    profile: plan.profile,
+    adapter,
+    replay: false,
+  });
+
+  await controller.press(plan.action.button, 80, {
+    intent: "native_test_press",
+    source: "opencontroller-cli",
+  });
+  await controller.moveStick("LEFT", { x: 0, y: -1 }, 120, {
+    intent: "native_test_move",
+    source: "opencontroller-cli",
+  });
+  await controller.trigger(plan.action.trigger, 0.5, 90, {
+    intent: "native_test_trigger",
+    source: "opencontroller-cli",
+  });
+  await controller.neutral({
+    intent: "native_test_neutral",
+    source: "opencontroller-cli",
+  });
+
+  const state = controller.getState();
+  await controller.disconnect();
+
+  console.log("OpenController native test completed");
+  console.log(
+    JSON.stringify(
+      {
+        id: plan.id,
+        profile: plan.profile,
+        backend: plan.backend,
+        dryRun: plan.dryRun,
+        state,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+export function createNativeTestPlan(
+  flags: NativeCommandFlags,
+  platform: NodeJS.Platform = process.platform,
+): NativeTestPlan {
+  const selection =
+    stringFlag(flags, "backend") ?? stringFlag(flags, "platform") ?? "current";
+  if (normalizeNativeBackendSelection(selection) === "all") {
+    throw new Error(
+      "Native test runs one backend. Use current or a single backend.",
+    );
+  }
+
+  const backend = resolveNativeHostBridgeBackend({
+    backend: selection,
+    platform,
+  });
+  const profile = (stringFlag(flags, "profile") ??
+    "xbox") as ControllerProfileName;
+  const id = stringFlag(flags, "id") ?? "native-test";
+  const dryRun = booleanFlag(flags, "dry-run");
+  const waitForExitMs = numberFlag(flags, "wait-for-exit-ms");
+
+  return {
+    id,
+    profile,
+    backend,
+    dryRun,
+    action: nativeTestAction(profile),
+    adapterOptions: {
+      backend,
+      ...(waitForExitMs !== undefined ? { waitForExitMs } : {}),
+      linux: createLinuxNativeTestOptions(flags, dryRun),
+      windows: createWindowsNativeTestOptions(flags),
+      macos: createMacosNativeTestOptions(flags),
+    },
+  };
 }
 
 export async function nativeDoctorCommand(
@@ -272,6 +391,104 @@ function booleanFlag(flags: NativeCommandFlags, key: string): boolean {
   return flags[key] === true || flags[key] === "true";
 }
 
+function numberFlag(
+  flags: NativeCommandFlags,
+  key: string,
+): number | undefined {
+  const value = stringFlag(flags, key);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(
+      `Expected --${key} to be a finite number, received ${value}`,
+    );
+  }
+  return parsed;
+}
+
+function nativeTestAction(profile: ControllerProfileName): NativeTestAction {
+  switch (profile) {
+    case "playstation":
+      return { button: "CROSS", trigger: "R2" };
+    case "switch":
+      return { button: "B", trigger: "ZR" };
+    case "generic-hid":
+      return { button: "BUTTON_0", trigger: "BUTTON_7" };
+    case "keyboard-mouse":
+      return { button: "KEY_SPACE", trigger: "MOUSE_LEFT" };
+    case "xbox":
+      return { button: "A", trigger: "RT" };
+  }
+}
+
+function createLinuxNativeTestOptions(
+  flags: NativeCommandFlags,
+  dryRun: boolean,
+): NonNullable<NativeHostBridgeAdapterOptions["linux"]> {
+  const options: NonNullable<NativeHostBridgeAdapterOptions["linux"]> = {};
+  const helperPath = stringFlag(flags, "helper-path");
+  const devicePath = stringFlag(flags, "device-path");
+  const deviceName = stringFlag(flags, "device-name");
+
+  if (helperPath) {
+    options.helperPath = helperPath;
+  }
+  if (devicePath) {
+    options.devicePath = devicePath;
+  }
+  if (deviceName) {
+    options.deviceName = deviceName;
+  }
+  if (dryRun) {
+    options.dryRun = true;
+  }
+
+  return options;
+}
+
+function createWindowsNativeTestOptions(
+  flags: NativeCommandFlags,
+): NonNullable<NativeHostBridgeAdapterOptions["windows"]> {
+  const hostBridgePath =
+    stringFlag(flags, "host-bridge-path") ?? stringFlag(flags, "helper-path");
+  const devicePath = stringFlag(flags, "device-path");
+  const options: NonNullable<NativeHostBridgeAdapterOptions["windows"]> = {};
+
+  if (hostBridgePath) {
+    options.hostBridgePath = hostBridgePath;
+  }
+  if (devicePath) {
+    options.devicePath = devicePath;
+  }
+
+  return options;
+}
+
+function createMacosNativeTestOptions(
+  flags: NativeCommandFlags,
+): NonNullable<NativeHostBridgeAdapterOptions["macos"]> {
+  const hostBridgePath =
+    stringFlag(flags, "host-bridge-path") ?? stringFlag(flags, "helper-path");
+  const driverBundleIdentifier = stringFlag(flags, "driver-bundle-id");
+  const driverClassName = stringFlag(flags, "driver-class-name");
+  const options: NonNullable<NativeHostBridgeAdapterOptions["macos"]> = {};
+
+  if (hostBridgePath) {
+    options.hostBridgePath = hostBridgePath;
+  }
+  if (driverBundleIdentifier) {
+    options.driverBundleIdentifier = driverBundleIdentifier;
+  }
+  if (driverClassName) {
+    options.driverClassName = driverClassName;
+  }
+
+  return options;
+}
+
 function firstPositionalArg(args: string[]): string | undefined {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -310,11 +527,15 @@ Usage:
   opencontroller native doctor --backend all
   opencontroller native doctor --backend linux-uinput --json
   opencontroller native doctor --backend macos-driverkit --check
+  opencontroller native test --backend linux-uinput --dry-run
+  opencontroller native test --backend current
+  opencontroller native test --backend windows-vhf --host-bridge-path ./OpenControllerVhfHostBridge.exe
 
 Backends:
   current
   all
   linux-uinput
+  windows-vhf
   windows-virtual-gamepad
   macos-driverkit
 `);
