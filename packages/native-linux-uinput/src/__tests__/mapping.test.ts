@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { ControllerState } from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
+  linuxEventsFromHidGamepadReport,
   linuxEventsFromNativeBridgeMessage,
   linuxEventsFromXInputReport,
 } from "../events";
@@ -76,14 +77,45 @@ describe("linux uinput event mapping", () => {
       updatedAt: 1,
     };
 
-    const events = linuxEventsFromNativeBridgeMessage(
-      createNativeBridgeStateMessage(state, { includeState: false }),
-    );
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const events = linuxEventsFromNativeBridgeMessage(message);
+    const {
+      hidReportFormat: _hidReportFormat,
+      hidReport: _hidReport,
+      hidReportBase64: _hidReportBase64,
+      ...legacyMessage
+    } = message;
+    const legacyEvents = linuxEventsFromNativeBridgeMessage(legacyMessage);
 
     expect(find(events, "BTN_SOUTH")).toBe(1);
     expect(find(events, "ABS_RZ")).toBe(128);
     expect(find(events, "ABS_X")).toBe(32767);
     expect(find(events, "ABS_Y")).toBe(-32767);
+    expect(find(legacyEvents, "ABS_RZ")).toBe(128);
+  });
+
+  test("maps descriptor-backed HID gamepad reports to Linux events", () => {
+    const events = linuxEventsFromHidGamepadReport({
+      reportId: 1,
+      buttons: 0x4000 | 0x0008,
+      leftTrigger: 32,
+      rightTrigger: 64,
+      leftStickX: -1234,
+      leftStickY: 1234,
+      rightStickX: 2345,
+      rightStickY: -2345,
+    });
+
+    expect(find(events, "BTN_WEST")).toBe(1);
+    expect(find(events, "BTN_DPAD_RIGHT")).toBe(1);
+    expect(find(events, "ABS_Z")).toBe(32);
+    expect(find(events, "ABS_RZ")).toBe(64);
+    expect(find(events, "ABS_X")).toBe(-1234);
+    expect(find(events, "ABS_Y")).toBe(-1234);
+    expect(find(events, "ABS_RX")).toBe(2345);
+    expect(find(events, "ABS_RY")).toBe(2345);
   });
 });
 

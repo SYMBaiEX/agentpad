@@ -13,6 +13,8 @@
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
+- Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`
+  payloads and falls back to legacy XInput payloads
 - Linux uinput doctor added for module, device, permission, and udev-rule
   diagnostics
 - `@opencontroller/native-windows-virtual-gamepad` package added with XUSB

@@ -362,7 +362,8 @@ opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinpu
 
 The Linux helper reads the native bridge JSONL stream, creates an
 `OpenController Virtual Gamepad` through `/dev/uinput`, emits Linux gamepad
-events, and destroys the device when the stream closes. It requires Linux and
+events, and destroys the device when the stream closes. It prefers the direct
+HID payload and keeps XInput fallback for older streams. It requires Linux and
 write access to `/dev/uinput`.
 
 ### React Overlay

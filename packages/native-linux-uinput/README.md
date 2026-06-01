@@ -43,6 +43,8 @@ opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinpu
 
 The helper creates an OpenController virtual gamepad, applies each state report,
 neutralizes on disconnect, and destroys the virtual device when the stream ends.
+It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
+legacy XInput-compatible `reportBase64` payload for older bridge streams.
 
 SDK code can also spawn the helper directly:
 

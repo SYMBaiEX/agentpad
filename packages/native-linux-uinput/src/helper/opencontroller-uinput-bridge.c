@@ -9,7 +9,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define OC_REPORT_BYTES 12
+#define OC_XINPUT_REPORT_BYTES 12
+#define OC_HID_REPORT_BYTES 13
+#define OC_HID_REPORT_ID 1
 #define OC_LINE_MAX 8192
 #define OC_DEFAULT_DEVICE "/dev/uinput"
 #define OC_DEFAULT_NAME "OpenController Virtual Gamepad"
@@ -124,15 +126,36 @@ static int setup_device(int fd, const char *name) {
   return 0;
 }
 
-static void decode_report(const uint8_t bytes[OC_REPORT_BYTES],
-                          struct oc_report *report) {
+static int16_t read_i16_le(const uint8_t *bytes) {
+  return (int16_t)(bytes[0] | (bytes[1] << 8));
+}
+
+static void decode_xinput_report(
+    const uint8_t bytes[OC_XINPUT_REPORT_BYTES],
+    struct oc_report *report) {
   report->buttons = (uint16_t)(bytes[0] | (bytes[1] << 8));
   report->left_trigger = bytes[2];
   report->right_trigger = bytes[3];
-  report->left_x = (int16_t)(bytes[4] | (bytes[5] << 8));
-  report->left_y = (int16_t)(bytes[6] | (bytes[7] << 8));
-  report->right_x = (int16_t)(bytes[8] | (bytes[9] << 8));
-  report->right_y = (int16_t)(bytes[10] | (bytes[11] << 8));
+  report->left_x = read_i16_le(&bytes[4]);
+  report->left_y = read_i16_le(&bytes[6]);
+  report->right_x = read_i16_le(&bytes[8]);
+  report->right_y = read_i16_le(&bytes[10]);
+}
+
+static int decode_hid_report(const uint8_t bytes[OC_HID_REPORT_BYTES],
+                             struct oc_report *report) {
+  if (bytes[0] != OC_HID_REPORT_ID) {
+    return -1;
+  }
+
+  report->buttons = (uint16_t)(bytes[1] | (bytes[2] << 8));
+  report->left_x = read_i16_le(&bytes[3]);
+  report->left_y = read_i16_le(&bytes[5]);
+  report->right_x = read_i16_le(&bytes[7]);
+  report->right_y = read_i16_le(&bytes[9]);
+  report->left_trigger = bytes[11];
+  report->right_trigger = bytes[12];
+  return 0;
 }
 
 static int apply_report(int fd, const struct oc_report *report) {
@@ -190,8 +213,8 @@ static int base64_value(char c) {
   return -1;
 }
 
-static int decode_base64_report(const char *input,
-                                uint8_t output[OC_REPORT_BYTES]) {
+static int decode_base64_bytes(const char *input, uint8_t *output,
+                               size_t expected_bytes) {
   int values[4];
   int value_count = 0;
   size_t output_count = 0;
@@ -211,14 +234,14 @@ static int decode_base64_report(const char *input,
     if (values[0] < 0 || values[1] < 0) {
       return -1;
     }
-    if (output_count < OC_REPORT_BYTES) {
+    if (output_count < expected_bytes) {
       output[output_count++] = (uint8_t)((values[0] << 2) | (values[1] >> 4));
     }
-    if (values[2] >= 0 && output_count < OC_REPORT_BYTES) {
+    if (values[2] >= 0 && output_count < expected_bytes) {
       output[output_count++] =
           (uint8_t)(((values[1] & 0x0f) << 4) | (values[2] >> 2));
     }
-    if (values[3] >= 0 && output_count < OC_REPORT_BYTES) {
+    if (values[3] >= 0 && output_count < expected_bytes) {
       output[output_count++] =
           (uint8_t)(((values[2] & 0x03) << 6) | values[3]);
     }
@@ -226,18 +249,29 @@ static int decode_base64_report(const char *input,
     value_count = 0;
   }
 
-  return output_count == OC_REPORT_BYTES ? 0 : -1;
+  return output_count == expected_bytes ? 0 : -1;
 }
 
-static int extract_report_base64(const char *line,
-                                 uint8_t output[OC_REPORT_BYTES]) {
-  const char *key = "\"reportBase64\":\"";
+static int extract_base64_field(const char *line, const char *key,
+                                uint8_t *output, size_t expected_bytes) {
   const char *start = strstr(line, key);
   if (start == NULL) {
     return -1;
   }
   start += strlen(key);
-  return decode_base64_report(start, output);
+  return decode_base64_bytes(start, output, expected_bytes);
+}
+
+static int extract_hid_report_base64(
+    const char *line, uint8_t output[OC_HID_REPORT_BYTES]) {
+  return extract_base64_field(line, "\"hidReportBase64\":\"", output,
+                              OC_HID_REPORT_BYTES);
+}
+
+static int extract_xinput_report_base64(
+    const char *line, uint8_t output[OC_XINPUT_REPORT_BYTES]) {
+  return extract_base64_field(line, "\"reportBase64\":\"", output,
+                              OC_XINPUT_REPORT_BYTES);
 }
 
 static int is_disconnect(const char *line) {
@@ -277,7 +311,8 @@ int main(void) {
   created = 1;
 
   while (running && fgets(line, sizeof(line), stdin) != NULL) {
-    uint8_t bytes[OC_REPORT_BYTES];
+    uint8_t hid_bytes[OC_HID_REPORT_BYTES];
+    uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
     struct oc_report report;
 
     if (is_disconnect(line)) {
@@ -285,11 +320,17 @@ int main(void) {
       break;
     }
 
-    if (extract_report_base64(line, bytes) < 0) {
-      continue;
+    if (extract_hid_report_base64(line, hid_bytes) == 0) {
+      if (decode_hid_report(hid_bytes, &report) < 0) {
+        continue;
+      }
+    } else {
+      if (extract_xinput_report_base64(line, xinput_bytes) < 0) {
+        continue;
+      }
+      decode_xinput_report(xinput_bytes, &report);
     }
 
-    decode_report(bytes, &report);
     if (apply_report(fd, &report) < 0) {
       fprintf(stderr, "opencontroller-uinput: failed to emit report: %s\n",
               strerror(errno));

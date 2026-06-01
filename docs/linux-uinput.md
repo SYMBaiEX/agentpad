@@ -3,9 +3,9 @@
 `@opencontroller/native-linux-uinput` is the first OpenController platform
 backend for OS-level virtual controller emulation.
 
-It consumes OpenController native bridge JSONL and writes Linux gamepad events to
-`/dev/uinput`. Linux then exposes the virtual device through the normal input
-subsystem, so games and tools can see it as a gamepad-like input device.
+It consumes OpenController native bridge JSONL and writes Linux gamepad events
+to `/dev/uinput`. Linux then exposes the virtual device through the normal
+input subsystem, so games and tools can see it as a gamepad-like input device.
 
 ## Install From The Monorepo
 
@@ -71,7 +71,9 @@ The helper:
 
 - opens `/dev/uinput`
 - creates an `OpenController Virtual Gamepad`
-- maps OpenController XInput reports to Linux gamepad event codes
+- prefers descriptor-backed `hidReportBase64` payloads and falls back to legacy
+  `reportBase64` XInput payloads
+- maps OpenController gamepad reports to Linux gamepad event codes
 - emits `SYN_REPORT` after each state update
 - neutralizes and destroys the virtual device when the stream ends
 
@@ -93,6 +95,11 @@ Review either rule before installing it under `/etc/udev/rules.d/`.
 
 ## Event Mapping
 
+OpenController's native bridge now carries a canonical 13-byte HID gamepad
+report for descriptor-backed drivers and a 12-byte XInput-compatible payload for
+older helpers. The Linux bridge accepts both. HID is preferred because it is the
+same report contract used by the Windows VHF and macOS DriverKit directions.
+
 | XInput | Linux event |
 | --- | --- |
 | A | `BTN_SOUTH` |
@@ -107,8 +114,8 @@ Review either rule before installing it under `/etc/udev/rules.d/`.
 | Right stick | `ABS_RX` / `ABS_RY` |
 | LT/RT | `ABS_Z` / `ABS_RZ` |
 
-OpenController's XInput report uses positive Y for up. Linux gamepad axes use
-negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
+OpenController's HID and XInput reports use positive Y for up. Linux gamepad
+axes use negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 
 ## Current Limitations
 

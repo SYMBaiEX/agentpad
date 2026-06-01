@@ -1,8 +1,10 @@
 import type { NativeBridgeMessage } from "@opencontroller/core/bridge";
-import { nativeBridgeMessageToReportBytes } from "@opencontroller/core/bridge";
+import { nativeBridgeMessageToHidGamepadReportBytes } from "@opencontroller/core/bridge";
 import {
+  type HidGamepadReport,
   type XInputGamepadReport,
-  decodeXInputReport,
+  createHidGamepadReport,
+  decodeHidGamepadReport,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 
@@ -41,12 +43,18 @@ export function linuxEventsFromNativeBridgeMessage(
     return linuxNeutralEvents();
   }
 
-  const bytes = nativeBridgeMessageToReportBytes(message);
-  return linuxEventsFromXInputReport(decodeXInputReport(bytes));
+  const bytes = nativeBridgeMessageToHidGamepadReportBytes(message);
+  return linuxEventsFromHidGamepadReport(decodeHidGamepadReport(bytes));
 }
 
 export function linuxEventsFromXInputReport(
   report: XInputGamepadReport,
+): LinuxInputEventPlan[] {
+  return linuxEventsFromHidGamepadReport(createHidGamepadReport(report));
+}
+
+export function linuxEventsFromHidGamepadReport(
+  report: HidGamepadReport,
 ): LinuxInputEventPlan[] {
   const events: LinuxInputEventPlan[] = [];
 
