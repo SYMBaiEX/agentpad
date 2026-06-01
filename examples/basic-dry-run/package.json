@@ -1,0 +1,11 @@
+{
+  "name": "@agentpad/example-basic-dry-run",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "dependencies": {
+    "@agentpad/core": "workspace:*"
+  }
+}

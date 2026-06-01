@@ -1,0 +1,47 @@
+import type { ControllerProfile } from "./index";
+
+export const xboxButtons = [
+  "A",
+  "B",
+  "X",
+  "Y",
+  "LB",
+  "RB",
+  "LT",
+  "RT",
+  "BACK",
+  "START",
+  "GUIDE",
+  "LS",
+  "RS",
+  "DPAD_UP",
+  "DPAD_DOWN",
+  "DPAD_LEFT",
+  "DPAD_RIGHT",
+] as const;
+
+export const xboxProfile: ControllerProfile = {
+  name: "xbox",
+  buttons: xboxButtons,
+  triggers: ["LT", "RT"],
+  aliases: {},
+  toUniversal: {
+    A: "SOUTH",
+    B: "EAST",
+    X: "WEST",
+    Y: "NORTH",
+    LB: "LEFT_BUMPER",
+    RB: "RIGHT_BUMPER",
+    LT: "LEFT_TRIGGER",
+    RT: "RIGHT_TRIGGER",
+    BACK: "SELECT",
+    START: "START",
+    GUIDE: "HOME",
+    LS: "LEFT_STICK",
+    RS: "RIGHT_STICK",
+    DPAD_UP: "DPAD_UP",
+    DPAD_DOWN: "DPAD_DOWN",
+    DPAD_LEFT: "DPAD_LEFT",
+    DPAD_RIGHT: "DPAD_RIGHT",
+  },
+};

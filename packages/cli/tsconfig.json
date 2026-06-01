@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "baseUrl": "../..",
+    "paths": {
+      "@agentpad/core": ["packages/core/src/index.ts"],
+      "@agentpad/core/*": ["packages/core/src/*"],
+      "@agentpad/overlay": ["packages/overlay/src/index.ts"],
+      "@agentpad/overlay/*": ["packages/overlay/src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../overlay"
+    }
+  ]
+}

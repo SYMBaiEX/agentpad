@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@agentpad/core": ["packages/core/src/index.ts"],
+      "@agentpad/core/*": ["packages/core/src/*"],
+      "@agentpad/core/browser": ["packages/core/src/browser.ts"],
+      "@agentpad/overlay": ["packages/overlay/src/index.ts"],
+      "@agentpad/overlay/*": ["packages/overlay/src/*"]
+    },
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["bun"],
+    "jsx": "react-jsx"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@agentpad/cli",
+  "version": "0.1.0",
+  "description": "Command line tools for AgentPad.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SYMBaiEX/agentpad.git",
+    "directory": "packages/cli"
+  },
+  "keywords": ["ai", "controller", "gamepad", "cli", "agentpad"],
+  "bin": {
+    "agentpad": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@agentpad/core": "^0.1.0",
+    "@agentpad/overlay": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.15",
+    "typescript": "^5.8.3"
+  }
+}

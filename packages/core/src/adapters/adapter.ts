@@ -1,0 +1,28 @@
+import type {
+  ControllerAdapterCapabilities,
+  NormalizedControllerCommand,
+} from "../types";
+
+export interface ControllerAdapter {
+  name: string;
+  platform: "all" | "linux" | "windows" | "macos" | "browser";
+  connect(): Promise<void>;
+  send(command: NormalizedControllerCommand): Promise<void>;
+  neutral(command?: NormalizedControllerCommand): Promise<void>;
+  disconnect(): Promise<void>;
+  capabilities(): ControllerAdapterCapabilities;
+}
+
+export const baseCapabilities: ControllerAdapterCapabilities = {
+  supportsButtons: true,
+  supportsAnalogTriggers: true,
+  supportsSticks: true,
+  supportsDpad: true,
+  supportsRumble: false,
+  supportsTouchpad: false,
+  supportsGyro: false,
+  supportsMultipleControllers: true,
+  supportsVirtualDevice: false,
+  requiresNativeInstall: false,
+  requiresElevatedPermissions: false,
+};

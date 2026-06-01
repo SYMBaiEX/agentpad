@@ -1,0 +1,244 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #12110f;
+  color: #f4f1ea;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+main {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.surface {
+  display: grid;
+  gap: 18px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab,
+.status,
+.padButton,
+.primary {
+  min-height: 38px;
+  border: 1px solid #4d4a42;
+  border-radius: 8px;
+  background: #211f1a;
+  color: #f4f1ea;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform
+    120ms ease;
+}
+
+.tab {
+  padding: 0 14px;
+  text-transform: capitalize;
+}
+
+.tab.active,
+.status.connected,
+.padButton.active,
+.primary {
+  border-color: #8bd3a8;
+  background: #2f5f46;
+}
+
+.status {
+  min-width: 104px;
+  padding: 0 14px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.35fr) minmax(360px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.overlayPanel {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+  border: 1px solid #3d3a33;
+  border-radius: 8px;
+  background: #171511;
+  padding: 18px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #3d3a33;
+  border-radius: 8px;
+  background: #191814;
+  padding: 12px;
+}
+
+.group h2 {
+  margin: 0;
+  color: #d8d0bf;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.buttonGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.padButton {
+  width: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.padButton:active,
+.primary:active,
+.tab:active,
+.status:active {
+  transform: translateY(1px);
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 42px;
+  gap: 10px;
+  align-items: center;
+  min-height: 32px;
+  color: #ddd4c2;
+  font-size: 13px;
+}
+
+.slider input {
+  width: 100%;
+  accent-color: #8bd3a8;
+}
+
+.slider output {
+  color: #f6c86f;
+  text-align: right;
+}
+
+.stickControl {
+  display: grid;
+  gap: 8px;
+}
+
+.stickControl > span {
+  color: #f6c86f;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  align-items: end;
+}
+
+.primary {
+  width: 100%;
+  min-height: 44px;
+}
+
+.eventLog {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventLog li {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #3d3a33;
+  border-radius: 8px;
+  background: #191814;
+  padding: 8px 10px;
+}
+
+.eventLog time {
+  color: #a69d8c;
+  font-size: 11px;
+}
+
+.eventLog span {
+  overflow: hidden;
+  color: #f4f1ea;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .workspace,
+  .controls,
+  .eventLog {
+    grid-template-columns: 1fr;
+  }
+
+  .overlayPanel {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 520px) {
+  main {
+    padding: 12px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tab,
+  .status {
+    flex: 1;
+  }
+}

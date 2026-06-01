@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.turbo/
+output/
+.DS_Store
+bun.lockb
+replays/
+coverage/
+*.log
+*.tgz
+*.tsbuildinfo
+
+# Local runtime state
+examples/agent-fighter/data/
+
+# Local agent/session notes
+AGENTS.md
+progress.md
+
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example

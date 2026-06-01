@@ -1,0 +1,52 @@
+import type { ControllerProfile } from "./index";
+
+export const playstationButtons = [
+  "CROSS",
+  "CIRCLE",
+  "SQUARE",
+  "TRIANGLE",
+  "L1",
+  "R1",
+  "L2",
+  "R2",
+  "SHARE",
+  "OPTIONS",
+  "PS",
+  "L3",
+  "R3",
+  "TOUCHPAD",
+  "DPAD_UP",
+  "DPAD_DOWN",
+  "DPAD_LEFT",
+  "DPAD_RIGHT",
+] as const;
+
+export const playstationProfile: ControllerProfile = {
+  name: "playstation",
+  buttons: playstationButtons,
+  triggers: ["L2", "R2"],
+  aliases: {
+    X: "CROSS",
+    O: "CIRCLE",
+  },
+  toUniversal: {
+    CROSS: "SOUTH",
+    CIRCLE: "EAST",
+    SQUARE: "WEST",
+    TRIANGLE: "NORTH",
+    L1: "LEFT_BUMPER",
+    R1: "RIGHT_BUMPER",
+    L2: "LEFT_TRIGGER",
+    R2: "RIGHT_TRIGGER",
+    SHARE: "SELECT",
+    OPTIONS: "START",
+    PS: "HOME",
+    L3: "LEFT_STICK",
+    R3: "RIGHT_STICK",
+    TOUCHPAD: "TOUCHPAD",
+    DPAD_UP: "DPAD_UP",
+    DPAD_DOWN: "DPAD_DOWN",
+    DPAD_LEFT: "DPAD_LEFT",
+    DPAD_RIGHT: "DPAD_RIGHT",
+  },
+};

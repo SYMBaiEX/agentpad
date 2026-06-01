@@ -1,0 +1,12 @@
+{
+  "name": "@agentpad/example-obs-overlay",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "dependencies": {
+    "@agentpad/core": "workspace:*",
+    "@agentpad/overlay": "workspace:*"
+  }
+}

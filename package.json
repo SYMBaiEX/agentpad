@@ -1,0 +1,47 @@
+{
+  "name": "agentpad",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bun-first TypeScript SDK for AI-agent virtual controller control, overlays, safety, and replay logs.",
+  "type": "module",
+  "homepage": "https://github.com/SYMBaiEX/agentpad#readme",
+  "bugs": {
+    "url": "https://github.com/SYMBaiEX/agentpad/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SYMBaiEX/agentpad.git"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/overlay",
+    "packages/cli",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo examples/*/dist examples/*/tsconfig.tsbuildinfo .turbo output",
+    "dev:fighter": "bun --cwd examples/agent-fighter dev",
+    "dev:overlay": "bun --cwd examples/obs-overlay dev",
+    "test": "bun test packages/core/src/__tests__/controller.test.ts",
+    "typecheck": "tsc -b",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "keywords": ["ai", "controller", "gamepad", "overlay", "bun"],
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.2.15",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "playwright": "^1.60.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  },
+  "packageManager": "bun@1.2.15"
+}

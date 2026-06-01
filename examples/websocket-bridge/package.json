@@ -1,0 +1,11 @@
+{
+  "name": "@agentpad/example-websocket-bridge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "dependencies": {
+    "@agentpad/core": "workspace:*"
+  }
+}

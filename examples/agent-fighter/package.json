@@ -1,0 +1,14 @@
+{
+  "name": "@agentpad/example-agent-fighter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "bun run server.ts",
+    "start": "bun run server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@agentpad/core": "workspace:*"
+  }
+}
