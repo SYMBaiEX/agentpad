@@ -61,6 +61,7 @@ native path:
 ```bash
 opencontroller native test \
   --backend macos-driverkit \
+  --id player-1 \
   --host-bridge-path "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
 ```
 
@@ -88,6 +89,7 @@ const reportBytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(messag
 const infoPlist = createMacosDriverKitInfoPlist();
 const sourceFiles = createMacosDriverKitDriverSourceFiles();
 const adapter = createMacosDriverKitHostBridgeAdapter({
+  controllerId: "player-1",
   hostBridgePath:
     "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
 });
@@ -117,6 +119,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createMacosDriverKitHostBridgeAdapter({
+    controllerId: "player-1",
     driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
     driverClassName: "OpenControllerVirtualGamepadDriver"
   }),
@@ -132,7 +135,9 @@ The default bridge path is
 The adapter passes `OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID`,
 `OPENCONTROLLER_DRIVERKIT_DRIVER_BUNDLE_ID`, and
 `OPENCONTROLLER_DRIVERKIT_SERVICE_NAME` to the process so a host bridge can bind
-to the intended DriverKit service.
+to the intended DriverKit service. It also passes
+`OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is provided so the host bridge
+can ignore other controllers in a shared multi-agent stream.
 
 ## Current Limitations
 

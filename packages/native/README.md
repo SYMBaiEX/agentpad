@@ -39,10 +39,12 @@ const adapter = createNativeHostBridgeAdapter({
     deviceName: "OpenController Virtual Gamepad"
   },
   windows: {
+    controllerId: "player-1",
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   },
   macos: {
+    controllerId: "player-1",
     hostBridgePath:
       "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
     driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad"

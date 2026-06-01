@@ -193,6 +193,7 @@ describe("macOS DriverKit helpers", () => {
       expect(plan.nativeTestCommand).toContain(
         "opencontroller native test --backend macos-driverkit",
       );
+      expect(plan.nativeTestCommand).toContain("--id player-1");
       expect(plan.nativeTestCommand).toContain(
         "com.example.opencontroller.driver",
       );
@@ -244,6 +245,7 @@ describe("macOS DriverKit helpers", () => {
       hostBridgePath:
         "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
       appBundleIdentifier: "com.example.opencontroller.host",
+      controllerId: "macos-player",
       driverBundleIdentifier: "com.example.opencontroller.driver",
       driverClassName: "ExampleOpenControllerDriver",
       waitForExitMs: 50,
@@ -271,6 +273,7 @@ describe("macOS DriverKit helpers", () => {
       "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
     );
     expect(calls[0]?.args).toEqual([]);
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("macos-player");
     expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID).toBe(
       "com.example.opencontroller.host",
     );

@@ -44,10 +44,12 @@ const adapter = createNativeHostBridgeAdapter({
     deviceName: "OpenController Virtual Gamepad"
   },
   windows: {
+    controllerId: "player-1",
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   },
   macos: {
+    controllerId: "player-1",
     hostBridgePath:
       "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
     driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad"
@@ -103,6 +105,7 @@ Windows and macOS host bridge paths can be supplied explicitly:
 ```bash
 opencontroller native test \
   --backend windows-vhf \
+  --id player-1 \
   --host-bridge-path ./OpenControllerVhfHostBridge.exe
 ```
 

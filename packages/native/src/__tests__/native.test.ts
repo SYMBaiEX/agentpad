@@ -91,6 +91,7 @@ describe("native host bridge facade", () => {
       waitForExitMs: 50,
       spawn,
       windows: {
+        controllerId: "native-player",
         hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
         devicePath: "\\\\.\\OpenControllerVhfGamepad",
       },
@@ -105,6 +106,7 @@ describe("native host bridge facade", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_VHF_DEVICE_PATH).toBe(
       "\\\\.\\OpenControllerVhfGamepad",
     );
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("native-player");
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );
@@ -118,6 +120,7 @@ describe("native host bridge facade", () => {
       waitForExitMs: 50,
       spawn,
       macos: {
+        controllerId: "native-player",
         hostBridgePath: "/tmp/OpenControllerDriverKitHostBridge",
         driverBundleIdentifier: "com.example.opencontroller.driver",
         driverClassName: "ExampleOpenControllerDriver",
@@ -134,6 +137,7 @@ describe("native host bridge facade", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_SERVICE_NAME).toBe(
       "ExampleOpenControllerDriver",
     );
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("native-player");
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );

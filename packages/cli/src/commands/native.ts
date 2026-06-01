@@ -295,8 +295,8 @@ export function createNativeTestPlan(
       backend,
       ...(waitForExitMs !== undefined ? { waitForExitMs } : {}),
       linux: createLinuxNativeTestOptions(flags, dryRun, id),
-      windows: createWindowsNativeTestOptions(flags),
-      macos: createMacosNativeTestOptions(flags),
+      windows: createWindowsNativeTestOptions(flags, id),
+      macos: createMacosNativeTestOptions(flags, id),
     },
   };
 }
@@ -650,11 +650,14 @@ function createLinuxNativeTestOptions(
 
 function createWindowsNativeTestOptions(
   flags: NativeCommandFlags,
+  controllerId: string,
 ): NonNullable<NativeHostBridgeAdapterOptions["windows"]> {
   const hostBridgePath =
     stringFlag(flags, "host-bridge-path") ?? stringFlag(flags, "helper-path");
   const devicePath = stringFlag(flags, "device-path");
-  const options: NonNullable<NativeHostBridgeAdapterOptions["windows"]> = {};
+  const options: NonNullable<NativeHostBridgeAdapterOptions["windows"]> = {
+    controllerId,
+  };
 
   if (hostBridgePath) {
     options.hostBridgePath = hostBridgePath;
@@ -668,12 +671,15 @@ function createWindowsNativeTestOptions(
 
 function createMacosNativeTestOptions(
   flags: NativeCommandFlags,
+  controllerId: string,
 ): NonNullable<NativeHostBridgeAdapterOptions["macos"]> {
   const hostBridgePath =
     stringFlag(flags, "host-bridge-path") ?? stringFlag(flags, "helper-path");
   const driverBundleIdentifier = stringFlag(flags, "driver-bundle-id");
   const driverClassName = stringFlag(flags, "driver-class-name");
-  const options: NonNullable<NativeHostBridgeAdapterOptions["macos"]> = {};
+  const options: NonNullable<NativeHostBridgeAdapterOptions["macos"]> = {
+    controllerId,
+  };
 
   if (hostBridgePath) {
     options.hostBridgePath = hostBridgePath;
@@ -730,7 +736,7 @@ Usage:
   opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
   opencontroller native test --backend linux-uinput --dry-run --id player-1
   opencontroller native test --backend current
-  opencontroller native test --backend windows-vhf --host-bridge-path ./OpenControllerVhfHostBridge.exe
+  opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path ./OpenControllerVhfHostBridge.exe
 
 Backends:
   current

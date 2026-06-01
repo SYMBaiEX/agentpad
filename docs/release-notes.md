@@ -46,18 +46,23 @@
   VHF-backed virtual HID gamepad
 - Windows VHF asset generator now emits host bridge C source/header templates
   that stream OpenController JSONL reports to the driver with `DeviceIoControl`
+- Windows VHF host bridge templates now support `OPENCONTROLLER_CONTROLLER_ID`
+  and `--controller-id` filtering for shared multi-agent streams
 - Windows VHF helpers now export `createWindowsVhfHostBridgeAdapter` for
   SDK-owned host bridge processes after a VHF driver package is built
 - macOS DriverKit asset generator now emits C++ source/header templates for an
   `IOUserHIDDevice` virtual gamepad dext
 - macOS DriverKit helpers now export `createMacosDriverKitHostBridgeAdapter`
   for SDK-owned host bridge processes after a signed host app is built
+- Windows VHF and macOS DriverKit host bridge adapters now pass
+  `OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is configured
 - `@opencontroller/native` package added with `createNativeHostBridgeAdapter`
   for selecting Linux `uinput`, Windows VHF, or macOS DriverKit from one import
 - `opencontroller native test` added to smoke-test a selected native host
   bridge from the CLI, including Linux `--dry-run` support
 - `opencontroller native test` now passes its emitted controller ID through to
-  Linux helper filtering so dry-run and real-device smoke tests stay aligned
+  every native host bridge adapter so smoke tests and controller filters stay
+  aligned
 - `opencontroller native setup` added as a unified CLI entrypoint for Linux
   uinput, Windows VHF, and macOS DriverKit setup workflows
 - `opencontroller-windows-vhf-setup` added to stage reviewed Windows VHF

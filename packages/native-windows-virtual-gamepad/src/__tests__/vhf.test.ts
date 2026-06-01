@@ -154,6 +154,9 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("DeviceIoControl");
     expect(source).toContain("hidReportBase64");
     expect(source).toContain("reportBase64");
+    expect(source).toContain("OPENCONTROLLER_CONTROLLER_ID");
+    expect(source).toContain("opencontroller_line_matches_controller_id");
+    expect(source).toContain("--controller-id");
     expect(source).toContain("opencontroller_extract_hid_report_base64");
     expect(source).toContain("opencontroller_extract_xinput_report_base64");
     expect(source).toContain("opencontroller_decode_xinput_report");
@@ -193,6 +196,7 @@ describe("windows VHF helpers", () => {
       expect(plan.nativeTestCommand).toContain(
         "opencontroller native test --backend windows-vhf",
       );
+      expect(plan.nativeTestCommand).toContain("--id player-1");
       expect(plan.nativeTestCommand).toContain("OpenControllerTestGamepad");
       expect(readme).toContain("No privileged system changes were made");
       expect(readme).toContain("Do not install");
@@ -238,6 +242,7 @@ describe("windows VHF helpers", () => {
     };
     const adapter = createWindowsVhfHostBridgeAdapter({
       hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+      controllerId: "windows-player",
       devicePath: "\\\\.\\OpenControllerVhfGamepad",
       waitForExitMs: 50,
       spawn,
@@ -262,6 +267,7 @@ describe("windows VHF helpers", () => {
       "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     );
     expect(calls[0]?.args).toEqual([]);
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("windows-player");
     expect(calls[0]?.env?.OPENCONTROLLER_VHF_DEVICE_PATH).toBe(
       "\\\\.\\OpenControllerVhfGamepad",
     );

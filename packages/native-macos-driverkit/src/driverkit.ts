@@ -54,6 +54,7 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
     MacosDriverKitBundleOptions,
     "appBundleIdentifier" | "driverBundleIdentifier" | "driverClassName"
   > & {
+    controllerId?: string;
     hostBridgePath?: string;
   };
 
@@ -214,7 +215,7 @@ export async function prepareMacosDriverKitSetup(
     codesignReminder:
       "codesign and notarize the host app and embedded dext with approved DriverKit entitlements",
     activationCheckCommand: "systemextensionsctl list",
-    nativeTestCommand: `opencontroller native test --backend macos-driverkit --host-bridge-path ${quoteShell(
+    nativeTestCommand: `opencontroller native test --backend macos-driverkit --id player-1 --host-bridge-path ${quoteShell(
       hostBridgePath,
     )} --driver-bundle-id ${quoteShell(
       bundle.driverBundleIdentifier,
@@ -781,7 +782,11 @@ function toCppIdentifier(value: string): string {
 function createMacosDriverKitHostBridgeEnv(
   options: Pick<
     MacosDriverKitHostBridgeAdapterOptions,
-    "appBundleIdentifier" | "driverBundleIdentifier" | "driverClassName" | "env"
+    | "appBundleIdentifier"
+    | "controllerId"
+    | "driverBundleIdentifier"
+    | "driverClassName"
+    | "env"
   >,
 ): Record<string, string | undefined> {
   const bundle = {
@@ -795,5 +800,8 @@ function createMacosDriverKitHostBridgeEnv(
     OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID: bundle.appBundleIdentifier,
     OPENCONTROLLER_DRIVERKIT_DRIVER_BUNDLE_ID: bundle.driverBundleIdentifier,
     OPENCONTROLLER_DRIVERKIT_SERVICE_NAME: bundle.driverClassName,
+    ...(options.controllerId
+      ? { OPENCONTROLLER_CONTROLLER_ID: options.controllerId }
+      : {}),
   };
 }

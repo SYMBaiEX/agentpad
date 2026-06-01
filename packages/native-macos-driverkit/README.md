@@ -42,6 +42,7 @@ the installed host bridge:
 ```bash
 opencontroller native test \
   --backend macos-driverkit \
+  --id player-1 \
   --host-bridge-path "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
 ```
 
@@ -93,6 +94,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createMacosDriverKitHostBridgeAdapter({
+    controllerId: "player-1",
     hostBridgePath:
       "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
     driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
@@ -107,8 +109,10 @@ await controller.disconnect();
 
 The adapter streams descriptor-backed `hidReportBase64` payloads to the host
 bridge process and exports the driver identity through
-`OPENCONTROLLER_DRIVERKIT_*` environment variables. It does not bypass Apple's
-signing, notarization, entitlement, or user-approval requirements.
+`OPENCONTROLLER_DRIVERKIT_*` environment variables. It also sets
+`OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is provided so host bridges
+can ignore other controllers in a shared multi-agent stream. It does not bypass
+Apple's signing, notarization, entitlement, or user-approval requirements.
 
 ## Diagnose
 

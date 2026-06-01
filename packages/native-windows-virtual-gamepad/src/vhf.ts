@@ -66,6 +66,7 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   | "onExit"
 > & {
   hostBridgePath?: string;
+  controllerId?: string;
   devicePath?: string;
 };
 
@@ -225,7 +226,7 @@ export async function prepareWindowsVhfSetup(
     ),
     readmePath,
     installCommand: `pnputil /add-driver ${quotePowerShell(infPath)} /install`,
-    nativeTestCommand: `opencontroller native test --backend windows-vhf --host-bridge-path ${quotePowerShell(
+    nativeTestCommand: `opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path ${quotePowerShell(
       hostBridgePath,
     )} --device-path ${quotePowerShell(devicePath)}`,
   };
@@ -693,6 +694,10 @@ export function createWindowsVhfHostBridgeSource(
     "#define OPENCONTROLLER_LINE_MAX 8192",
     "",
     "static int opencontroller_is_disconnect(const char *line);",
+    "static int opencontroller_line_matches_controller_id(",
+    "  const char *line,",
+    "  const char *controllerId",
+    ");",
     "static int opencontroller_extract_hid_report_base64(",
     "  const char *line,",
     "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
@@ -717,14 +722,46 @@ export function createWindowsVhfHostBridgeSource(
     "int main(int argc, char **argv)",
     "{",
     '  const char *devicePath = getenv("OPENCONTROLLER_VHF_DEVICE_PATH");',
+    '  const char *controllerId = getenv("OPENCONTROLLER_CONTROLLER_ID");',
+    '  const char *controllerIdPrefix = "--controller-id=";',
     "  HANDLE device;",
     "  char line[OPENCONTROLLER_LINE_MAX];",
     "  uint8_t neutralReport[OPENCONTROLLER_HID_REPORT_BYTES] = {0};",
+    "  int argIndex;",
     "",
     "  neutralReport[0] = OPENCONTROLLER_HID_REPORT_ID;",
     "",
-    "  if (argc > 1 && argv[1][0] != '\\0') {",
-    "    devicePath = argv[1];",
+    "  for (argIndex = 1; argIndex < argc; argIndex++) {",
+    '    if (strcmp(argv[argIndex], "--controller-id") == 0) {',
+    "      if (argIndex + 1 >= argc || argv[argIndex + 1][0] == '\\0') {",
+    '        fprintf(stderr, "opencontroller-vhf-host: --controller-id requires a value\\n");',
+    "        return 2;",
+    "      }",
+    "      controllerId = argv[++argIndex];",
+    "      continue;",
+    "    }",
+    "    if (strncmp(argv[argIndex], controllerIdPrefix, strlen(controllerIdPrefix)) == 0) {",
+    "      controllerId = argv[argIndex] + strlen(controllerIdPrefix);",
+    "      if (controllerId[0] == '\\0') {",
+    '        fprintf(stderr, "opencontroller-vhf-host: --controller-id requires a value\\n");',
+    "        return 2;",
+    "      }",
+    "      continue;",
+    "    }",
+    '    if (strcmp(argv[argIndex], "--device-path") == 0) {',
+    "      if (argIndex + 1 >= argc || argv[argIndex + 1][0] == '\\0') {",
+    '        fprintf(stderr, "opencontroller-vhf-host: --device-path requires a value\\n");',
+    "        return 2;",
+    "      }",
+    "      devicePath = argv[++argIndex];",
+    "      continue;",
+    "    }",
+    "    if (argv[argIndex][0] != '\\0' && argv[argIndex][0] != '-') {",
+    "      devicePath = argv[argIndex];",
+    "      continue;",
+    "    }",
+    '    fprintf(stderr, "opencontroller-vhf-host: unknown argument: %s\\n", argv[argIndex]);',
+    "    return 2;",
     "  }",
     "  if (devicePath == NULL || devicePath[0] == '\\0') {",
     `    devicePath = ${prefix}_DEFAULT_DEVICE_PATH;`,
@@ -753,6 +790,10 @@ export function createWindowsVhfHostBridgeSource(
     "    uint8_t xinputBytes[OPENCONTROLLER_XINPUT_REPORT_BYTES];",
     "    uint8_t hidReport[OPENCONTROLLER_HID_REPORT_BYTES];",
     "    OPENCONTROLLER_XINPUT_REPORT xinputReport;",
+    "",
+    "    if (!opencontroller_line_matches_controller_id(line, controllerId)) {",
+    "      continue;",
+    "    }",
     "",
     "    if (opencontroller_is_disconnect(line)) {",
     "      opencontroller_submit_hid_report(device, neutralReport);",
@@ -880,6 +921,36 @@ export function createWindowsVhfHostBridgeSource(
     "static int opencontroller_is_disconnect(const char *line)",
     "{",
     '  return strstr(line, "\\"type\\":\\"opencontroller.bridge.disconnect\\"") != NULL;',
+    "}",
+    "",
+    "static int opencontroller_line_matches_controller_id(",
+    "  const char *line,",
+    "  const char *controllerId",
+    ")",
+    "{",
+    '  const char *key = "\\"controllerId\\":\\"";',
+    "  const char *start;",
+    "  const char *end;",
+    "  size_t idLength;",
+    "",
+    "  if (controllerId == NULL || controllerId[0] == '\\0') {",
+    "    return 1;",
+    "  }",
+    "",
+    "  start = strstr(line, key);",
+    "  if (start == NULL) {",
+    "    return 0;",
+    "  }",
+    "",
+    "  start += strlen(key);",
+    "  end = strchr(start, '\"');",
+    "  if (end == NULL) {",
+    "    return 0;",
+    "  }",
+    "",
+    "  idLength = (size_t)(end - start);",
+    "  return strlen(controllerId) == idLength &&",
+    "    strncmp(start, controllerId, idLength) == 0;",
     "}",
     "",
     "static void opencontroller_decode_xinput_report(",
@@ -1051,11 +1122,17 @@ function quotePowerShell(value: string): string {
 }
 
 function createWindowsVhfHostBridgeEnv(
-  options: Pick<WindowsVhfHostBridgeAdapterOptions, "devicePath" | "env">,
+  options: Pick<
+    WindowsVhfHostBridgeAdapterOptions,
+    "controllerId" | "devicePath" | "env"
+  >,
 ): Record<string, string | undefined> {
   return {
     ...process.env,
     ...options.env,
+    ...(options.controllerId
+      ? { OPENCONTROLLER_CONTROLLER_ID: options.controllerId }
+      : {}),
     ...(options.devicePath
       ? { OPENCONTROLLER_VHF_DEVICE_PATH: options.devicePath }
       : {}),

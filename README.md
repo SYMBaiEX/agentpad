@@ -400,6 +400,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createMacosDriverKitHostBridgeAdapter({
+    controllerId: "player-1",
     driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
     driverClassName: "OpenControllerVirtualGamepadDriver"
   }),
@@ -445,6 +446,11 @@ the same stream without opening `/dev/uinput`. Use `--controller-id` or
 `OPENCONTROLLER_CONTROLLER_ID` when a helper reads a shared stream so one
 virtual device only reacts to its assigned controller. Real device mode
 requires Linux and write access to `/dev/uinput`.
+
+The Windows VHF and macOS DriverKit host bridge adapters use the same
+`controllerId` option and `OPENCONTROLLER_CONTROLLER_ID` environment contract,
+so one helper process can safely own one virtual controller even when agents
+share a bridge stream.
 
 ### React Overlay
 

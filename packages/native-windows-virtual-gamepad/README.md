@@ -60,7 +60,7 @@ pnputil /add-driver ".\opencontroller-windows-vhf\driver\OpenControllerVhfGamepa
 Then test the installed driver and host bridge:
 
 ```powershell
-opencontroller native test --backend windows-vhf --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
+opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
 ```
 
 ## VHF Assets
@@ -106,7 +106,9 @@ The generated host bridge C source is the user-mode side of that handoff. It
 reads OpenController native bridge JSONL from stdin, prefers direct
 `hidReportBase64` payloads, falls back to converting legacy `reportBase64`
 XInput bytes, opens the driver device path, and sends reports with
-`DeviceIoControl`.
+`DeviceIoControl`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
+`--controller-id` to bind a host bridge process to one controller from a shared
+multi-agent stream.
 
 After building and reviewing that host bridge, SDK code can own the process:
 
@@ -120,6 +122,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createWindowsVhfHostBridgeAdapter({
+    controllerId: "player-1",
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   }),

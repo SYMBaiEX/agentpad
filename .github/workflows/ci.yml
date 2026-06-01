@@ -119,6 +119,8 @@ jobs:
           test -f /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
           grep -q "No privileged system changes were made" /tmp/opencontroller-windows-vhf/README.md
           grep -q "DeviceIoControl" /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
+          grep -q "OPENCONTROLLER_CONTROLLER_ID" /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
+          grep -q -- "--id player-1" /tmp/opencontroller-windows-vhf-setup.json
       - run: |
           bun packages/native-macos-driverkit/dist/bin/setup.js \
             --output /tmp/opencontroller-macos-driverkit \
@@ -132,6 +134,7 @@ jobs:
           test -f /tmp/opencontroller-macos-driverkit/host-app/OpenControllerHost.entitlements
           grep -q "No privileged system changes were made" /tmp/opencontroller-macos-driverkit/README.md
           grep -q "System Extension activation" /tmp/opencontroller-macos-driverkit/README.md
+          grep -q -- "--id player-1" /tmp/opencontroller-macos-driverkit-setup.json
       - run: |
           bun packages/cli/dist/index.js native setup \
             --backend windows-vhf \

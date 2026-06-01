@@ -124,6 +124,21 @@ describe("native backend test plan", () => {
     expect(plan.adapterOptions.windows?.hostBridgePath).toBe(
       "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     );
+    expect(plan.adapterOptions.windows?.controllerId).toBe("native-test");
+  });
+
+  test("passes native test controller ids through non-Linux adapters", () => {
+    const windowsPlan = createNativeTestPlan({
+      backend: "windows-vhf",
+      id: "player-2",
+    });
+    const macosPlan = createNativeTestPlan({
+      backend: "macos-driverkit",
+      id: "player-3",
+    });
+
+    expect(windowsPlan.adapterOptions.windows?.controllerId).toBe("player-2");
+    expect(macosPlan.adapterOptions.macos?.controllerId).toBe("player-3");
   });
 
   test("rejects all-backend native tests", () => {
@@ -304,7 +319,7 @@ const fakeWindowsSetupPlan = {
   installCommand:
     'pnputil /add-driver "C:\\OpenController\\vhf-kit\\driver\\OpenControllerVhfGamepad.inf" /install',
   nativeTestCommand:
-    'opencontroller native test --backend windows-vhf --host-bridge-path "C:\\OpenController\\OpenControllerVhfHostBridge.exe"',
+    'opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path "C:\\OpenController\\OpenControllerVhfHostBridge.exe"',
 } as const;
 
 const fakeMacosSetupPlan = {
@@ -335,5 +350,5 @@ const fakeMacosSetupPlan = {
     "codesign and notarize the host app and embedded dext with approved DriverKit entitlements",
   activationCheckCommand: "systemextensionsctl list",
   nativeTestCommand:
-    "opencontroller native test --backend macos-driverkit --host-bridge-path '/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge'",
+    "opencontroller native test --backend macos-driverkit --id player-1 --host-bridge-path '/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge'",
 } as const;

@@ -152,3 +152,8 @@ template that reads this JSONL stream from stdin and submits HID reports to the
 VHF driver with `DeviceIoControl`. The HID payload also carries Home/Guide/PS
 and auxiliary Capture/Touchpad controls; the XInput compatibility payload keeps
 the standard XInput button mask and omits those system controls.
+
+Native host bridges should use `controllerId` to isolate devices when a stream
+contains multiple agents. OpenController adapters pass the selected ID through
+`OPENCONTROLLER_CONTROLLER_ID`; Linux and generated Windows helpers also accept
+`--controller-id`.

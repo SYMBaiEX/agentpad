@@ -62,7 +62,7 @@ After the signed driver and user-mode host bridge are installed, smoke-test the
 native path:
 
 ```powershell
-opencontroller native test --backend windows-vhf --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
+opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
 ```
 
 ## VHF Assets
@@ -108,7 +108,10 @@ reviewed user-mode host path before installation.
 The generated host bridge C source reads OpenController native bridge JSONL from
 stdin, prefers direct `hidReportBase64` payloads, falls back to converting
 legacy `reportBase64` XInput packets, opens the VHF driver with `CreateFileA`,
-and writes 13-byte HID reports through `DeviceIoControl`.
+and writes 13-byte HID reports through `DeviceIoControl`. Set
+`OPENCONTROLLER_CONTROLLER_ID` or pass `--controller-id` when the host bridge is
+reading a shared stream so each virtual device only reacts to its assigned
+controller.
 
 After the driver and host bridge are built and reviewed, SDK code can spawn the
 host bridge directly:
@@ -123,6 +126,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createWindowsVhfHostBridgeAdapter({
+    controllerId: "player-1",
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   }),
