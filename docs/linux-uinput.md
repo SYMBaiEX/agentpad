@@ -62,18 +62,15 @@ reviewing local permission changes.
 Or let the SDK own the helper process:
 
 ```ts
+import { createController } from "@opencontroller/core";
 import {
-  NativeProcessBridgeAdapter,
-  createController
-} from "@opencontroller/core";
+  createLinuxUinputBridgeAdapter
+} from "@opencontroller/native-linux-uinput";
 
 const controller = await createController({
   id: "player-1",
   profile: "xbox",
-  adapter: new NativeProcessBridgeAdapter({
-    command: `${process.env.HOME}/.opencontroller/bin/opencontroller-uinput-bridge`,
-    includeState: false
-  }),
+  adapter: createLinuxUinputBridgeAdapter(),
   replay: false
 });
 ```

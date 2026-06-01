@@ -18,6 +18,49 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
+      - run: |
+          node --input-type=module <<'EOF'
+          import {
+            NativeProcessBridgeAdapter,
+            createController
+          } from "./packages/core/dist/index.js";
+          import {
+            createLinuxUinputBridgeAdapter,
+            defaultLinuxUinputHelperPath
+          } from "./packages/native-linux-uinput/dist/index.js";
+
+          if (typeof createLinuxUinputBridgeAdapter !== "function") {
+            throw new Error("Linux uinput adapter factory is not exported");
+          }
+          if (!defaultLinuxUinputHelperPath("/tmp/home").endsWith("opencontroller-uinput-bridge")) {
+            throw new Error("Linux uinput helper path export is invalid");
+          }
+
+          let stdout = "";
+          const adapter = new NativeProcessBridgeAdapter({
+            command: "/bin/cat",
+            waitForExitMs: 500,
+            onStdout(chunk) {
+              stdout += chunk;
+            }
+          });
+          const controller = await createController({
+            id: "node-ci",
+            profile: "xbox",
+            adapter,
+            replay: false
+          });
+          await controller.press("A", 1);
+          await controller.disconnect();
+          await new Promise((resolve) => setTimeout(resolve, 20));
+
+          if (!stdout.includes("hidReportBase64")) {
+            throw new Error("Node native process smoke did not emit HID reports");
+          }
+          if (!stdout.includes("opencontroller.bridge.disconnect")) {
+            throw new Error("Node native process smoke did not emit disconnect");
+          }
+          EOF
       - run: cc -fsyntax-only -Wall -Wextra packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
       - run: cc -O2 -Wall -Wextra -o /tmp/opencontroller-uinput-bridge packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
       - run: |

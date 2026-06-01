@@ -57,17 +57,16 @@ You can also set `OPENCONTROLLER_UINPUT_DRY_RUN=1` for CI scripts.
 SDK code can also spawn the helper directly:
 
 ```ts
+import { createController } from "@opencontroller/core";
 import {
-  NativeProcessBridgeAdapter,
-  createController
-} from "@opencontroller/core";
+  createLinuxUinputBridgeAdapter
+} from "@opencontroller/native-linux-uinput";
 
 const controller = await createController({
   id: "player-1",
   profile: "xbox",
-  adapter: new NativeProcessBridgeAdapter({
-    command: `${process.env.HOME}/.opencontroller/bin/opencontroller-uinput-bridge`,
-    includeState: false
+  adapter: createLinuxUinputBridgeAdapter({
+    deviceName: "OpenController Virtual Gamepad"
   }),
   replay: false
 });

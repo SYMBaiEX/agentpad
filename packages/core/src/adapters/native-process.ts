@@ -1,3 +1,5 @@
+import { spawn as spawnChildProcess } from "node:child_process";
+import { Readable } from "node:stream";
 import {
   type NativeBridgeMessage,
   createNativeBridgeDisconnectMessage,
@@ -222,13 +224,59 @@ function defaultSpawnNativeProcess(
   args: string[],
   options: NativeProcessBridgeSpawnOptions,
 ): NativeProcessBridgeProcess {
-  return Bun.spawn([command, ...args], {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
+  const bun = (globalThis as typeof globalThis & { Bun?: typeof Bun }).Bun;
+  if (bun) {
+    return bun.spawn([command, ...args], {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      ...(options.cwd ? { cwd: options.cwd } : {}),
+      ...(options.env ? { env: options.env } : {}),
+    });
+  }
+
+  const child = spawnChildProcess(command, args, {
     ...(options.cwd ? { cwd: options.cwd } : {}),
-    ...(options.env ? { env: options.env } : {}),
+    ...(options.env ? { env: options.env as NodeJS.ProcessEnv } : {}),
+    stdio: ["pipe", "pipe", "pipe"],
   });
+  const exited = new Promise<number>((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) => resolve(code ?? 0));
+  });
+
+  return {
+    stdin: {
+      write(chunk) {
+        return new Promise<number>((resolve, reject) => {
+          child.stdin.write(chunk, (error) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(chunk.length);
+            }
+          });
+        });
+      },
+      flush() {
+        return 0;
+      },
+      end() {
+        child.stdin.end();
+        return 0;
+      },
+    },
+    stdout: child.stdout
+      ? (Readable.toWeb(child.stdout) as unknown as ReadableStream<Uint8Array>)
+      : null,
+    stderr: child.stderr
+      ? (Readable.toWeb(child.stderr) as unknown as ReadableStream<Uint8Array>)
+      : null,
+    exited,
+    kill(signal) {
+      child.kill(signal);
+    },
+  };
 }
 
 function sleep(ms: number): Promise<void> {

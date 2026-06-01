@@ -31,6 +31,10 @@
     "./diagnostics": {
       "types": "./dist/diagnostics.d.ts",
       "import": "./dist/diagnostics.js"
+    },
+    "./linux-uinput": {
+      "types": "./dist/linux-uinput.d.ts",
+      "import": "./dist/linux-uinput.js"
     }
   },
   "bin": {
@@ -39,7 +43,7 @@
   },
   "files": ["dist", "src/helper/opencontroller-uinput-bridge.c", "README.md"],
   "scripts": {
-    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/bin/*.js",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist && chmod +x dist/bin/*.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test src/__tests__"
   },

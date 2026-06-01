@@ -44,7 +44,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test src/__tests__/controller.test.ts"
   },

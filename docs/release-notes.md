@@ -17,6 +17,12 @@
   payloads and falls back to legacy XInput payloads
 - Linux `uinput` helper now supports dry-run JSONL decoding, and CI compiles
   and smoke-tests the real C helper parser
+- Linux package now exports `createLinuxUinputBridgeAdapter` for SDK-owned
+  helper processes with default helper path, device naming, and dry-run options
+- package builds now rewrite emitted relative ESM imports for Node-compatible
+  npm consumption
+- `NativeProcessBridgeAdapter` now falls back to Node `child_process` when Bun
+  is not the active runtime
 - Linux uinput doctor added for module, device, permission, and udev-rule
   diagnostics
 - `@opencontroller/native-windows-virtual-gamepad` package added with XUSB

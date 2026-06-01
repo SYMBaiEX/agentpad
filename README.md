@@ -322,9 +322,9 @@ await controller.disconnect();
 ```
 
 Each line is a versioned bridge message containing the controller id, profile,
-diagnostic report fields, and base64-encoded XInput report bytes. Native bridge
-processes can consume the same stream over stdio, pipes, sockets, or any ordered
-byte transport.
+diagnostic report fields, and base64-encoded XInput/HID report bytes. Native
+bridge processes can consume the same stream over stdio, pipes, sockets, or any
+ordered byte transport.
 
 ### Native Process Helpers
 
@@ -346,6 +346,23 @@ const controller = await createController({
 
 await controller.press("A", 80);
 await controller.disconnect();
+```
+
+Linux projects can use the package-level helper instead of wiring the process
+adapter manually:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createLinuxUinputBridgeAdapter
+} from "@opencontroller/native-linux-uinput";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createLinuxUinputBridgeAdapter(),
+  replay: false
+});
 ```
 
 This adapter spawns a helper process, streams native bridge JSONL to stdin,
