@@ -16,6 +16,7 @@ import {
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
   hidGamepadReportFromNativeBridgeMessage,
+  nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage,
   xInputButtonBits,
@@ -178,6 +179,21 @@ describe("controller runtime", () => {
 
     expect(aPressed.state).toBeUndefined();
     expect(nativeBridgeMessageToReportBytes(aPressed).byteLength).toBe(12);
+    expect(aPressed.hidReportFormat).toBe("hid-gamepad");
+    expect(aPressed.hidReport?.reportId).toBe(1);
+    expect(typeof aPressed.hidReportBase64).toBe("string");
+    expect(
+      nativeBridgeMessageToHidGamepadReportBytes(aPressed).byteLength,
+    ).toBe(hidGamepadReportByteLength);
+    const {
+      hidReportFormat: _hidReportFormat,
+      hidReport: _hidReport,
+      hidReportBase64: _hidReportBase64,
+      ...legacyMessage
+    } = aPressed;
+    expect(
+      nativeBridgeMessageToHidGamepadReportBytes(legacyMessage).byteLength,
+    ).toBe(hidGamepadReportByteLength);
     expect(
       encodeHidGamepadReport(hidGamepadReportFromNativeBridgeMessage(aPressed))
         .byteLength,

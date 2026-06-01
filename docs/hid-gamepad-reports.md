@@ -60,4 +60,7 @@ const bytes = encodeHidGamepadReport(report);
 
 Native bridge processes can keep consuming the existing JSONL protocol and
 convert each state message into this HID report when their platform API expects
-descriptor-backed HID input.
+descriptor-backed HID input. New native bridge messages also include
+`hidReportBase64`, so descriptor-backed drivers can consume the packed 13-byte
+report directly and use `hidGamepadReportFromNativeBridgeMessage` as a checked
+fallback.

@@ -75,9 +75,10 @@ WDK project starting point, then add signing, installation, and a user-mode host
 bridge that writes the buffered IOCTL.
 
 The generated host bridge C source is the user-mode side of that handoff. It
-reads OpenController native bridge JSONL from stdin, decodes `reportBase64`,
-converts XInput bytes to the OpenController HID report, opens the driver device
-path, and sends reports with `DeviceIoControl`.
+reads OpenController native bridge JSONL from stdin, prefers direct
+`hidReportBase64` payloads, falls back to converting legacy `reportBase64`
+XInput bytes, opens the driver device path, and sends reports with
+`DeviceIoControl`.
 
 ## Report Helpers
 

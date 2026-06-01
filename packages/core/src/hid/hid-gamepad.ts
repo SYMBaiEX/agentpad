@@ -1,11 +1,7 @@
 import type { NativeBridgeStateMessage } from "../bridge/native";
-import { nativeBridgeMessageToReportBytes } from "../bridge/native";
+import { nativeBridgeMessageToHidGamepadReportBytes } from "../bridge/native";
 import type { ControllerState } from "../types";
-import {
-  type XInputGamepadReport,
-  createXInputReport,
-  decodeXInputReport,
-} from "./xinput";
+import { type XInputGamepadReport, createXInputReport } from "./xinput";
 
 export const hidGamepadReportId = 1;
 export const hidGamepadReportByteLength = 13;
@@ -109,8 +105,8 @@ export function createHidGamepadReport(
 export function hidGamepadReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
 ): HidGamepadReport {
-  return createHidGamepadReport(
-    decodeXInputReport(nativeBridgeMessageToReportBytes(message)),
+  return decodeHidGamepadReport(
+    nativeBridgeMessageToHidGamepadReportBytes(message),
   );
 }
 

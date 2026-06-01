@@ -80,9 +80,9 @@ with `VhfReadReportSubmit`. It still needs a signed driver package and a
 reviewed user-mode host path before installation.
 
 The generated host bridge C source reads OpenController native bridge JSONL from
-stdin, decodes each `reportBase64` XInput packet, converts it to the
-descriptor-backed 13-byte HID report, opens the VHF driver with `CreateFileA`,
-and writes reports through `DeviceIoControl`.
+stdin, prefers direct `hidReportBase64` payloads, falls back to converting
+legacy `reportBase64` XInput packets, opens the VHF driver with `CreateFileA`,
+and writes 13-byte HID reports through `DeviceIoControl`.
 
 ## XUSB Reports
 

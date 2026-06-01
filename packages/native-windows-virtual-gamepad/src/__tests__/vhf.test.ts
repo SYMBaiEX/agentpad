@@ -141,7 +141,10 @@ describe("windows VHF helpers", () => {
     expect(header).toContain("OpenControllerVhfGamepad");
     expect(source).toContain("CreateFileA");
     expect(source).toContain("DeviceIoControl");
-    expect(source).toContain('const char *key = "\\"reportBase64\\":\\""');
+    expect(source).toContain("hidReportBase64");
+    expect(source).toContain("reportBase64");
+    expect(source).toContain("opencontroller_extract_hid_report_base64");
+    expect(source).toContain("opencontroller_extract_xinput_report_base64");
     expect(source).toContain("opencontroller_decode_xinput_report");
     expect(source).toContain("opencontroller_encode_hid_report");
     expect(source).toContain("OPENCONTROLLER_VHF_DEVICE_PATH");

@@ -92,13 +92,26 @@ const controller = await createController({
     "rightStickX": 0,
     "rightStickY": 0
   },
-  "reportBase64": "ABAAAAAAAAAAAAAA"
+  "reportBase64": "ABAAAAAAAAAAAAAA",
+  "hidReportFormat": "hid-gamepad",
+  "hidReport": {
+    "reportId": 1,
+    "buttons": 4096,
+    "leftTrigger": 0,
+    "rightTrigger": 0,
+    "leftStickX": 0,
+    "leftStickY": 0,
+    "rightStickX": 0,
+    "rightStickY": 0
+  },
+  "hidReportBase64": "AQAQAAAAAAAAAAAAAA=="
 }
 ```
 
 Set `includeState: true` to include the full OpenController state object in
-each message. Native drivers should use `reportBase64` as the authoritative
-packed report and may use `report` for diagnostics.
+each message. `reportBase64` remains the compatibility XInput payload.
+Descriptor-backed native drivers should prefer `hidReportBase64`, which is the
+13-byte OpenController HID gamepad report matching the shared descriptor.
 
 ## Disconnect Message
 
@@ -118,6 +131,7 @@ receive a disconnect message or when the stream closes unexpectedly.
 
 ```ts
 import {
+  nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage
 } from "@opencontroller/core/bridge";
@@ -125,12 +139,14 @@ import {
 const message = parseNativeBridgeMessage(line);
 
 if (message.type === "opencontroller.bridge.state") {
-  const bytes = nativeBridgeMessageToReportBytes(message);
-  // Write bytes to the platform virtual-device backend.
+  const xinputBytes = nativeBridgeMessageToReportBytes(message);
+  const hidBytes = nativeBridgeMessageToHidGamepadReportBytes(message);
+  // Write the payload required by the platform virtual-device backend.
 }
 ```
 
 Platform packages can either consume the XInput bytes directly or convert them
-to a descriptor-backed HID report. The Windows VHF helpers generate a host
-bridge C template that reads this JSONL stream from stdin and submits HID
-reports to the VHF driver with `DeviceIoControl`.
+to a descriptor-backed HID report. New descriptor-backed bridges should consume
+`hidReportBase64` directly. The Windows VHF helpers generate a host bridge C
+template that reads this JSONL stream from stdin and submits HID reports to the
+VHF driver with `DeviceIoControl`.

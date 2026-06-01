@@ -56,7 +56,7 @@ developer experience on top.
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
 - Canonical HID gamepad report descriptor and input report encoder
-- Versioned JSONL native bridge protocol for driver and daemon integrations
+- Versioned JSONL native bridge protocol with XInput and HID report payloads
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, native backend doctor, test, overlay, replay, and starter action maps
@@ -185,7 +185,7 @@ The core package exports:
 - built-in profiles for common controller families
 - dry-run, WebSocket, and XInput report adapters
 - native process bridge adapter for helper processes
-- native bridge JSONL protocol helpers
+- native bridge JSONL protocol helpers with direct HID report bytes
 - safety policies and replay logging
 - XInput report helpers from `@opencontroller/core/hid`
 - HID gamepad report descriptor and report helpers from `@opencontroller/core/hid`
@@ -415,7 +415,7 @@ Current adapters:
 - `dry-run`: updates state, safety, and replay logs without touching a real device
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
-- `native-bridge`: emits versioned JSONL messages for native bridge processes
+- `native-bridge`: emits versioned JSONL messages with XInput and HID report payloads for native bridge processes
 - `NativeProcessBridgeAdapter`: streams JSONL directly to a helper process stdin
 
 Runtime adapters can also opt into full state synchronization. This is the
