@@ -13,6 +13,10 @@ import {
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
   hidGamepadRumbleReportId,
+  hidPlayStationExtendedReportByteLength,
+  hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithRumble,
+  hidPlayStationExtendedReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -25,17 +29,27 @@ import {
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
   decodeMacosDriverKitInputReport,
+  decodeMacosDriverKitPlayStationInputReport,
   decodeMacosDriverKitRumbleReport,
   defaultMacosDriverKitHostBridgePath,
   encodeMacosDriverKitInputReport,
+  encodeMacosDriverKitPlayStationInputReport,
   encodeMacosDriverKitRumbleReport,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitInputReportForCpp,
+  formatMacosDriverKitPlayStationHidDescriptorForCpp,
+  formatMacosDriverKitPlayStationInputReportForCpp,
   formatMacosDriverKitSetupPlan,
   macosDriverKitHidReportDescriptor,
   macosDriverKitHidReportDescriptorWithRumble,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitInputReportFromNativeBridgeMessage,
+  macosDriverKitPlayStationHidReportDescriptor,
+  macosDriverKitPlayStationHidReportDescriptorWithRumble,
+  macosDriverKitPlayStationInputReportByteLength,
+  macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage,
+  macosDriverKitPlayStationInputReportFromNativeBridgeMessage,
+  macosDriverKitPlayStationInputReportId,
   macosDriverKitRumbleReportByteLength,
   prepareMacosDriverKitSetup,
 } from "../driverkit";
@@ -48,6 +62,12 @@ describe("macOS DriverKit helpers", () => {
     expect(Array.from(macosDriverKitHidReportDescriptorWithRumble)).toEqual(
       Array.from(hidGamepadReportDescriptorWithRumble),
     );
+    expect(Array.from(macosDriverKitPlayStationHidReportDescriptor)).toEqual(
+      Array.from(hidPlayStationExtendedReportDescriptor),
+    );
+    expect(
+      Array.from(macosDriverKitPlayStationHidReportDescriptorWithRumble),
+    ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
   });
 
   test("creates DriverKit rumble output report bytes", () => {
@@ -115,6 +135,95 @@ describe("macOS DriverKit helpers", () => {
     expect(decoded).toEqual(report);
   });
 
+  test("creates PlayStation DriverKit input report bytes from native bridge messages", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "playstation",
+      connected: true,
+      buttons: {
+        CROSS: true,
+        CIRCLE: false,
+        SQUARE: false,
+        TRIANGLE: false,
+        L1: false,
+        R1: false,
+        L2: false,
+        R2: false,
+        SHARE: false,
+        OPTIONS: false,
+        PS: false,
+        L3: false,
+        R3: false,
+        TOUCHPAD: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        L2: 0,
+        R2: 0.5,
+      },
+      sticks: {
+        left: { x: 0, y: 0 },
+        right: { x: 0, y: 0 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: true,
+        contacts: [
+          {
+            id: 4,
+            active: true,
+            x: 0.25,
+            y: 0.75,
+            pressure: 0.5,
+          },
+        ],
+      },
+      motion: {
+        acceleration: { x: 0, y: 0, z: 1 },
+        gyroscope: { x: 0, y: 0, z: 0 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const report =
+      macosDriverKitPlayStationInputReportFromNativeBridgeMessage(message);
+    const bytes =
+      macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage(message);
+    const decoded = decodeMacosDriverKitPlayStationInputReport(bytes);
+
+    expect(bytes.byteLength).toBe(
+      macosDriverKitPlayStationInputReportByteLength,
+    );
+    expect(macosDriverKitPlayStationInputReportByteLength).toBe(
+      hidPlayStationExtendedReportByteLength,
+    );
+    expect(report.reportId).toBe(macosDriverKitPlayStationInputReportId);
+    expect(macosDriverKitPlayStationInputReportId).toBe(
+      hidPlayStationExtendedReportId,
+    );
+    expect(report.touchpadPressed).toBe(true);
+    expect(report.touchpadContacts[0]).toEqual({
+      id: 4,
+      active: true,
+      x: 16384,
+      y: 49151,
+      pressure: 128,
+    });
+    expect(decoded).toEqual(report);
+  });
+
   test("formats descriptor and report arrays for DriverKit source", () => {
     const report = {
       reportId: hidGamepadReportId,
@@ -144,6 +253,48 @@ describe("macOS DriverKit helpers", () => {
     ).toEqual(report);
   });
 
+  test("formats PlayStation descriptor and report arrays for DriverKit source", () => {
+    const report = {
+      reportId: hidPlayStationExtendedReportId,
+      buttons: xInputButtonBits.A,
+      leftTrigger: 0,
+      rightTrigger: 128,
+      leftStickX: 0,
+      leftStickY: 0,
+      rightStickX: 0,
+      rightStickY: 0,
+      touchpadPressed: true,
+      touchpadContacts: [
+        { id: 1, active: true, x: 65535, y: 0, pressure: 255 },
+        { id: 0, active: false, x: 0, y: 0, pressure: 0 },
+      ],
+      accelerationX: 0,
+      accelerationY: 0,
+      accelerationZ: 32767,
+      gyroscopeX: 0,
+      gyroscopeY: 0,
+      gyroscopeZ: 0,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    } as const;
+
+    const descriptor = formatMacosDriverKitPlayStationHidDescriptorForCpp();
+    const inputReport =
+      formatMacosDriverKitPlayStationInputReportForCpp(report);
+
+    expect(descriptor).toContain(
+      "static const uint8_t openControllerPlayStationHidReportDescriptor[]",
+    );
+    expect(descriptor).toContain("0x85, 0x03");
+    expect(inputReport).toContain(
+      "static const uint8_t openControllerPlayStationSampleInputReport[]",
+    );
+    expect(encodeMacosDriverKitPlayStationInputReport(report).byteLength).toBe(
+      47,
+    );
+  });
+
   test("creates DriverKit plist and entitlement templates", () => {
     const infoPlist = createMacosDriverKitInfoPlist();
     const dextEntitlements = createMacosDriverKitEntitlements();
@@ -166,7 +317,9 @@ describe("macOS DriverKit helpers", () => {
     expect(manifest.systemExtensionPath).toContain(
       "Contents/Library/SystemExtensions",
     );
+    expect(manifest.reportProfile).toBe("generic");
     expect(manifest.inputReportByteLength).toBe(13);
+    expect(manifest.inputReportId).toBe(1);
     expect(manifest.hidReportDescriptorWithRumbleBytes.length).toBeGreaterThan(
       manifest.hidReportDescriptorBytes.length,
     );
@@ -196,6 +349,7 @@ describe("macOS DriverKit helpers", () => {
     expect(source).toContain("OSData::withBytes");
     expect(source).toContain("kIOHIDVendorIDKey");
     expect(source).toContain("openControllerNeutralInputReport[13]");
+    expect(source).toContain("openControllerInputReportId = 1");
     expect(source).toContain("openControllerRumbleReportId = 2");
     expect(source).toContain("openControllerRumbleReportLength = 5");
     expect(source).toContain("kIOHIDReportTypeOutput");
@@ -207,6 +361,27 @@ describe("macOS DriverKit helpers", () => {
       "OpenControllerVirtualGamepadDriver.h",
       "OpenControllerVirtualGamepadDriver.cpp",
     ]);
+  });
+
+  test("creates PlayStation DriverKit C++ source templates", () => {
+    const header = createMacosDriverKitDriverHeader({
+      reportProfile: "playstation",
+    });
+    const source = createMacosDriverKitDriverSource({
+      reportProfile: "playstation",
+    });
+    const manifest = createMacosDriverKitAssetManifest({
+      reportProfile: "playstation",
+    });
+
+    expect(header).toContain("inputReport[47]");
+    expect(source).toContain("openControllerNeutralInputReport[47]");
+    expect(source).toContain("openControllerInputReportId = 3");
+    expect(source).toContain("0x85, 0x03");
+    expect(source).toContain("0x95, 0x22");
+    expect(manifest.reportProfile).toBe("playstation");
+    expect(manifest.inputReportByteLength).toBe(47);
+    expect(manifest.inputReportId).toBe(3);
   });
 
   test("prepares a reviewed macOS DriverKit setup kit", async () => {
@@ -238,6 +413,7 @@ describe("macOS DriverKit helpers", () => {
 
       expect(plan.platform).toBe("linux");
       expect(plan.outputDirectory).toBe(outputDirectory);
+      expect(plan.reportProfile).toBe("generic");
       expect(plan.files).toContain(plan.infoPlistPath);
       expect(plan.files).toContain(plan.driverSourcePath);
       expect(plan.doctorCommand).toBe(
@@ -258,6 +434,40 @@ describe("macOS DriverKit helpers", () => {
       expect(manifest).toContain("com.example.opencontroller.host");
       expect(formatted).toContain("OpenController macOS DriverKit Setup");
       expect(formatted).toContain("No privileged system changes were made.");
+      expect(formatted).toContain("Report profile: generic");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("prepares a PlayStation macOS DriverKit setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-driverkit-playstation-"),
+    );
+
+    try {
+      const plan = await prepareMacosDriverKitSetup({
+        outputDirectory,
+        platform: "linux",
+        driver: {
+          reportProfile: "playstation",
+        },
+      });
+      const readme = await readFile(plan.readmePath, "utf8");
+      const header = await readFile(plan.driverHeaderPath, "utf8");
+      const source = await readFile(plan.driverSourcePath, "utf8");
+      const manifest = await readFile(plan.manifestPath, "utf8");
+
+      expect(plan.reportProfile).toBe("playstation");
+      expect(header).toContain("inputReport[47]");
+      expect(source).toContain("openControllerNeutralInputReport[47]");
+      expect(source).toContain("openControllerInputReportId = 3");
+      expect(source).toContain("0x85, 0x03");
+      expect(source).toContain("0x95, 0x22");
+      expect(manifest).toContain('"reportProfile": "playstation"');
+      expect(manifest).toContain('"inputReportByteLength": 47');
+      expect(manifest).toContain('"inputReportId": 3');
+      expect(readme).toContain("playstation HID report profile");
     } finally {
       await rm(outputDirectory, { recursive: true, force: true });
     }

@@ -85,6 +85,8 @@
 - macOS DriverKit generated source now returns the rumble-capable HID
   descriptor, accepts output reports through `setReport`, and exposes a
   `copyRumbleReport` hook for signed host bridge feedback publishing
+- macOS DriverKit source generators now support `reportProfile: "playstation"`
+  for the 47-byte `hid-playstation-extended` descriptor/report
 - macOS DriverKit helpers now export `createMacosDriverKitHostBridgeAdapter`
   for SDK-owned host bridge processes after a signed host app is built
 - Windows VHF and macOS DriverKit host bridge adapters now pass
@@ -98,6 +100,8 @@
   aligned
 - `opencontroller native setup` added as a unified CLI entrypoint for Linux
   uinput, Windows VHF, and macOS DriverKit setup workflows
+- `opencontroller native setup --report-profile playstation` now forwards
+  profile-specific HID generation to Windows VHF and macOS DriverKit kits
 - `opencontroller-windows-vhf-setup` added to stage reviewed Windows VHF
   driver/host source files and install/test commands without privileged changes
 - `opencontroller-macos-driverkit-setup` added to stage reviewed DriverKit

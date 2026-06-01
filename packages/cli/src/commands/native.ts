@@ -33,6 +33,8 @@ import {
 
 export type NativeCommandFlags = Record<string, string | boolean | undefined>;
 
+type NativeReportProfile = "generic" | "playstation";
+
 export type NativeBackendId =
   | "linux-uinput"
   | "windows-virtual-gamepad"
@@ -500,6 +502,20 @@ function booleanFlag(flags: NativeCommandFlags, key: string): boolean {
   return flags[key] === true || flags[key] === "true";
 }
 
+function reportProfileFlag(
+  flags: NativeCommandFlags,
+  key: string,
+): NativeReportProfile | undefined {
+  const value = flags[key];
+  if (value === undefined || value === false) {
+    return undefined;
+  }
+  if (value === "generic" || value === "playstation") {
+    return value;
+  }
+  throw new Error(`--${key} must be generic or playstation`);
+}
+
 function numberFlag(
   flags: NativeCommandFlags,
   key: string,
@@ -564,6 +580,7 @@ function createWindowsNativeSetupOptions(
   const outputDirectory = stringFlag(flags, "output");
   const hostBridgePath = stringFlag(flags, "host-bridge-path");
   const devicePath = stringFlag(flags, "device-path");
+  const reportProfile = reportProfileFlag(flags, "report-profile");
 
   if (outputDirectory) {
     options.outputDirectory = outputDirectory;
@@ -573,6 +590,16 @@ function createWindowsNativeSetupOptions(
   }
   if (devicePath) {
     options.devicePath = devicePath;
+  }
+  if (reportProfile) {
+    options.driver = {
+      ...(options.driver ?? {}),
+      reportProfile,
+    };
+    options.hostBridge = {
+      ...(options.hostBridge ?? {}),
+      reportProfile,
+    };
   }
 
   return options;
@@ -594,6 +621,7 @@ function createMacosNativeSetupOptions(
   const driverBundleIdentifier = stringFlag(flags, "driver-bundle-id");
   const driverClassName = stringFlag(flags, "driver-class-name");
   const teamIdentifier = stringFlag(flags, "team-id");
+  const reportProfile = reportProfileFlag(flags, "report-profile");
 
   if (outputDirectory) {
     options.outputDirectory = outputDirectory;
@@ -615,6 +643,12 @@ function createMacosNativeSetupOptions(
   }
   if (Object.keys(bundle).length > 0) {
     options.bundle = bundle;
+  }
+  if (reportProfile) {
+    options.driver = {
+      ...(options.driver ?? {}),
+      reportProfile,
+    };
   }
 
   return options;
@@ -734,6 +768,8 @@ Usage:
   opencontroller native doctor --backend macos-driverkit --check
   opencontroller native setup --backend current
   opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
+  opencontroller native setup --backend windows-vhf --report-profile playstation
+  opencontroller native setup --backend macos-driverkit --report-profile playstation
   opencontroller native test --backend linux-uinput --dry-run --id player-1
   opencontroller native test --backend current
   opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path ./OpenControllerVhfHostBridge.exe

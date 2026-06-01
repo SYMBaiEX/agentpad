@@ -79,7 +79,13 @@ Extensions, or make privileged system changes.
 opencontroller native setup --backend linux-uinput --output ~/.opencontroller/bin/opencontroller-uinput-bridge
 opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
 opencontroller native setup --backend macos-driverkit --output ./opencontroller-macos-driverkit
+opencontroller native setup --backend windows-vhf --report-profile playstation
+opencontroller native setup --backend macos-driverkit --report-profile playstation
 ```
+
+Use `--report-profile playstation` when generating Windows VHF or macOS
+DriverKit kits that should expose OpenController's 47-byte
+`hid-playstation-extended` report for touchpad contacts and motion vectors.
 
 ## Smoke Test A Native Bridge
 

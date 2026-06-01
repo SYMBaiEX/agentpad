@@ -158,6 +158,7 @@ describe("native backend setup plan", () => {
         "host-bridge-path":
           "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
         "device-path": "\\\\.\\OpenControllerTestGamepad",
+        "report-profile": "playstation",
       },
       {
         platform: "darwin",
@@ -176,6 +177,12 @@ describe("native backend setup plan", () => {
         outputDirectory: "./opencontroller-windows-vhf",
         hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
         devicePath: "\\\\.\\OpenControllerTestGamepad",
+        driver: {
+          reportProfile: "playstation",
+        },
+        hostBridge: {
+          reportProfile: "playstation",
+        },
       },
     ]);
   });
@@ -191,6 +198,7 @@ describe("native backend setup plan", () => {
         "driver-bundle-id": "com.example.opencontroller.driver",
         "driver-class-name": "ExampleOpenControllerDriver",
         "team-id": "TEAM42",
+        "report-profile": "playstation",
       },
       {
         platform: "linux",
@@ -213,6 +221,9 @@ describe("native backend setup plan", () => {
           driverBundleIdentifier: "com.example.opencontroller.driver",
           driverClassName: "ExampleOpenControllerDriver",
           teamIdentifier: "TEAM42",
+        },
+        driver: {
+          reportProfile: "playstation",
         },
       },
     ]);
@@ -332,6 +343,7 @@ const fakeMacosSetupPlan = {
   appBundleIdentifier: "com.example.opencontroller.host",
   driverBundleIdentifier: "com.example.opencontroller.driver",
   driverClassName: "ExampleOpenControllerDriver",
+  reportProfile: "generic",
   files: ["/tmp/opencontroller-macos-driverkit/driverkit-extension/Info.plist"],
   infoPlistPath:
     "/tmp/opencontroller-macos-driverkit/driverkit-extension/Info.plist",

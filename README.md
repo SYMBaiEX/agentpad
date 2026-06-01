@@ -508,6 +508,8 @@ opencontroller native doctor --backend current
 opencontroller native doctor --backend all --json
 opencontroller native setup --backend current
 opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
+opencontroller native setup --backend windows-vhf --report-profile playstation
+opencontroller native setup --backend macos-driverkit --report-profile playstation
 opencontroller native test --backend linux-uinput --dry-run --id player-1
 opencontroller native test --backend current
 opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf

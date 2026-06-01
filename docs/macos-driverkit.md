@@ -47,6 +47,7 @@ entitlements, manifest, README, and reviewed commands in one folder:
 
 ```bash
 opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
+opencontroller-macos-driverkit-setup --report-profile playstation
 opencontroller-macos-driverkit-setup --json
 ```
 
@@ -75,6 +76,7 @@ opencontroller-macos-driverkit-assets --info-plist
 opencontroller-macos-driverkit-assets --dext-entitlements
 opencontroller-macos-driverkit-assets --host-entitlements
 opencontroller-macos-driverkit-assets --manifest
+opencontroller-macos-driverkit-assets --driver-cpp --report-profile playstation
 ```
 
 ```ts
@@ -83,11 +85,17 @@ import {
   createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
+  macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-macos-driverkit/driverkit";
 
 const reportBytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
 const infoPlist = createMacosDriverKitInfoPlist();
 const sourceFiles = createMacosDriverKitDriverSourceFiles();
+const playstationSourceFiles = createMacosDriverKitDriverSourceFiles({
+  reportProfile: "playstation"
+});
+const playstationBytes =
+  macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage(message);
 const adapter = createMacosDriverKitHostBridgeAdapter({
   controllerId: "player-1",
   hostBridgePath:
@@ -98,10 +106,15 @@ const adapter = createMacosDriverKitHostBridgeAdapter({
 The descriptor and input report bytes come from the shared
 [HID Gamepad Reports](hid-gamepad-reports.md) contract.
 
+The default generated DriverKit device uses the generic 13-byte HID gamepad
+report. Use `reportProfile: "playstation"` or `--report-profile playstation` to
+emit the 47-byte `hid-playstation-extended` descriptor/report for touchpad
+contacts and motion vectors.
+
 The generated C++ source is a DriverKit starting point for an `IOUserHIDDevice`
-subclass. It returns the shared OpenController report descriptor with rumble
-output support, publishes the virtual gamepad description, keeps a neutral
-13-byte input report, accepts host output reports through `setReport`, and
+subclass. It returns the selected OpenController report descriptor with rumble
+output support, publishes the virtual gamepad description, keeps a neutral input
+report sized to the chosen profile, accepts host output reports through `setReport`, and
 exposes `updateInputReport` plus `copyRumbleReport` entry points for a signed
 host app/user-client bridge.
 
