@@ -25,6 +25,7 @@ export const baseCapabilities: ControllerAdapterCapabilities = {
   supportsGyro: false,
   supportsStateSync: false,
   supportsXInputReports: false,
+  supportsNativeBridge: false,
   supportsMultipleControllers: true,
   supportsVirtualDevice: false,
   requiresNativeInstall: false,

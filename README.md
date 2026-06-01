@@ -53,8 +53,9 @@ developer experience on top.
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
-- Adapter model with dry-run, WebSocket, and XInput report output backends
+- Adapter model with dry-run, WebSocket, XInput report, and native bridge output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
+- Versioned JSONL native bridge protocol for driver and daemon integrations
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, test, overlay, replay, and starter action maps
@@ -74,9 +75,10 @@ manifests are in place.
 The SDK surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, and native bridge prototyping.
 It is not yet a full native virtual controller driver stack. The current
-emulation boundary is the adapter layer plus XInput-compatible binary report
-encoding; the next milestone is platform bridge packages for Linux `uinput`,
-Windows virtual gamepad/HID, and macOS DriverKit-compatible flows.
+emulation boundary is the adapter layer, XInput-compatible binary report
+encoding, and a versioned JSONL protocol for native bridge processes. The next
+milestone is platform bridge packages for Linux `uinput`, Windows virtual
+gamepad/HID, and macOS DriverKit-compatible flows.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Wait for the native bridge packages if your
@@ -156,8 +158,10 @@ The core package exports:
 - `createControllerHub` for multi-controller sessions
 - built-in profiles for common controller families
 - dry-run, WebSocket, and XInput report adapters
+- native bridge JSONL protocol helpers
 - safety policies and replay logging
 - XInput report helpers from `@opencontroller/core/hid`
+- bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
 
 ### Core API
@@ -228,6 +232,34 @@ XInput reports are the handoff point for native bridge processes. They do not
 install a driver by themselves, but they provide the packed state a driver or
 local bridge needs.
 
+### Native Bridge JSONL
+
+```ts
+import { NativeBridgeAdapter, createController } from "@opencontroller/core";
+
+const adapter = new NativeBridgeAdapter({
+  includeState: false,
+  write(line) {
+    process.stdout.write(line);
+  }
+});
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter,
+  replay: false
+});
+
+await controller.press("A", 80);
+await controller.disconnect();
+```
+
+Each line is a versioned bridge message containing the controller id, profile,
+diagnostic report fields, and base64-encoded XInput report bytes. Native bridge
+processes can consume the same stream over stdio, pipes, sockets, or any ordered
+byte transport.
+
 ### React Overlay
 
 ```tsx
@@ -245,6 +277,7 @@ opencontroller doctor
 opencontroller test --profile xbox --adapter dry-run
 opencontroller overlay --profile xbox --port 4317
 opencontroller replay ./replays/session/events.jsonl
+opencontroller bridge --id player-1
 opencontroller init
 ```
 
@@ -270,6 +303,7 @@ Current adapters:
 - `dry-run`: updates state, safety, and replay logs without touching a real device
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
+- `native-bridge`: emits versioned JSONL messages for native bridge processes
 
 Runtime adapters can also opt into full state synchronization. This is the
 important boundary for virtual controller emulation: native drivers generally
@@ -283,6 +317,7 @@ bun run dev:fighter
 bun --cwd examples/react-overlay dev
 bun --cwd examples/obs-overlay dev
 bun --cwd examples/websocket-bridge dev
+bun --cwd examples/native-bridge-jsonl dev
 ```
 
 Example folders:
@@ -292,6 +327,7 @@ Example folders:
 - `examples/react-overlay`: React controller visualization
 - `examples/obs-overlay`: local OBS browser-source overlay server
 - `examples/websocket-bridge`: WebSocket adapter target example
+- `examples/native-bridge-jsonl`: JSONL stream for native bridge authors
 
 ## Development
 
@@ -343,6 +379,7 @@ Included:
 - replay logs
 - dry-run and WebSocket adapters
 - XInput binary report bridge
+- native bridge JSONL protocol
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
@@ -363,6 +400,7 @@ Not included yet:
 - Publish npm packages under a confirmed scope
 - Add native virtual controller adapters where platform permissions allow them
 - Add Linux `uinput`, Windows ViGEm/virtual HID, and macOS DriverKit bridge packages
+- Add native bridge daemon templates with install and permission diagnostics
 - Add a headless match runner for repeated agent duels
 - Export replay data to JSON, CSV, and training-friendly formats
 - Add richer telemetry dashboards for agents and controller state

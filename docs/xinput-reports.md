@@ -7,6 +7,9 @@ This is not a native driver by itself. It is the bridge contract that a native
 process can consume when writing to ViGEm, `uinput`, DriverKit, or another
 platform-specific virtual controller backend.
 
+For an ordered JSONL wire protocol that carries these bytes to a separate
+process, see [Native Bridge Protocol](native-bridge-protocol.md).
+
 ```ts
 import {
   XInputReportAdapter,

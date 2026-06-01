@@ -106,6 +106,7 @@ export type ControllerAdapterCapabilities = {
   supportsGyro: boolean;
   supportsStateSync: boolean;
   supportsXInputReports: boolean;
+  supportsNativeBridge: boolean;
   supportsMultipleControllers: boolean;
   supportsVirtualDevice: boolean;
   requiresNativeInstall: boolean;
@@ -165,7 +166,11 @@ export type ReplayEvent =
       data?: Record<string, unknown>;
     };
 
-export type AdapterName = "dry-run" | "websocket" | "xinput-report";
+export type AdapterName =
+  | "dry-run"
+  | "websocket"
+  | "xinput-report"
+  | "native-bridge";
 
 export type CreateControllerOptions = {
   id?: string;

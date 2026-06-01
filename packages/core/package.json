@@ -29,6 +29,10 @@
       "types": "./dist/actions/index.d.ts",
       "import": "./dist/actions/index.js"
     },
+    "./bridge": {
+      "types": "./dist/bridge/index.d.ts",
+      "import": "./dist/bridge/index.js"
+    },
     "./hid": {
       "types": "./dist/hid/index.d.ts",
       "import": "./dist/hid/index.js"

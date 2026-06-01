@@ -18,6 +18,7 @@ export async function doctorCommand(): Promise<void> {
     ["dry-run", "ready"],
     ["websocket", "ready when target server is reachable"],
     ["xinput-report", "ready for native bridge integration"],
+    ["native-bridge", "ready for JSONL native bridge protocol"],
     ["", ""],
     ["Dry-run capabilities", JSON.stringify(capabilities)],
   ];

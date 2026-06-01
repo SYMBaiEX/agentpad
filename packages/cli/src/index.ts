@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { bridgeCommand } from "./commands/bridge";
 import { doctorCommand } from "./commands/doctor";
 import { initCommand } from "./commands/init";
 import { overlayCommand } from "./commands/overlay";
@@ -29,6 +30,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case "adapters":
       await doctorCommand();
+      return;
+    case "bridge":
+      await bridgeCommand(stringFlags(flags));
       return;
     case "help":
     case "--help":
@@ -86,6 +90,7 @@ Usage:
   opencontroller test --profile xbox --adapter dry-run
   opencontroller overlay --profile xbox --port 4317
   opencontroller replay ./replays/session/events.jsonl
+  opencontroller bridge --id player-1
   opencontroller adapters
 `);
 }

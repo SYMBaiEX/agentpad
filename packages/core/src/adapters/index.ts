@@ -2,6 +2,7 @@ import { AdapterError } from "../errors";
 import type { CreateControllerOptions } from "../types";
 import type { ControllerAdapter } from "./adapter";
 import { DryRunAdapter } from "./dry-run";
+import { NativeBridgeAdapter } from "./native-bridge";
 import { WebSocketAdapter } from "./websocket";
 import { XInputReportAdapter } from "./xinput-report";
 
@@ -25,10 +26,13 @@ export async function resolveAdapter(
       return new WebSocketAdapter({ url: options.url });
     case "xinput-report":
       return new XInputReportAdapter();
+    case "native-bridge":
+      return new NativeBridgeAdapter();
   }
 }
 
 export * from "./adapter";
 export * from "./dry-run";
+export * from "./native-bridge";
 export * from "./websocket";
 export * from "./xinput-report";

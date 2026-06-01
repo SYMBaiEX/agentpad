@@ -1,0 +1,11 @@
+{
+  "name": "@opencontroller/example-native-bridge-jsonl",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "dependencies": {
+    "@opencontroller/core": "workspace:*"
+  }
+}

@@ -4,11 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   DryRunAdapter,
+  NativeBridgeAdapter,
   XInputReportAdapter,
   createActionMap,
   createController,
   createControllerHub,
   decodeXInputReport,
+  nativeBridgeMessageToReportBytes,
+  parseNativeBridgeMessage,
   xInputButtonBits,
 } from "../index";
 
@@ -113,6 +116,43 @@ describe("controller runtime", () => {
     expect(latest?.leftStickY).toBe(32767);
 
     await controller.disconnect();
+  });
+
+  test("streams native bridge JSONL messages", async () => {
+    const lines: string[] = [];
+    const adapter = new NativeBridgeAdapter({
+      includeState: false,
+      write(line) {
+        lines.push(line);
+      },
+    });
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("A", 5);
+
+    const messages = lines.map(parseNativeBridgeMessage);
+    const aPressed = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        (message.report.buttons & xInputButtonBits.A) !== 0,
+    );
+
+    expect(aPressed?.type).toBe("opencontroller.bridge.state");
+    if (!aPressed || aPressed.type !== "opencontroller.bridge.state") {
+      throw new Error("Expected an A-pressed native bridge state message");
+    }
+
+    expect(aPressed.state).toBeUndefined();
+    expect(nativeBridgeMessageToReportBytes(aPressed).byteLength).toBe(12);
+
+    await controller.disconnect();
+
+    const disconnect = parseNativeBridgeMessage(lines.at(-1) ?? "");
+    expect(disconnect.type).toBe("opencontroller.bridge.disconnect");
   });
 
   test("writes replay command events", async () => {

@@ -6,6 +6,8 @@
 - WebSocket adapter now emits `controller.state` messages
 - XInput report encoder added for native virtual-device bridge processes
 - `xinput-report` adapter added for testing and native bridge integration
+- native bridge JSONL protocol added for platform driver processes
+- `native-bridge` adapter and CLI sample stream added
 
 ## v0.1.0
 
