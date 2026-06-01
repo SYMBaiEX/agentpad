@@ -79,15 +79,15 @@ It is not yet a full cross-platform native virtual controller driver stack. The
 current emulation boundary is the adapter layer, XInput-compatible binary report
 encoding, a descriptor-backed HID gamepad report format, a versioned JSONL
 protocol for native bridge processes, the first Linux `uinput` bridge package,
-and Windows XUSB compatibility helpers. The next milestone is wiring that HID
-contract into maintained Windows virtual HID and macOS DriverKit-compatible
-flows.
+Windows VHF host bridge helpers, and macOS DriverKit host bridge helpers. The
+next milestone is turning those host bridge surfaces into signed, installable
+native device flows.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
 bridge. Windows users can inspect VHF/HID assets, legacy ViGEmBus compatibility,
-and XUSB report mapping. macOS users can generate DriverKit HID assets and check
-local signing/tool readiness.
+and XUSB report mapping. macOS users can generate DriverKit HID assets, wrap a
+signed host bridge process, and check local signing/tool readiness.
 
 ## Try Agent Fighter
 
@@ -129,7 +129,7 @@ channels, so the demo still works offline.
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
 | `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
 | `@opencontroller/native-windows-virtual-gamepad` | Windows VHF/HID assets, XUSB helpers, and legacy ViGEmBus diagnostics |
-| `@opencontroller/native-macos-driverkit` | macOS DriverKit HID assets and local authoring diagnostics |
+| `@opencontroller/native-macos-driverkit` | macOS DriverKit HID assets, host bridge adapter factory, and local authoring diagnostics |
 
 ## Install
 
@@ -212,6 +212,7 @@ The macOS native package adds:
 - DriverKit-ready HID descriptor and input report helpers
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation
+- host bridge adapter factory for a signed DriverKit host process
 - `opencontroller-macos-driverkit-doctor`
 
 ### Core API
@@ -368,6 +369,29 @@ const controller = await createController({
 This adapter spawns a helper process, streams native bridge JSONL to stdin,
 sends a disconnect message, closes stdin, and surfaces non-zero helper exits.
 
+macOS DriverKit projects can use the same native process pattern once a signed
+host app/bridge is available:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createMacosDriverKitHostBridgeAdapter
+} from "@opencontroller/native-macos-driverkit";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createMacosDriverKitHostBridgeAdapter({
+    driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
+    driverClassName: "OpenControllerVirtualGamepadDriver"
+  }),
+  replay: false
+});
+```
+
+The default macOS bridge path is
+`~/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge`.
+
 ### Linux uinput
 
 ```bash
@@ -519,7 +543,7 @@ Included:
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
 - Windows VHF/HID virtual gamepad source and asset helpers
-- macOS DriverKit virtual HID source and asset helpers
+- macOS DriverKit virtual HID source, asset, and host bridge adapter helpers
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows

@@ -32,6 +32,10 @@ jobs:
             createWindowsVhfHostBridgeAdapter,
             defaultWindowsVhfHostBridgePath
           } from "./packages/native-windows-virtual-gamepad/dist/index.js";
+          import {
+            createMacosDriverKitHostBridgeAdapter,
+            defaultMacosDriverKitHostBridgePath
+          } from "./packages/native-macos-driverkit/dist/index.js";
 
           if (typeof createLinuxUinputBridgeAdapter !== "function") {
             throw new Error("Linux uinput adapter factory is not exported");
@@ -44,6 +48,12 @@ jobs:
           }
           if (!defaultWindowsVhfHostBridgePath("C:\\Users\\ci\\AppData\\Local").endsWith("OpenControllerVhfHostBridge.exe")) {
             throw new Error("Windows VHF host bridge path export is invalid");
+          }
+          if (typeof createMacosDriverKitHostBridgeAdapter !== "function") {
+            throw new Error("macOS DriverKit host bridge adapter factory is not exported");
+          }
+          if (!defaultMacosDriverKitHostBridgePath("/Users/ci/Library/Application Support").endsWith("OpenControllerDriverKitHostBridge")) {
+            throw new Error("macOS DriverKit host bridge path export is invalid");
           }
 
           let stdout = "";

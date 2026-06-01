@@ -54,6 +54,7 @@ opencontroller-macos-driverkit-assets --manifest
 
 ```ts
 import {
+  createMacosDriverKitHostBridgeAdapter,
   createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
@@ -62,6 +63,10 @@ import {
 const reportBytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
 const infoPlist = createMacosDriverKitInfoPlist();
 const sourceFiles = createMacosDriverKitDriverSourceFiles();
+const adapter = createMacosDriverKitHostBridgeAdapter({
+  hostBridgePath:
+    "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
+});
 ```
 
 The descriptor and input report bytes come from the shared
@@ -72,8 +77,42 @@ subclass. It returns the shared OpenController report descriptor, publishes the
 virtual gamepad description, keeps a neutral 13-byte input report, and exposes an
 `updateInputReport` entry point for the future host app/user-client bridge.
 
+## Host Bridge Adapter
+
+Once a signed host app/bridge exists, use
+`createMacosDriverKitHostBridgeAdapter` to let OpenController spawn it and stream
+native bridge JSONL to stdin:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createMacosDriverKitHostBridgeAdapter
+} from "@opencontroller/native-macos-driverkit/driverkit";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createMacosDriverKitHostBridgeAdapter({
+    driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
+    driverClassName: "OpenControllerVirtualGamepadDriver"
+  }),
+  replay: false
+});
+
+await controller.press("A", 80);
+await controller.disconnect();
+```
+
+The default bridge path is
+`~/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge`.
+The adapter passes `OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID`,
+`OPENCONTROLLER_DRIVERKIT_DRIVER_BUNDLE_ID`, and
+`OPENCONTROLLER_DRIVERKIT_SERVICE_NAME` to the process so a host bridge can bind
+to the intended DriverKit service.
+
 ## Current Limitations
 
 - no host app SystemExtensions activation flow yet
+- no signed host bridge binary included yet
 - no signing, notarization, or entitlement automation
 - no automatic driver installation

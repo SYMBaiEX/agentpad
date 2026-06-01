@@ -1,3 +1,9 @@
+import { homedir } from "node:os";
+import { posix } from "node:path";
+import {
+  NativeProcessBridgeAdapter,
+  type NativeProcessBridgeAdapterOptions,
+} from "@opencontroller/core";
 import type { NativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
@@ -30,6 +36,26 @@ export type MacosDriverKitDriverSourceOptions = MacosDriverKitBundleOptions & {
   sourceFileName?: string;
 };
 
+export type MacosDriverKitHostBridgeAdapterOptions = Pick<
+  NativeProcessBridgeAdapterOptions,
+  | "args"
+  | "cwd"
+  | "env"
+  | "includeState"
+  | "waitForExitMs"
+  | "killSignal"
+  | "spawn"
+  | "onStdout"
+  | "onStderr"
+  | "onExit"
+> &
+  Pick<
+    MacosDriverKitBundleOptions,
+    "appBundleIdentifier" | "driverBundleIdentifier" | "driverClassName"
+  > & {
+    hostBridgePath?: string;
+  };
+
 export const defaultMacosDriverKitBundleOptions = {
   appBundleIdentifier: "com.opencontroller.app",
   driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
@@ -47,6 +73,41 @@ export const defaultMacosDriverKitDriverSourceOptions = {
   headerFileName: "OpenControllerVirtualGamepadDriver.h",
   sourceFileName: "OpenControllerVirtualGamepadDriver.cpp",
 } satisfies Required<MacosDriverKitDriverSourceOptions>;
+
+export function defaultMacosDriverKitHostBridgePath(
+  applicationSupportDirectory = posix.join(
+    homedir(),
+    "Library",
+    "Application Support",
+  ),
+): string {
+  return posix.join(
+    applicationSupportDirectory,
+    "OpenController",
+    "bin",
+    "OpenControllerDriverKitHostBridge",
+  );
+}
+
+export function createMacosDriverKitHostBridgeAdapter(
+  options: MacosDriverKitHostBridgeAdapterOptions = {},
+): NativeProcessBridgeAdapter {
+  return new NativeProcessBridgeAdapter({
+    command: options.hostBridgePath ?? defaultMacosDriverKitHostBridgePath(),
+    args: options.args ?? [],
+    ...(options.cwd ? { cwd: options.cwd } : {}),
+    env: createMacosDriverKitHostBridgeEnv(options),
+    includeState: options.includeState ?? false,
+    ...(options.waitForExitMs !== undefined
+      ? { waitForExitMs: options.waitForExitMs }
+      : {}),
+    ...(options.killSignal ? { killSignal: options.killSignal } : {}),
+    ...(options.spawn ? { spawn: options.spawn } : {}),
+    ...(options.onStdout ? { onStdout: options.onStdout } : {}),
+    ...(options.onStderr ? { onStderr: options.onStderr } : {}),
+    ...(options.onExit ? { onExit: options.onExit } : {}),
+  });
+}
 
 export function macosDriverKitInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
@@ -491,4 +552,24 @@ function toCppIdentifier(value: string): string {
   }
 
   return `_${identifier}`;
+}
+
+function createMacosDriverKitHostBridgeEnv(
+  options: Pick<
+    MacosDriverKitHostBridgeAdapterOptions,
+    "appBundleIdentifier" | "driverBundleIdentifier" | "driverClassName" | "env"
+  >,
+): Record<string, string | undefined> {
+  const bundle = {
+    ...defaultMacosDriverKitBundleOptions,
+    ...options,
+  };
+
+  return {
+    ...process.env,
+    ...options.env,
+    OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID: bundle.appBundleIdentifier,
+    OPENCONTROLLER_DRIVERKIT_DRIVER_BUNDLE_ID: bundle.driverBundleIdentifier,
+    OPENCONTROLLER_DRIVERKIT_SERVICE_NAME: bundle.driverClassName,
+  };
 }

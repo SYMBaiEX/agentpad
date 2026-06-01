@@ -12,6 +12,7 @@ This package provides:
 - DriverKit-ready HID report descriptor and input report helpers
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation
+- `createMacosDriverKitHostBridgeAdapter` for SDK-owned host bridge processes
 - `opencontroller-macos-driverkit-doctor` for local tool checks
 
 Upstream context:
@@ -51,6 +52,39 @@ building or signing a real dext.
 The generated C++ source subclasses `IOUserHIDDevice`, returns the shared
 OpenController report descriptor, exposes a neutral input report, and leaves the
 host app/user-client update path explicit.
+
+## Host Bridge Adapter
+
+After you build and sign a host app/bridge that activates the DriverKit system
+extension and accepts OpenController native bridge JSONL on stdin, the SDK can
+own the process lifecycle:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createMacosDriverKitHostBridgeAdapter
+} from "@opencontroller/native-macos-driverkit/driverkit";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createMacosDriverKitHostBridgeAdapter({
+    hostBridgePath:
+      "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
+    driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
+    driverClassName: "OpenControllerVirtualGamepadDriver"
+  }),
+  replay: false
+});
+
+await controller.press("A", 80);
+await controller.disconnect();
+```
+
+The adapter streams descriptor-backed `hidReportBase64` payloads to the host
+bridge process and exports the driver identity through
+`OPENCONTROLLER_DRIVERKIT_*` environment variables. It does not bypass Apple's
+signing, notarization, entitlement, or user-approval requirements.
 
 ## Diagnose
 

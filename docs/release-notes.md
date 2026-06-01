@@ -43,6 +43,8 @@
   SDK-owned host bridge processes after a VHF driver package is built
 - macOS DriverKit asset generator now emits C++ source/header templates for an
   `IOUserHIDDevice` virtual gamepad dext
+- macOS DriverKit helpers now export `createMacosDriverKitHostBridgeAdapter`
+  for SDK-owned host bridge processes after a signed host app is built
 
 ## v0.1.0
 

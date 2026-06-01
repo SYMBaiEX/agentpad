@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { ControllerState } from "@opencontroller/core";
+import {
+  type ControllerState,
+  type NativeProcessBridgeSpawner,
+  createController,
+} from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   hidGamepadReportDescriptor,
@@ -12,9 +16,11 @@ import {
   createMacosDriverKitDriverSource,
   createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitEntitlements,
+  createMacosDriverKitHostBridgeAdapter,
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
   decodeMacosDriverKitInputReport,
+  defaultMacosDriverKitHostBridgePath,
   encodeMacosDriverKitInputReport,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitInputReportForCpp,
@@ -143,5 +149,83 @@ describe("macOS DriverKit helpers", () => {
       "OpenControllerVirtualGamepadDriver.h",
       "OpenControllerVirtualGamepadDriver.cpp",
     ]);
+  });
+
+  test("wraps a DriverKit host bridge as a native process adapter", async () => {
+    const writes: string[] = [];
+    const calls: Array<{
+      command: string;
+      args: string[];
+      env?: Record<string, string | undefined>;
+    }> = [];
+    let resolveExit: (exitCode: number) => void = () => {};
+    const spawn: NativeProcessBridgeSpawner = (command, args, options) => {
+      calls.push({ command, args, env: options.env });
+      return {
+        stdin: {
+          write(chunk) {
+            writes.push(chunk);
+            return chunk.length;
+          },
+          flush() {
+            return 0;
+          },
+          end() {
+            resolveExit(0);
+            return 0;
+          },
+        },
+        stdout: null,
+        stderr: null,
+        exited: new Promise<number>((resolve) => {
+          resolveExit = resolve;
+        }),
+        kill() {},
+      };
+    };
+    const adapter = createMacosDriverKitHostBridgeAdapter({
+      hostBridgePath:
+        "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
+      appBundleIdentifier: "com.example.opencontroller.host",
+      driverBundleIdentifier: "com.example.opencontroller.driver",
+      driverClassName: "ExampleOpenControllerDriver",
+      waitForExitMs: 50,
+      spawn,
+    });
+    const controller = await createController({
+      id: "macos-player",
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("A", 1);
+    await controller.disconnect();
+
+    expect(
+      defaultMacosDriverKitHostBridgePath(
+        "/Users/agent/Library/Application Support",
+      ),
+    ).toBe(
+      "/Users/agent/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge",
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe(
+      "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
+    );
+    expect(calls[0]?.args).toEqual([]);
+    expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_HOST_APP_BUNDLE_ID).toBe(
+      "com.example.opencontroller.host",
+    );
+    expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_DRIVER_BUNDLE_ID).toBe(
+      "com.example.opencontroller.driver",
+    );
+    expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_SERVICE_NAME).toBe(
+      "ExampleOpenControllerDriver",
+    );
+    expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
+      true,
+    );
+    expect(writes.at(-1)).toContain("opencontroller.bridge.disconnect");
   });
 });
