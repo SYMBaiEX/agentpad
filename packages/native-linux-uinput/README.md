@@ -5,6 +5,7 @@ Linux `uinput` bridge for OpenController.
 This package provides:
 
 - a pure TypeScript event mapper for tests and diagnostics
+- a Linux uinput doctor for device, module, and permission checks
 - a build helper for the native C bridge
 - a C helper that reads OpenController native bridge JSONL from stdin and emits
   Linux gamepad events through `/dev/uinput`
@@ -21,6 +22,18 @@ bun packages/native-linux-uinput/dist/bin/build-helper.js
 ```
 
 The build command prints the compiled helper path.
+
+## Diagnose The Host
+
+```bash
+opencontroller-linux-uinput-doctor
+opencontroller-linux-uinput-doctor --json
+opencontroller-linux-uinput-doctor --check
+```
+
+The doctor checks Linux support, `/dev/uinput` candidates, write access, whether
+the `uinput` module appears in `/proc/modules`, and prints explicit udev rule
+templates. It does not change system permissions.
 
 ## Run With OpenController JSONL
 

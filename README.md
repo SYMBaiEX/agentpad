@@ -176,6 +176,7 @@ The core package exports:
 The Linux native package adds:
 
 - OpenController JSONL to Linux event mapping
+- host diagnostics for `/dev/uinput`, module, and permission readiness
 - C helper source for `/dev/uinput`
 - build helper for producing `opencontroller-uinput-bridge`
 
@@ -280,6 +281,7 @@ byte transport.
 ```bash
 bun --cwd packages/native-linux-uinput build
 bun packages/native-linux-uinput/dist/bin/build-helper.js
+opencontroller-linux-uinput-doctor
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 

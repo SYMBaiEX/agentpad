@@ -10,6 +10,8 @@
 - `native-bridge` adapter and CLI sample stream added
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
+- Linux uinput doctor added for module, device, permission, and udev-rule
+  diagnostics
 
 ## v0.1.0
 

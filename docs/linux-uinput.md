@@ -28,6 +28,22 @@ That prints the compiled helper path, normally:
 
 ## Run
 
+Check the host first:
+
+```bash
+opencontroller-linux-uinput-doctor
+```
+
+Use JSON for automation or `--check` for a non-zero exit when the host is not
+ready:
+
+```bash
+opencontroller-linux-uinput-doctor --json
+opencontroller-linux-uinput-doctor --check
+```
+
+Then stream controller reports into the helper:
+
 ```bash
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
@@ -48,6 +64,13 @@ an input-related group, or a local udev rule.
 OpenController does not install permission rules automatically. Virtual input
 devices can control real applications, so permission changes should stay
 explicit and reviewable.
+
+The doctor prints two udev rule templates:
+
+- `desktop-uaccess` for logind/seat-managed user access
+- `input-group` for systems where users are explicitly added to an input group
+
+Review either rule before installing it under `/etc/udev/rules.d/`.
 
 ## Event Mapping
 
@@ -73,6 +96,7 @@ negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 - Linux only
 - no rumble or force feedback yet
 - no installer or udev-rule generator yet
+- no automatic permission changes
 - helper source is included and buildable, but not prebuilt
 - CI validates TypeScript mapping and package builds; real `/dev/uinput`
   verification requires a Linux host with permissions

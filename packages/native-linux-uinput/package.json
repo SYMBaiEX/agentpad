@@ -27,22 +27,27 @@
     "./events": {
       "types": "./dist/events.d.ts",
       "import": "./dist/events.js"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics.d.ts",
+      "import": "./dist/diagnostics.js"
     }
   },
   "bin": {
-    "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js"
+    "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js",
+    "opencontroller-linux-uinput-doctor": "./dist/bin/doctor.js"
   },
   "files": ["dist", "src/helper/opencontroller-uinput-bridge.c", "README.md"],
   "scripts": {
-    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/bin/build-helper.js",
+    "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && chmod +x dist/bin/*.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test src/__tests__/mapping.test.ts"
+    "test": "bun test src/__tests__"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "workspace:*"
+    "@opencontroller/core": "^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",
