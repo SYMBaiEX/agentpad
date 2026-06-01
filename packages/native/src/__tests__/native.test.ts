@@ -56,6 +56,7 @@ describe("native host bridge facade", () => {
       waitForExitMs: 50,
       spawn,
       linux: {
+        controllerId: "native-player",
         helperPath: "/tmp/opencontroller-uinput-bridge",
         devicePath: "/tmp/uinput",
         deviceName: "OpenController Unified Linux",
@@ -66,7 +67,12 @@ describe("native host bridge facade", () => {
     await driveAdapter(adapter);
 
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");
-    expect(calls[0]?.args).toEqual(["--dry-run"]);
+    expect(calls[0]?.args).toEqual([
+      "--dry-run",
+      "--controller-id",
+      "native-player",
+    ]);
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("native-player");
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_DEVICE).toBe("/tmp/uinput");
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_NAME).toBe(
       "OpenController Unified Linux",

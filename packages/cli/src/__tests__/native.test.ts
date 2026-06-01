@@ -277,9 +277,9 @@ const fakeLinuxSetupPlan = {
   udevRules: [],
   doctorCommand: "opencontroller-linux-uinput-doctor --check",
   dryRunCommand:
-    "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --dry-run",
+    "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --controller-id player-1 --dry-run",
   bridgeCommand:
-    "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge",
+    "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --controller-id player-1",
 } as const;
 
 const fakeWindowsSetupPlan = {

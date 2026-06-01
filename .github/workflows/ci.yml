@@ -54,8 +54,8 @@ jobs:
             helperPath: "/tmp/opencontroller-uinput-bridge",
             udevRules: [],
             doctorCommand: "opencontroller-linux-uinput-doctor --check",
-            dryRunCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --dry-run",
-            bridgeCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge"
+            dryRunCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --controller-id player-1 --dry-run",
+            bridgeCommand: "opencontroller bridge --id player-1 | /tmp/opencontroller-uinput-bridge --controller-id player-1"
           }).includes("No privileged system changes were made.")) {
             throw new Error("Linux uinput setup formatter is invalid");
           }
@@ -169,7 +169,20 @@ jobs:
           printf '%s\n' '{"hidReportBase64":"AQAEAAAAAAAAAAAAAA=="}' |
             /tmp/opencontroller-uinput-bridge --dry-run |
             tee /tmp/opencontroller-uinput-home-dry-run.txt
+          printf '%s\n' \
+            '{"type":"opencontroller.bridge.state","controllerId":"player-2","hidReportBase64":"AQAQAAAAAAAAAAAAAA=="}' \
+            '{"type":"opencontroller.bridge.state","controllerId":"player-1","hidReportBase64":"AQAEAAAAAAAAAAAAAA=="}' \
+            '{"type":"opencontroller.bridge.disconnect","controllerId":"player-2"}' \
+            '{"type":"opencontroller.bridge.disconnect","controllerId":"player-1"}' |
+            /tmp/opencontroller-uinput-bridge --dry-run --controller-id player-1 |
+            tee /tmp/opencontroller-uinput-filtered-dry-run.txt
           grep -q "state buttons=0x1000" /tmp/opencontroller-uinput-dry-run.txt
           grep -q "state buttons=0x0000 lt=0 rt=128 lx=0 ly=0 rx=0 ry=0" /tmp/opencontroller-uinput-dry-run.txt
           grep -q "disconnect buttons=0x0000" /tmp/opencontroller-uinput-dry-run.txt
           grep -q "state buttons=0x0400" /tmp/opencontroller-uinput-home-dry-run.txt
+          grep -q "state buttons=0x0400" /tmp/opencontroller-uinput-filtered-dry-run.txt
+          grep -q "disconnect buttons=0x0000" /tmp/opencontroller-uinput-filtered-dry-run.txt
+          if grep -q "state buttons=0x1000" /tmp/opencontroller-uinput-filtered-dry-run.txt; then
+            echo "controller-id filter allowed player-2 input through"
+            exit 1
+          fi

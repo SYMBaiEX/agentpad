@@ -433,6 +433,7 @@ bun packages/native-linux-uinput/dist/bin/build-helper.js
 opencontroller-linux-uinput-setup
 opencontroller-linux-uinput-doctor
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --controller-id player-1
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --dry-run
 ```
 
@@ -440,8 +441,10 @@ The Linux helper reads the native bridge JSONL stream, creates an
 `OpenController Virtual Gamepad` through `/dev/uinput`, emits Linux gamepad
 events, and destroys the device when the stream closes. It prefers the direct
 HID payload and keeps XInput fallback for older streams. Dry-run mode decodes
-the same stream without opening `/dev/uinput`. Real device mode requires Linux
-and write access to `/dev/uinput`.
+the same stream without opening `/dev/uinput`. Use `--controller-id` or
+`OPENCONTROLLER_CONTROLLER_ID` when a helper reads a shared stream so one
+virtual device only reacts to its assigned controller. Real device mode
+requires Linux and write access to `/dev/uinput`.
 
 ### React Overlay
 

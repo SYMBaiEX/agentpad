@@ -279,6 +279,33 @@ static int is_disconnect(const char *line) {
   return strstr(line, "\"type\":\"opencontroller.bridge.disconnect\"") != NULL;
 }
 
+static int line_matches_controller_id(const char *line,
+                                      const char *controller_id) {
+  const char *key = "\"controllerId\":\"";
+  const char *start;
+  const char *end;
+  size_t id_length;
+
+  if (controller_id == NULL || controller_id[0] == '\0') {
+    return 1;
+  }
+
+  start = strstr(line, key);
+  if (start == NULL) {
+    return 0;
+  }
+
+  start += strlen(key);
+  end = strchr(start, '"');
+  if (end == NULL) {
+    return 0;
+  }
+
+  id_length = (size_t)(end - start);
+  return strlen(controller_id) == id_length &&
+         strncmp(start, controller_id, id_length) == 0;
+}
+
 static int parse_bridge_line(const char *line, struct oc_report *report) {
   uint8_t hid_bytes[OC_HID_REPORT_BYTES];
   uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
@@ -308,11 +335,15 @@ static void print_decoded_report(const char *kind,
   fflush(stdout);
 }
 
-static int run_dry_run(void) {
+static int run_dry_run(const char *controller_id) {
   char line[OC_LINE_MAX];
 
   while (fgets(line, sizeof(line), stdin) != NULL) {
     struct oc_report report;
+
+    if (!line_matches_controller_id(line, controller_id)) {
+      continue;
+    }
 
     if (is_disconnect(line)) {
       memset(&report, 0, sizeof(report));
@@ -333,15 +364,49 @@ static int run_dry_run(void) {
 int main(int argc, char **argv) {
   const char *device_path = getenv("OPENCONTROLLER_UINPUT_DEVICE");
   const char *device_name = getenv("OPENCONTROLLER_UINPUT_NAME");
-  const int dry_run =
-      is_enabled_flag(getenv("OPENCONTROLLER_UINPUT_DRY_RUN")) ||
-      (argc > 1 && strcmp(argv[1], "--dry-run") == 0);
+  const char *controller_id = getenv("OPENCONTROLLER_CONTROLLER_ID");
+  const char *controller_id_arg = "--controller-id=";
+  int dry_run = is_enabled_flag(getenv("OPENCONTROLLER_UINPUT_DRY_RUN"));
+  int arg_index;
   char line[OC_LINE_MAX];
   int fd;
   int created = 0;
 
+  for (arg_index = 1; arg_index < argc; arg_index++) {
+    if (strcmp(argv[arg_index], "--dry-run") == 0) {
+      dry_run = 1;
+      continue;
+    }
+
+    if (strcmp(argv[arg_index], "--controller-id") == 0) {
+      if (arg_index + 1 >= argc || argv[arg_index + 1][0] == '\0') {
+        fprintf(stderr,
+                "opencontroller-uinput: --controller-id requires a value\n");
+        return 2;
+      }
+
+      controller_id = argv[++arg_index];
+      continue;
+    }
+
+    if (strncmp(argv[arg_index], controller_id_arg, strlen(controller_id_arg)) ==
+        0) {
+      controller_id = argv[arg_index] + strlen(controller_id_arg);
+      if (controller_id[0] == '\0') {
+        fprintf(stderr,
+                "opencontroller-uinput: --controller-id requires a value\n");
+        return 2;
+      }
+      continue;
+    }
+
+    fprintf(stderr, "opencontroller-uinput: unknown argument: %s\n",
+            argv[arg_index]);
+    return 2;
+  }
+
   if (dry_run) {
-    return run_dry_run();
+    return run_dry_run(controller_id);
   }
 
   if (device_path == NULL || device_path[0] == '\0') {
@@ -371,6 +436,10 @@ int main(int argc, char **argv) {
 
   while (running && fgets(line, sizeof(line), stdin) != NULL) {
     struct oc_report report;
+
+    if (!line_matches_controller_id(line, controller_id)) {
+      continue;
+    }
 
     if (is_disconnect(line)) {
       neutralize(fd);

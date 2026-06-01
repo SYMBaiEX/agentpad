@@ -52,6 +52,7 @@ describe("linux uinput adapter helpers", () => {
 
     const adapter = createLinuxUinputBridgeAdapter({
       helperPath: "/tmp/opencontroller-uinput-bridge",
+      controllerId: "linux-player",
       devicePath: "/tmp/uinput",
       deviceName: "OpenController Test Pad",
       dryRun: true,
@@ -70,7 +71,12 @@ describe("linux uinput adapter helpers", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");
-    expect(calls[0]?.args).toEqual(["--dry-run"]);
+    expect(calls[0]?.args).toEqual([
+      "--dry-run",
+      "--controller-id",
+      "linux-player",
+    ]);
+    expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("linux-player");
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_DEVICE).toBe("/tmp/uinput");
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_NAME).toBe(
       "OpenController Test Pad",
@@ -104,7 +110,9 @@ describe("linux uinput adapter helpers", () => {
     ]);
     expect(plan.helperPath).toBe("/tmp/opencontroller-uinput-bridge");
     expect(plan.dryRunCommand).toContain("--dry-run");
+    expect(plan.dryRunCommand).toContain("--controller-id player-1");
     expect(plan.bridgeCommand).toContain("'/tmp/opencontroller-uinput-bridge'");
+    expect(plan.bridgeCommand).toContain("--controller-id player-1");
     expect(plan.udevRules[1]?.rule).toContain('GROUP="plugdev"');
     expect(formatted).toContain("No privileged system changes were made.");
     expect(formatted).toContain("sudo modprobe uinput");

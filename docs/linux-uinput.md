@@ -61,6 +61,14 @@ Then stream controller reports into the helper:
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 
+If the helper is consuming a stream that may contain more than one controller,
+pin it to the device it should own:
+
+```bash
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --controller-id player-1
+opencontroller bridge --id player-1 | OPENCONTROLLER_CONTROLLER_ID=player-1 ~/.opencontroller/bin/opencontroller-uinput-bridge
+```
+
 To verify the bridge stream without creating a virtual device, run the helper in
 dry-run mode:
 
@@ -87,6 +95,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createLinuxUinputBridgeAdapter({
+    controllerId: "player-1",
     helperPath: setup.helperPath
   }),
   replay: false
@@ -104,6 +113,9 @@ The helper:
 - neutralizes and destroys the virtual device when the stream ends
 - supports `--dry-run` or `OPENCONTROLLER_UINPUT_DRY_RUN=1` to decode bridge
   streams without opening `/dev/uinput`
+- supports `--controller-id` or `OPENCONTROLLER_CONTROLLER_ID` so shared
+  native bridge streams do not leak one controller's inputs into another
+  virtual device
 
 ## Permissions
 
@@ -152,6 +164,8 @@ axes use negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 - no rumble or force feedback yet
 - no automatic permission changes
 - helper source is included and buildable, but not prebuilt
+- one helper creates one virtual device; run one helper per emulated controller
+  and filter shared streams with `--controller-id`
 - CI validates TypeScript mapping, package builds, C syntax, and helper dry-run
   decoding; real `/dev/uinput` device verification requires a Linux host with
   permissions

@@ -19,6 +19,8 @@
   payloads and falls back to legacy XInput payloads
 - Linux `uinput` helper now supports dry-run JSONL decoding, and CI compiles
   and smoke-tests the real C helper parser
+- Linux `uinput` helper now supports `--controller-id` and
+  `OPENCONTROLLER_CONTROLLER_ID` filtering for multi-controller bridge streams
 - Linux package now exports `createLinuxUinputBridgeAdapter` for SDK-owned
   helper processes with default helper path, device naming, and dry-run options
 - Linux package now exports `prepareLinuxUinputSetup` and

@@ -53,6 +53,14 @@ templates. It does not change system permissions.
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 
+When the input stream may contain multiple controllers, bind one helper process
+to one controller:
+
+```bash
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --controller-id player-1
+opencontroller bridge --id player-1 | OPENCONTROLLER_CONTROLLER_ID=player-1 ~/.opencontroller/bin/opencontroller-uinput-bridge
+```
+
 The helper creates an OpenController virtual gamepad, applies each state report,
 neutralizes on disconnect, and destroys the virtual device when the stream ends.
 It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
@@ -83,6 +91,7 @@ const controller = await createController({
   id: "player-1",
   profile: "xbox",
   adapter: createLinuxUinputBridgeAdapter({
+    controllerId: "player-1",
     deviceName: "OpenController Virtual Gamepad"
   }),
   replay: false

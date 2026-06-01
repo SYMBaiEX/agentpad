@@ -37,6 +37,7 @@ export type LinuxUinputSetupPlan = {
 
 export type LinuxUinputBridgeProcessOptions = {
   helperPath: string;
+  controllerId?: string;
   devicePath?: string;
   deviceName?: string;
   dryRun?: boolean;
@@ -56,6 +57,7 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "onExit"
 > & {
   helperPath?: string;
+  controllerId?: string;
   devicePath?: string;
   deviceName?: string;
   dryRun?: boolean;
@@ -145,8 +147,8 @@ export async function prepareLinuxUinputSetup(
     helperPath,
     udevRules,
     doctorCommand: "opencontroller-linux-uinput-doctor --check",
-    dryRunCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)} --dry-run`,
-    bridgeCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)}`,
+    dryRunCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)} --controller-id player-1 --dry-run`,
+    bridgeCommand: `opencontroller bridge --id player-1 | ${quoteShell(helperPath)} --controller-id player-1`,
   };
 }
 
@@ -195,6 +197,9 @@ export function createLinuxUinputBridgeAdapter(
   if (options.dryRun && !args.includes("--dry-run")) {
     args.push("--dry-run");
   }
+  if (options.controllerId && !hasOption(args, "--controller-id")) {
+    args.push("--controller-id", options.controllerId);
+  }
 
   return new NativeProcessBridgeAdapter({
     command: helperPath,
@@ -229,6 +234,9 @@ export function spawnLinuxUinputBridgeProcess(
         ? { OPENCONTROLLER_UINPUT_NAME: options.deviceName }
         : {}),
       ...(options.dryRun ? { OPENCONTROLLER_UINPUT_DRY_RUN: "1" } : {}),
+      ...(options.controllerId
+        ? { OPENCONTROLLER_CONTROLLER_ID: options.controllerId }
+        : {}),
     },
   });
 }
@@ -236,7 +244,7 @@ export function spawnLinuxUinputBridgeProcess(
 function createLinuxUinputBridgeEnv(
   options: Pick<
     LinuxUinputBridgeAdapterOptions,
-    "devicePath" | "deviceName" | "dryRun" | "env"
+    "controllerId" | "devicePath" | "deviceName" | "dryRun" | "env"
   >,
 ): Record<string, string | undefined> {
   return {
@@ -249,7 +257,14 @@ function createLinuxUinputBridgeEnv(
       ? { OPENCONTROLLER_UINPUT_NAME: options.deviceName }
       : {}),
     ...(options.dryRun ? { OPENCONTROLLER_UINPUT_DRY_RUN: "1" } : {}),
+    ...(options.controllerId
+      ? { OPENCONTROLLER_CONTROLLER_ID: options.controllerId }
+      : {}),
   };
+}
+
+function hasOption(args: string[], name: string): boolean {
+  return args.includes(name) || args.some((arg) => arg.startsWith(`${name}=`));
 }
 
 function formatInstallUdevRuleCommand(rule: LinuxUinputUdevRule): string {

@@ -34,6 +34,7 @@ Override backend-specific paths when you have installed helpers somewhere else:
 ```ts
 const adapter = createNativeHostBridgeAdapter({
   linux: {
+    controllerId: "player-1",
     helperPath: "/usr/local/bin/opencontroller-uinput-bridge",
     deviceName: "OpenController Virtual Gamepad"
   },

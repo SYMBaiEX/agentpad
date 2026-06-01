@@ -39,6 +39,7 @@ stdin, and sends a disconnect message before closing the stream.
 ```ts
 const adapter = createNativeHostBridgeAdapter({
   linux: {
+    controllerId: "player-1",
     helperPath: "/usr/local/bin/opencontroller-uinput-bridge",
     deviceName: "OpenController Virtual Gamepad"
   },
