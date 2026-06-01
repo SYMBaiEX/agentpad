@@ -26,3 +26,21 @@ await controller.disconnect();
 
 Dry-run is the default adapter because it requires no native permissions and
 still updates state, safety, and replay logs.
+
+When you are ready to target a real OS virtual controller bridge, use the
+unified native package:
+
+```ts
+import { createController } from "@opencontroller/core";
+import { createNativeHostBridgeAdapter } from "@opencontroller/native";
+
+const controller = await createController({
+  profile: "xbox",
+  adapter: createNativeHostBridgeAdapter(),
+  replay: false
+});
+```
+
+That adapter selects Linux `uinput`, Windows VHF, or macOS DriverKit for the
+current host. The native helper/driver still needs to be installed and trusted
+outside the TypeScript runtime.

@@ -25,6 +25,11 @@ jobs:
             createController
           } from "./packages/core/dist/index.js";
           import {
+            createNativeHostBridgeAdapter,
+            defaultNativeHostBridgePath,
+            resolveNativeHostBridgeBackend
+          } from "./packages/native/dist/index.js";
+          import {
             createLinuxUinputBridgeAdapter,
             defaultLinuxUinputHelperPath
           } from "./packages/native-linux-uinput/dist/index.js";
@@ -54,6 +59,15 @@ jobs:
           }
           if (!defaultMacosDriverKitHostBridgePath("/Users/ci/Library/Application Support").endsWith("OpenControllerDriverKitHostBridge")) {
             throw new Error("macOS DriverKit host bridge path export is invalid");
+          }
+          if (typeof createNativeHostBridgeAdapter !== "function") {
+            throw new Error("Unified native host bridge adapter factory is not exported");
+          }
+          if (resolveNativeHostBridgeBackend({ platform: "linux" }) !== "linux-uinput") {
+            throw new Error("Unified native backend resolver did not select Linux");
+          }
+          if (!defaultNativeHostBridgePath({ backend: "macos-driverkit" }).endsWith("OpenControllerDriverKitHostBridge")) {
+            throw new Error("Unified native host bridge path export is invalid");
           }
 
           let stdout = "";

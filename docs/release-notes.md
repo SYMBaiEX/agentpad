@@ -45,6 +45,8 @@
   `IOUserHIDDevice` virtual gamepad dext
 - macOS DriverKit helpers now export `createMacosDriverKitHostBridgeAdapter`
   for SDK-owned host bridge processes after a signed host app is built
+- `@opencontroller/native` package added with `createNativeHostBridgeAdapter`
+  for selecting Linux `uinput`, Windows VHF, or macOS DriverKit from one import
 
 ## v0.1.0
 

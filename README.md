@@ -127,6 +127,7 @@ channels, so the demo still works offline.
 | `@opencontroller/core` | Controller runtime, profiles, adapters, safety, state, replay logs |
 | `@opencontroller/overlay` | React overlays, canvas rendering helpers, OBS browser-source server |
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
+| `@opencontroller/native` | One-import native host bridge adapter selection for Linux, Windows, and macOS |
 | `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
 | `@opencontroller/native-windows-virtual-gamepad` | Windows VHF/HID assets, XUSB helpers, and legacy ViGEmBus diagnostics |
 | `@opencontroller/native-macos-driverkit` | macOS DriverKit HID assets, host bridge adapter factory, and local authoring diagnostics |
@@ -152,6 +153,12 @@ For CLI workflows:
 
 ```bash
 npm install -D @opencontroller/cli
+```
+
+For cross-platform native bridge work:
+
+```bash
+npm install @opencontroller/core @opencontroller/native
 ```
 
 For Linux native bridge work:
@@ -191,6 +198,14 @@ The core package exports:
 - HID gamepad report descriptor and report helpers from `@opencontroller/core/hid`
 - bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
+
+The unified native package adds:
+
+- `createNativeHostBridgeAdapter` for selecting the host bridge backend for the
+  current platform
+- `resolveNativeHostBridgeBackend` and `defaultNativeHostBridgePath` for install
+  and packaging workflows
+- backend aliases for Linux `uinput`, Windows VHF, and macOS DriverKit
 
 The Linux native package adds:
 
@@ -392,6 +407,21 @@ const controller = await createController({
 The default macOS bridge path is
 `~/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge`.
 
+For application code that should run on whichever native backend is installed
+for the current host, use the unified native package:
+
+```ts
+import { createController } from "@opencontroller/core";
+import { createNativeHostBridgeAdapter } from "@opencontroller/native";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createNativeHostBridgeAdapter(),
+  replay: false
+});
+```
+
 ### Linux uinput
 
 ```bash
@@ -512,6 +542,7 @@ bun run build
 npm pack --workspace packages/core --dry-run
 npm pack --workspace packages/overlay --dry-run
 npm pack --workspace packages/cli --dry-run
+npm pack --workspace packages/native --dry-run
 npm pack --workspace packages/native-linux-uinput --dry-run
 npm pack --workspace packages/native-windows-virtual-gamepad --dry-run
 npm pack --workspace packages/native-macos-driverkit --dry-run
@@ -541,6 +572,7 @@ Included:
 - XInput binary report bridge
 - HID gamepad report descriptor and encoder
 - native bridge JSONL protocol
+- unified native host bridge adapter package
 - Linux `uinput` bridge package and helper source
 - Windows VHF/HID virtual gamepad source and asset helpers
 - macOS DriverKit virtual HID source, asset, and host bridge adapter helpers
