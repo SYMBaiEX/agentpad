@@ -1,5 +1,5 @@
 {
-  "lockfileVersion": 1,
+  "lockfileVersion": 2,
   "configVersion": 1,
   "workspaces": {
     "": {
@@ -26,6 +26,12 @@
     },
     "examples/basic-dry-run": {
       "name": "@opencontroller/example-basic-dry-run",
+      "dependencies": {
+        "@opencontroller/core": "workspace:*",
+      },
+    },
+    "examples/native-bridge-jsonl": {
+      "name": "@opencontroller/example-native-bridge-jsonl",
       "dependencies": {
         "@opencontroller/core": "workspace:*",
       },
@@ -96,22 +102,6 @@
     },
   },
   "packages": {
-    "@opencontroller/cli": ["@opencontroller/cli@workspace:packages/cli"],
-
-    "@opencontroller/core": ["@opencontroller/core@workspace:packages/core"],
-
-    "@opencontroller/example-agent-fighter": ["@opencontroller/example-agent-fighter@workspace:examples/agent-fighter"],
-
-    "@opencontroller/example-basic-dry-run": ["@opencontroller/example-basic-dry-run@workspace:examples/basic-dry-run"],
-
-    "@opencontroller/example-obs-overlay": ["@opencontroller/example-obs-overlay@workspace:examples/obs-overlay"],
-
-    "@opencontroller/example-react-overlay": ["@opencontroller/example-react-overlay@workspace:examples/react-overlay"],
-
-    "@opencontroller/example-websocket-bridge": ["@opencontroller/example-websocket-bridge@workspace:examples/websocket-bridge"],
-
-    "@opencontroller/overlay": ["@opencontroller/overlay@workspace:packages/overlay"],
-
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 
     "@babel/compat-data": ["@babel/compat-data@7.29.7", "", {}, "sha512-locTkQyKvwIEgBzVrn8693ebc97F2U8ZHjbXwDXJ5Fn2TCpNwTlKcaKLkdHop5c/icOFE7qt7Q9JC5hnKNa6Gg=="],
@@ -229,6 +219,24 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@opencontroller/cli": ["@opencontroller/cli@workspace:packages/cli"],
+
+    "@opencontroller/core": ["@opencontroller/core@workspace:packages/core"],
+
+    "@opencontroller/example-agent-fighter": ["@opencontroller/example-agent-fighter@workspace:examples/agent-fighter"],
+
+    "@opencontroller/example-basic-dry-run": ["@opencontroller/example-basic-dry-run@workspace:examples/basic-dry-run"],
+
+    "@opencontroller/example-native-bridge-jsonl": ["@opencontroller/example-native-bridge-jsonl@workspace:examples/native-bridge-jsonl"],
+
+    "@opencontroller/example-obs-overlay": ["@opencontroller/example-obs-overlay@workspace:examples/obs-overlay"],
+
+    "@opencontroller/example-react-overlay": ["@opencontroller/example-react-overlay@workspace:examples/react-overlay"],
+
+    "@opencontroller/example-websocket-bridge": ["@opencontroller/example-websocket-bridge@workspace:examples/websocket-bridge"],
+
+    "@opencontroller/overlay": ["@opencontroller/overlay@workspace:packages/overlay"],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.27", "", {}, "sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA=="],
 
