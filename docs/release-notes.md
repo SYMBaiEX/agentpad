@@ -17,6 +17,8 @@
   helpers and legacy ViGEmBus diagnostics
 - HID gamepad report descriptor and encoder added for descriptor-backed native
   virtual device backends
+- Windows VHF helpers added for HID descriptor/report bytes, C-array assets,
+  and a VHF lower-filter INF template
 
 ## v0.1.0
 

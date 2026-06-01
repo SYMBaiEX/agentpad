@@ -1,7 +1,7 @@
 {
   "name": "@opencontroller/native-windows-virtual-gamepad",
   "version": "0.1.0",
-  "description": "Windows virtual gamepad compatibility helpers and diagnostics for OpenController.",
+  "description": "Windows VHF/HID virtual gamepad helpers, XUSB compatibility helpers, and diagnostics for OpenController.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -14,6 +14,8 @@
     "controller",
     "gamepad",
     "windows",
+    "vhf",
+    "hid",
     "xinput",
     "xusb",
     "opencontroller"
@@ -29,13 +31,18 @@
       "types": "./dist/diagnostics.d.ts",
       "import": "./dist/diagnostics.js"
     },
+    "./vhf": {
+      "types": "./dist/vhf.d.ts",
+      "import": "./dist/vhf.js"
+    },
     "./xusb": {
       "types": "./dist/xusb.d.ts",
       "import": "./dist/xusb.js"
     }
   },
   "bin": {
-    "opencontroller-windows-gamepad-doctor": "./dist/bin/doctor.js"
+    "opencontroller-windows-gamepad-doctor": "./dist/bin/doctor.js",
+    "opencontroller-windows-vhf-assets": "./dist/bin/vhf-assets.js"
   },
   "files": ["dist", "README.md"],
   "scripts": {

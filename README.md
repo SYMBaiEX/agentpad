@@ -127,7 +127,7 @@ channels, so the demo still works offline.
 | `@opencontroller/overlay` | React overlays, canvas rendering helpers, OBS browser-source server |
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
 | `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
-| `@opencontroller/native-windows-virtual-gamepad` | Windows XUSB helpers and legacy ViGEmBus diagnostics |
+| `@opencontroller/native-windows-virtual-gamepad` | Windows VHF/HID assets, XUSB helpers, and legacy ViGEmBus diagnostics |
 
 ## Install
 
@@ -193,6 +193,8 @@ The Linux native package adds:
 
 The Windows native package adds:
 
+- VHF-ready HID descriptor and input report helpers
+- INF and C-array asset generators for a maintained Windows VHF driver path
 - XUSB report helpers
 - legacy ViGEmBus service diagnostics
 - `opencontroller-windows-gamepad-doctor`
@@ -473,7 +475,7 @@ Included:
 - HID gamepad report descriptor and encoder
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
-- Windows virtual gamepad compatibility package
+- Windows VHF/HID virtual gamepad asset helpers
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
