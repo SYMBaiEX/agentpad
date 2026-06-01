@@ -2,6 +2,8 @@
 import {
   createWindowsVhfDriverHeader,
   createWindowsVhfDriverSource,
+  createWindowsVhfHostBridgeHeader,
+  createWindowsVhfHostBridgeSource,
   createWindowsVhfInf,
   formatWindowsVhfHidDescriptorForC,
 } from "../vhf";
@@ -15,6 +17,8 @@ Usage:
   opencontroller-windows-vhf-assets --descriptor-c
   opencontroller-windows-vhf-assets --driver-c
   opencontroller-windows-vhf-assets --driver-h
+  opencontroller-windows-vhf-assets --host-c
+  opencontroller-windows-vhf-assets --host-h
   opencontroller-windows-vhf-assets --inf
 
 These assets are driver-authoring inputs. They do not install a driver.`);
@@ -27,6 +31,10 @@ if (args.has("--inf")) {
   console.log(createWindowsVhfDriverSource());
 } else if (args.has("--driver-h")) {
   console.log(createWindowsVhfDriverHeader());
+} else if (args.has("--host-c")) {
+  console.log(createWindowsVhfHostBridgeSource());
+} else if (args.has("--host-h")) {
+  console.log(createWindowsVhfHostBridgeHeader());
 } else {
   console.log(formatWindowsVhfHidDescriptorForC());
 }

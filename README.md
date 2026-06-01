@@ -202,7 +202,7 @@ The Linux native package adds:
 The Windows native package adds:
 
 - VHF-ready HID descriptor and input report helpers
-- INF, WDK C source, and C-array asset generators for a maintained Windows VHF driver path
+- INF, WDK C source, host bridge C source, and C-array asset generators for a maintained Windows VHF driver path
 - XUSB report helpers
 - legacy ViGEmBus service diagnostics
 - `opencontroller-windows-gamepad-doctor`

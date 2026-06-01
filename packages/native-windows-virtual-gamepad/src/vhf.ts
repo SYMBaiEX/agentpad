@@ -33,6 +33,16 @@ export type WindowsVhfDriverSourceOptions = {
   productId?: number;
   versionNumber?: number;
   ioctlFunctionCode?: number;
+  deviceInterfaceName?: string;
+  symbolicLinkName?: string;
+  userDevicePath?: string;
+};
+
+export type WindowsVhfHostBridgeSourceOptions = {
+  bridgeName?: string;
+  headerFileName?: string;
+  ioctlFunctionCode?: number;
+  userDevicePath?: string;
 };
 
 export const defaultWindowsVhfInfOptions = {
@@ -54,7 +64,17 @@ export const defaultWindowsVhfDriverSourceOptions = {
   productId: 0x0001,
   versionNumber: 0x0001,
   ioctlFunctionCode: 0x801,
+  deviceInterfaceName: "OpenControllerVhfGamepad",
+  symbolicLinkName: "\\DosDevices\\OpenControllerVhfGamepad",
+  userDevicePath: "\\\\.\\OpenControllerVhfGamepad",
 } satisfies Required<WindowsVhfDriverSourceOptions>;
+
+export const defaultWindowsVhfHostBridgeSourceOptions = {
+  bridgeName: "OpenControllerVhfHostBridge",
+  headerFileName: "OpenControllerVhfHostBridge.h",
+  ioctlFunctionCode: 0x801,
+  userDevicePath: defaultWindowsVhfDriverSourceOptions.userDevicePath,
+} satisfies Required<WindowsVhfHostBridgeSourceOptions>;
 
 export function windowsVhfInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
@@ -187,6 +207,7 @@ export function createWindowsVhfDriverHeader(
     `#define IOCTL_${prefix}_SUBMIT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
       merged.ioctlFunctionCode,
     )}, METHOD_BUFFERED, FILE_WRITE_DATA)`,
+    `#define ${prefix}_USER_DEVICE_PATH "${escapeCString(merged.userDevicePath)}"`,
     "",
     "typedef struct _OPENCONTROLLER_DEVICE_CONTEXT {",
     "  VHFHANDLE VhfHandle;",
@@ -262,6 +283,9 @@ export function createWindowsVhfDriverSource(
     "  WDFDEVICE device;",
     "  WDF_OBJECT_ATTRIBUTES deviceAttributes;",
     "  WDF_IO_QUEUE_CONFIG queueConfig;",
+    `  DECLARE_CONST_UNICODE_STRING(symbolicLinkName, L"${escapeWideCString(
+      merged.symbolicLinkName,
+    )}");`,
     "  VHF_CONFIG vhfConfig;",
     "  POPENCONTROLLER_DEVICE_CONTEXT context;",
     "",
@@ -271,6 +295,8 @@ export function createWindowsVhfDriverSource(
     "  );",
     "  deviceAttributes.EvtCleanupCallback = OpenControllerEvtDeviceCleanup;",
     "",
+    "  WdfDeviceInitSetIoType(DeviceInit, WdfDeviceIoBuffered);",
+    "",
     "  status = WdfDeviceCreate(&DeviceInit, &deviceAttributes, &device);",
     "  if (!NT_SUCCESS(status)) {",
     "    return status;",
@@ -278,6 +304,11 @@ export function createWindowsVhfDriverSource(
     "",
     "  context = OpenControllerGetDeviceContext(device);",
     "  RtlZeroMemory(context, sizeof(*context));",
+    "",
+    "  status = WdfDeviceCreateSymbolicLink(device, &symbolicLinkName);",
+    "  if (!NT_SUCCESS(status)) {",
+    "    return status;",
+    "  }",
     "",
     "  WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(",
     "    &queueConfig,",
@@ -402,6 +433,303 @@ export function createWindowsVhfDriverSourceFiles(
   };
 }
 
+export function createWindowsVhfHostBridgeHeader(
+  options: WindowsVhfHostBridgeSourceOptions = {},
+): string {
+  const merged = {
+    ...defaultWindowsVhfHostBridgeSourceOptions,
+    ...options,
+  };
+  const guard = `${toCIdentifier(merged.bridgeName).toUpperCase()}_H`;
+  const prefix = toCIdentifier(merged.bridgeName).toUpperCase();
+
+  return [
+    "#pragma once",
+    `#ifndef ${guard}`,
+    `#define ${guard}`,
+    "",
+    "#include <stdint.h>",
+    "#include <windows.h>",
+    "",
+    "#define OPENCONTROLLER_XINPUT_REPORT_BYTES 12",
+    `#define OPENCONTROLLER_HID_REPORT_BYTES ${windowsVhfInputReportByteLength}`,
+    "#define OPENCONTROLLER_HID_REPORT_ID 1",
+    `#define ${prefix}_DEFAULT_DEVICE_PATH "${escapeCString(merged.userDevicePath)}"`,
+    `#define IOCTL_${prefix}_SUBMIT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
+      merged.ioctlFunctionCode,
+    )}, METHOD_BUFFERED, FILE_WRITE_DATA)`,
+    "",
+    "typedef struct OPENCONTROLLER_XINPUT_REPORT {",
+    "  uint16_t buttons;",
+    "  uint8_t leftTrigger;",
+    "  uint8_t rightTrigger;",
+    "  int16_t leftStickX;",
+    "  int16_t leftStickY;",
+    "  int16_t rightStickX;",
+    "  int16_t rightStickY;",
+    "} OPENCONTROLLER_XINPUT_REPORT;",
+    "",
+    `#endif  // ${guard}`,
+    "",
+  ].join("\n");
+}
+
+export function createWindowsVhfHostBridgeSource(
+  options: WindowsVhfHostBridgeSourceOptions = {},
+): string {
+  const merged = {
+    ...defaultWindowsVhfHostBridgeSourceOptions,
+    ...options,
+  };
+  const prefix = toCIdentifier(merged.bridgeName).toUpperCase();
+
+  return [
+    `#include "${merged.headerFileName}"`,
+    "",
+    "#include <stdio.h>",
+    "#include <stdlib.h>",
+    "#include <string.h>",
+    "",
+    "#define OPENCONTROLLER_LINE_MAX 8192",
+    "",
+    "static int opencontroller_is_disconnect(const char *line);",
+    "static int opencontroller_extract_report_base64(",
+    "  const char *line,",
+    "  uint8_t output[OPENCONTROLLER_XINPUT_REPORT_BYTES]",
+    ");",
+    "static void opencontroller_decode_xinput_report(",
+    "  const uint8_t bytes[OPENCONTROLLER_XINPUT_REPORT_BYTES],",
+    "  OPENCONTROLLER_XINPUT_REPORT *report",
+    ");",
+    "static void opencontroller_encode_hid_report(",
+    "  const OPENCONTROLLER_XINPUT_REPORT *report,",
+    "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ");",
+    "static int opencontroller_submit_hid_report(",
+    "  HANDLE device,",
+    "  const uint8_t report[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ");",
+    "",
+    "int main(int argc, char **argv)",
+    "{",
+    '  const char *devicePath = getenv("OPENCONTROLLER_VHF_DEVICE_PATH");',
+    "  HANDLE device;",
+    "  char line[OPENCONTROLLER_LINE_MAX];",
+    "  uint8_t neutralReport[OPENCONTROLLER_HID_REPORT_BYTES] = {0};",
+    "",
+    "  neutralReport[0] = OPENCONTROLLER_HID_REPORT_ID;",
+    "",
+    "  if (argc > 1 && argv[1][0] != '\\0') {",
+    "    devicePath = argv[1];",
+    "  }",
+    "  if (devicePath == NULL || devicePath[0] == '\\0') {",
+    `    devicePath = ${prefix}_DEFAULT_DEVICE_PATH;`,
+    "  }",
+    "",
+    "  device = CreateFileA(",
+    "    devicePath,",
+    "    GENERIC_WRITE,",
+    "    FILE_SHARE_READ | FILE_SHARE_WRITE,",
+    "    NULL,",
+    "    OPEN_EXISTING,",
+    "    FILE_ATTRIBUTE_NORMAL,",
+    "    NULL",
+    "  );",
+    "  if (device == INVALID_HANDLE_VALUE) {",
+    "    fprintf(",
+    "      stderr,",
+    '      "opencontroller-vhf-host: failed to open %s: %lu\\n",',
+    "      devicePath,",
+    "      GetLastError()",
+    "    );",
+    "    return 1;",
+    "  }",
+    "",
+    "  while (fgets(line, sizeof(line), stdin) != NULL) {",
+    "    uint8_t xinputBytes[OPENCONTROLLER_XINPUT_REPORT_BYTES];",
+    "    uint8_t hidReport[OPENCONTROLLER_HID_REPORT_BYTES];",
+    "    OPENCONTROLLER_XINPUT_REPORT xinputReport;",
+    "",
+    "    if (opencontroller_is_disconnect(line)) {",
+    "      opencontroller_submit_hid_report(device, neutralReport);",
+    "      break;",
+    "    }",
+    "",
+    "    if (opencontroller_extract_report_base64(line, xinputBytes) != 0) {",
+    "      continue;",
+    "    }",
+    "",
+    "    opencontroller_decode_xinput_report(xinputBytes, &xinputReport);",
+    "    opencontroller_encode_hid_report(&xinputReport, hidReport);",
+    "    if (opencontroller_submit_hid_report(device, hidReport) != 0) {",
+    '      fprintf(stderr, "opencontroller-vhf-host: DeviceIoControl failed: %lu\\n", GetLastError());',
+    "      CloseHandle(device);",
+    "      return 1;",
+    "    }",
+    "  }",
+    "",
+    "  opencontroller_submit_hid_report(device, neutralReport);",
+    "  CloseHandle(device);",
+    "  return 0;",
+    "}",
+    "",
+    "static int opencontroller_base64_value(char c)",
+    "{",
+    "  if (c >= 'A' && c <= 'Z') {",
+    "    return c - 'A';",
+    "  }",
+    "  if (c >= 'a' && c <= 'z') {",
+    "    return c - 'a' + 26;",
+    "  }",
+    "  if (c >= '0' && c <= '9') {",
+    "    return c - '0' + 52;",
+    "  }",
+    "  if (c == '+') {",
+    "    return 62;",
+    "  }",
+    "  if (c == '/') {",
+    "    return 63;",
+    "  }",
+    "  if (c == '=') {",
+    "    return -2;",
+    "  }",
+    "  return -1;",
+    "}",
+    "",
+    "static int opencontroller_decode_base64_report(",
+    "  const char *input,",
+    "  uint8_t output[OPENCONTROLLER_XINPUT_REPORT_BYTES]",
+    ")",
+    "{",
+    "  int values[4];",
+    "  int valueCount = 0;",
+    "  size_t outputCount = 0;",
+    "  const char *cursor = input;",
+    "",
+    "  while (*cursor != '\\0' && *cursor != '\"') {",
+    "    int value = opencontroller_base64_value(*cursor++);",
+    "    if (value == -1) {",
+    "      continue;",
+    "    }",
+    "",
+    "    values[valueCount++] = value;",
+    "    if (valueCount < 4) {",
+    "      continue;",
+    "    }",
+    "",
+    "    if (values[0] < 0 || values[1] < 0) {",
+    "      return -1;",
+    "    }",
+    "    if (outputCount < OPENCONTROLLER_XINPUT_REPORT_BYTES) {",
+    "      output[outputCount++] = (uint8_t)((values[0] << 2) | (values[1] >> 4));",
+    "    }",
+    "    if (values[2] >= 0 && outputCount < OPENCONTROLLER_XINPUT_REPORT_BYTES) {",
+    "      output[outputCount++] =",
+    "        (uint8_t)(((values[1] & 0x0f) << 4) | (values[2] >> 2));",
+    "    }",
+    "    if (values[3] >= 0 && outputCount < OPENCONTROLLER_XINPUT_REPORT_BYTES) {",
+    "      output[outputCount++] =",
+    "        (uint8_t)(((values[2] & 0x03) << 6) | values[3]);",
+    "    }",
+    "",
+    "    valueCount = 0;",
+    "  }",
+    "",
+    "  return outputCount == OPENCONTROLLER_XINPUT_REPORT_BYTES ? 0 : -1;",
+    "}",
+    "",
+    "static int opencontroller_extract_report_base64(",
+    "  const char *line,",
+    "  uint8_t output[OPENCONTROLLER_XINPUT_REPORT_BYTES]",
+    ")",
+    "{",
+    '  const char *key = "\\"reportBase64\\":\\"";',
+    "  const char *start = strstr(line, key);",
+    "  if (start == NULL) {",
+    "    return -1;",
+    "  }",
+    "  start += strlen(key);",
+    "  return opencontroller_decode_base64_report(start, output);",
+    "}",
+    "",
+    "static int opencontroller_is_disconnect(const char *line)",
+    "{",
+    '  return strstr(line, "\\"type\\":\\"opencontroller.bridge.disconnect\\"") != NULL;',
+    "}",
+    "",
+    "static void opencontroller_decode_xinput_report(",
+    "  const uint8_t bytes[OPENCONTROLLER_XINPUT_REPORT_BYTES],",
+    "  OPENCONTROLLER_XINPUT_REPORT *report",
+    ")",
+    "{",
+    "  report->buttons = (uint16_t)(bytes[0] | (bytes[1] << 8));",
+    "  report->leftTrigger = bytes[2];",
+    "  report->rightTrigger = bytes[3];",
+    "  report->leftStickX = (int16_t)(bytes[4] | (bytes[5] << 8));",
+    "  report->leftStickY = (int16_t)(bytes[6] | (bytes[7] << 8));",
+    "  report->rightStickX = (int16_t)(bytes[8] | (bytes[9] << 8));",
+    "  report->rightStickY = (int16_t)(bytes[10] | (bytes[11] << 8));",
+    "}",
+    "",
+    "static void opencontroller_write_i16_le(uint8_t *target, int16_t value)",
+    "{",
+    "  target[0] = (uint8_t)(value & 0xff);",
+    "  target[1] = (uint8_t)(((uint16_t)value >> 8) & 0xff);",
+    "}",
+    "",
+    "static void opencontroller_encode_hid_report(",
+    "  const OPENCONTROLLER_XINPUT_REPORT *report,",
+    "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ")",
+    "{",
+    "  output[0] = OPENCONTROLLER_HID_REPORT_ID;",
+    "  output[1] = (uint8_t)(report->buttons & 0xff);",
+    "  output[2] = (uint8_t)((report->buttons >> 8) & 0xff);",
+    "  opencontroller_write_i16_le(&output[3], report->leftStickX);",
+    "  opencontroller_write_i16_le(&output[5], report->leftStickY);",
+    "  opencontroller_write_i16_le(&output[7], report->rightStickX);",
+    "  opencontroller_write_i16_le(&output[9], report->rightStickY);",
+    "  output[11] = report->leftTrigger;",
+    "  output[12] = report->rightTrigger;",
+    "}",
+    "",
+    "static int opencontroller_submit_hid_report(",
+    "  HANDLE device,",
+    "  const uint8_t report[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ")",
+    "{",
+    "  DWORD bytesReturned = 0;",
+    "  BOOL ok = DeviceIoControl(",
+    "    device,",
+    `    IOCTL_${prefix}_SUBMIT_REPORT,`,
+    "    (LPVOID)report,",
+    "    OPENCONTROLLER_HID_REPORT_BYTES,",
+    "    NULL,",
+    "    0,",
+    "    &bytesReturned,",
+    "    NULL",
+    "  );",
+    "",
+    "  return ok ? 0 : -1;",
+    "}",
+    "",
+  ].join("\n");
+}
+
+export function createWindowsVhfHostBridgeSourceFiles(
+  options: WindowsVhfHostBridgeSourceOptions = {},
+): Record<string, string> {
+  const merged = {
+    ...defaultWindowsVhfHostBridgeSourceOptions,
+    ...options,
+  };
+
+  return {
+    [merged.headerFileName]: createWindowsVhfHostBridgeHeader(merged),
+    [`${merged.bridgeName}.c`]: createWindowsVhfHostBridgeSource(merged),
+  };
+}
+
 function formatCByteArray(
   symbolName: string,
   bytes: Uint8Array,
@@ -437,4 +765,12 @@ function toCIdentifier(value: string): string {
   }
 
   return `_${identifier}`;
+}
+
+function escapeCString(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function escapeWideCString(value: string): string {
+  return escapeCString(value);
 }

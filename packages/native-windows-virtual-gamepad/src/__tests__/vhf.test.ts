@@ -10,6 +10,9 @@ import {
   createWindowsVhfDriverHeader,
   createWindowsVhfDriverSource,
   createWindowsVhfDriverSourceFiles,
+  createWindowsVhfHostBridgeHeader,
+  createWindowsVhfHostBridgeSource,
+  createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
   encodeWindowsVhfInputReport,
@@ -114,11 +117,37 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("VHF_CONFIG_INIT");
     expect(source).toContain("VhfCreate(&vhfConfig");
     expect(source).toContain("VhfStart(context->VhfHandle)");
+    expect(source).toContain("WdfDeviceInitSetIoType");
+    expect(source).toContain("WdfDeviceCreateSymbolicLink");
+    expect(source).toContain("DECLARE_CONST_UNICODE_STRING(symbolicLinkName");
+    expect(source).toContain("OpenControllerVhfGamepad");
     expect(source).toContain("VhfReadReportSubmit(context->VhfHandle");
     expect(source).toContain("OpenControllerInputReportLength = 13");
     expect(Object.keys(files)).toEqual([
       "OpenControllerVhfGamepad.h",
       "OpenControllerVhfGamepad.c",
+    ]);
+  });
+
+  test("creates Windows host bridge source templates for VHF IOCTL writes", () => {
+    const header = createWindowsVhfHostBridgeHeader();
+    const source = createWindowsVhfHostBridgeSource();
+    const files = createWindowsVhfHostBridgeSourceFiles();
+
+    expect(header).toContain("#include <windows.h>");
+    expect(header).toContain("OPENCONTROLLER_HID_REPORT_BYTES 13");
+    expect(header).toContain("IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_SUBMIT_REPORT");
+    expect(header).toContain("OPENCONTROLLERVHFHOSTBRIDGE_DEFAULT_DEVICE_PATH");
+    expect(header).toContain("OpenControllerVhfGamepad");
+    expect(source).toContain("CreateFileA");
+    expect(source).toContain("DeviceIoControl");
+    expect(source).toContain('const char *key = "\\"reportBase64\\":\\""');
+    expect(source).toContain("opencontroller_decode_xinput_report");
+    expect(source).toContain("opencontroller_encode_hid_report");
+    expect(source).toContain("OPENCONTROLLER_VHF_DEVICE_PATH");
+    expect(Object.keys(files)).toEqual([
+      "OpenControllerVhfHostBridge.h",
+      "OpenControllerVhfHostBridge.c",
     ]);
   });
 });

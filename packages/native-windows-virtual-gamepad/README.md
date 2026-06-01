@@ -46,19 +46,23 @@ template inputs for that driver.
 opencontroller-windows-vhf-assets --descriptor-c
 opencontroller-windows-vhf-assets --driver-c
 opencontroller-windows-vhf-assets --driver-h
+opencontroller-windows-vhf-assets --host-c
+opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
 ```
 
 ```ts
 import {
   createWindowsVhfDriverSourceFiles,
+  createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const bytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
 const inf = createWindowsVhfInf();
-const sourceFiles = createWindowsVhfDriverSourceFiles();
+const driverSourceFiles = createWindowsVhfDriverSourceFiles();
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles();
 ```
 
 The generated INF template includes the VHF lower filter declaration required
@@ -69,6 +73,11 @@ The generated C source wires the OpenController HID descriptor into VHF and
 submits 13-byte input reports through `VhfReadReportSubmit`. Treat it as the
 WDK project starting point, then add signing, installation, and a user-mode host
 bridge that writes the buffered IOCTL.
+
+The generated host bridge C source is the user-mode side of that handoff. It
+reads OpenController native bridge JSONL from stdin, decodes `reportBase64`,
+converts XInput bytes to the OpenController HID report, opens the driver device
+path, and sends reports with `DeviceIoControl`.
 
 ## Report Helpers
 

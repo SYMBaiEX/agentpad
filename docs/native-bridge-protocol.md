@@ -129,3 +129,8 @@ if (message.type === "opencontroller.bridge.state") {
   // Write bytes to the platform virtual-device backend.
 }
 ```
+
+Platform packages can either consume the XInput bytes directly or convert them
+to a descriptor-backed HID report. The Windows VHF helpers generate a host
+bridge C template that reads this JSONL stream from stdin and submits HID
+reports to the VHF driver with `DeviceIoControl`.

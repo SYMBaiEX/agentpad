@@ -50,19 +50,23 @@ but this package now emits the OpenController-specific pieces a driver needs.
 opencontroller-windows-vhf-assets --descriptor-c
 opencontroller-windows-vhf-assets --driver-c
 opencontroller-windows-vhf-assets --driver-h
+opencontroller-windows-vhf-assets --host-c
+opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
 ```
 
 ```ts
 import {
   createWindowsVhfDriverSourceFiles,
+  createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const reportBytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
 const infTemplate = createWindowsVhfInf();
-const sourceFiles = createWindowsVhfDriverSourceFiles();
+const driverSourceFiles = createWindowsVhfDriverSourceFiles();
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles();
 ```
 
 The descriptor and input report bytes come from the shared
@@ -74,6 +78,11 @@ descriptor into `VHF_CONFIG_INIT`, creates and starts a VHF device, accepts a
 13-byte OpenController HID input report through a buffered IOCTL, and submits it
 with `VhfReadReportSubmit`. It still needs a signed driver package and a
 reviewed user-mode host path before installation.
+
+The generated host bridge C source reads OpenController native bridge JSONL from
+stdin, decodes each `reportBase64` XInput packet, converts it to the
+descriptor-backed 13-byte HID report, opens the VHF driver with `CreateFileA`,
+and writes reports through `DeviceIoControl`.
 
 ## XUSB Reports
 
@@ -90,7 +99,8 @@ emits for native bridge processes.
 
 ## Current Limitations
 
-- no Windows helper process yet
 - VHF signing/install flow is not implemented yet
 - no automatic driver installation
+- generated host bridge source still needs a Windows build project and real
+  device install verification
 - legacy ViGEmBus diagnostics are compatibility-only
