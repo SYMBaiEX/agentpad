@@ -125,6 +125,8 @@ describe("macOS DriverKit helpers", () => {
       "static const uint8_t openControllerHidReportDescriptor[]",
     );
     expect(descriptor).toContain("0x05, 0x01");
+    expect(descriptor).toContain("0x85, 0x02");
+    expect(descriptor).toContain("0x91, 0x02");
     expect(inputReport).toContain(
       "static const uint8_t openControllerSampleInputReport[]",
     );
@@ -174,13 +176,24 @@ describe("macOS DriverKit helpers", () => {
 
     expect(header).toContain("class OpenControllerVirtualGamepadDriver");
     expect(header).toContain("newReportDescriptor() override");
+    expect(header).toContain("setReport");
     expect(header).toContain("updateInputReport");
+    expect(header).toContain("copyRumbleReport");
+    expect(header).toContain("rumbleReport[5]");
+    expect(header).toContain("bool hasRumbleReport");
     expect(source).toContain(
       "OSDefineMetaClassAndStructors(OpenControllerVirtualGamepadDriver",
     );
     expect(source).toContain("OSData::withBytes");
     expect(source).toContain("kIOHIDVendorIDKey");
     expect(source).toContain("openControllerNeutralInputReport[13]");
+    expect(source).toContain("openControllerRumbleReportId = 2");
+    expect(source).toContain("openControllerRumbleReportLength = 5");
+    expect(source).toContain("kIOHIDReportTypeOutput");
+    expect(source).toContain("report->readBytes");
+    expect(source).toContain("hasRumbleReport = true");
+    expect(source).toContain("copyRumbleReport");
+    expect(source).toContain("CompleteReport");
     expect(Object.keys(files)).toEqual([
       "OpenControllerVirtualGamepadDriver.h",
       "OpenControllerVirtualGamepadDriver.cpp",
@@ -230,6 +243,7 @@ describe("macOS DriverKit helpers", () => {
       );
       expect(readme).toContain("No privileged system changes were made");
       expect(readme).toContain("System Extension activation");
+      expect(readme).toContain("rumble report");
       expect(infoPlist).toContain("com.example.opencontroller.driver");
       expect(hostEntitlements).toContain("TEAM42");
       expect(manifest).toContain("com.example.opencontroller.host");

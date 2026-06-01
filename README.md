@@ -227,9 +227,11 @@ The Windows native package adds:
 
 The macOS native package adds:
 
-- DriverKit-ready HID descriptor and input report helpers
+- DriverKit-ready HID descriptor, input report helpers, and rumble output
+  report codecs
 - Info.plist and entitlement templates for a virtual HID gamepad dext
-- C++ DriverKit source and byte-array asset generation
+- C++ DriverKit source and byte-array asset generation, including `setReport`
+  rumble capture and a `copyRumbleReport` hook for signed host bridges
 - host bridge adapter factory for a signed DriverKit host process
 - setup helper for staging reviewed DriverKit/host source files and activation/test commands without privileged changes
 - `opencontroller-macos-driverkit-doctor`
@@ -427,6 +429,9 @@ const controller = await createController({
 
 The default macOS bridge path is
 `~/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge`.
+The generated DriverKit source stores HID rumble output reports so a signed host
+bridge can publish `opencontroller.bridge.feedback` JSONL back to
+`controller.onFeedback(...)`.
 
 For application code that should run on whichever native backend is installed
 for the current host, use the unified native package:

@@ -12,7 +12,8 @@ This package provides:
 - DriverKit-ready HID report descriptor, input report helpers, and rumble
   output report codecs
 - Info.plist and entitlement templates for a virtual HID gamepad dext
-- C++ DriverKit source and byte-array asset generation
+- C++ DriverKit source and byte-array asset generation, including rumble output
+  report capture hooks for a signed host bridge
 - `createMacosDriverKitHostBridgeAdapter` for SDK-owned host bridge processes
 - `opencontroller-macos-driverkit-setup` for staging reviewed DriverKit/host
   source files and activation/test commands without privileged changes
@@ -76,8 +77,10 @@ bundle identifiers, team identifier, entitlements, and IOKit personality before
 building or signing a real dext.
 
 The generated C++ source subclasses `IOUserHIDDevice`, returns the shared
-OpenController report descriptor, exposes a neutral input report, and leaves the
-host app/user-client update path explicit.
+OpenController report descriptor with rumble output support, exposes a neutral
+input report, accepts host output reports through `setReport`, and leaves the
+host app/user-client update path explicit through `updateInputReport` and
+`copyRumbleReport`.
 
 ## Host Bridge Adapter
 
@@ -114,6 +117,11 @@ bridge process and exports the driver identity through
 `OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is provided so host bridges
 can ignore other controllers in a shared multi-agent stream. It does not bypass
 Apple's signing, notarization, entitlement, or user-approval requirements.
+
+For rumble, the signed host bridge should poll the generated driver's
+`copyRumbleReport` hook and emit `opencontroller.bridge.feedback` JSONL with the
+shared `"hid-gamepad-rumble"` payload. The SDK process adapter will surface that
+event through `controller.onFeedback(...)`.
 
 ## Diagnose
 

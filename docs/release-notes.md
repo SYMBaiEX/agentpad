@@ -59,6 +59,9 @@
   SDK-owned host bridge processes after a VHF driver package is built
 - macOS DriverKit asset generator now emits C++ source/header templates for an
   `IOUserHIDDevice` virtual gamepad dext
+- macOS DriverKit generated source now returns the rumble-capable HID
+  descriptor, accepts output reports through `setReport`, and exposes a
+  `copyRumbleReport` hook for signed host bridge feedback publishing
 - macOS DriverKit helpers now export `createMacosDriverKitHostBridgeAdapter`
   for SDK-owned host bridge processes after a signed host app is built
 - Windows VHF and macOS DriverKit host bridge adapters now pass
