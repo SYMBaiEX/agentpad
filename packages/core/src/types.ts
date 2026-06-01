@@ -57,6 +57,8 @@ export type ControllerCommand =
       type: "neutral";
     };
 
+export type ControllerCommandType = ControllerCommand["type"];
+
 export type NormalizedControllerCommand = {
   id: string;
   controllerId: string;
@@ -115,6 +117,32 @@ export type ControllerFeedbackEvent = ControllerRumbleFeedbackEvent;
 
 export type FeedbackListener = (event: ControllerFeedbackEvent) => void;
 
+export type ControllerAdapterOutputFormat =
+  | "normalized-command"
+  | "controller-state"
+  | "websocket-json"
+  | "xinput-report"
+  | "hid-gamepad-report"
+  | "native-bridge-jsonl";
+
+export type ControllerAdapterReportFormat =
+  | "xinput"
+  | "hid-gamepad"
+  | "hid-gamepad-rumble";
+
+export type ControllerAdapterFeedbackType = ControllerFeedbackEvent["type"];
+
+export type ControllerAdapterTransport =
+  | "memory"
+  | "callback"
+  | "websocket"
+  | "native-process";
+
+export type ControllerAdapterVirtualDeviceKind =
+  | "none"
+  | "native-helper"
+  | "os-virtual-gamepad";
+
 export type ControllerAdapterCapabilities = {
   supportsButtons: boolean;
   supportsAnalogTriggers: boolean;
@@ -130,6 +158,13 @@ export type ControllerAdapterCapabilities = {
   supportsVirtualDevice: boolean;
   requiresNativeInstall: boolean;
   requiresElevatedPermissions: boolean;
+  supportedProfiles: readonly ControllerProfileName[];
+  supportedCommands: readonly ControllerCommandType[];
+  outputFormats: readonly ControllerAdapterOutputFormat[];
+  reportFormats: readonly ControllerAdapterReportFormat[];
+  feedbackTypes: readonly ControllerAdapterFeedbackType[];
+  transport: ControllerAdapterTransport;
+  virtualDeviceKind: ControllerAdapterVirtualDeviceKind;
 };
 
 export type SafetyConfig = {

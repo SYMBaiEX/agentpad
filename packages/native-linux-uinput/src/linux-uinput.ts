@@ -52,7 +52,11 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
+  | "supportsVirtualDevice"
   | "supportsRumble"
+  | "virtualDeviceKind"
+  | "requiresNativeInstall"
+  | "requiresElevatedPermissions"
   | "onFeedback"
   | "onStdout"
   | "onStderr"
@@ -214,7 +218,13 @@ export function createLinuxUinputBridgeAdapter(
       : {}),
     ...(options.killSignal ? { killSignal: options.killSignal } : {}),
     ...(options.spawn ? { spawn: options.spawn } : {}),
+    supportsVirtualDevice: options.supportsVirtualDevice ?? !options.dryRun,
     supportsRumble: options.supportsRumble ?? true,
+    virtualDeviceKind:
+      options.virtualDeviceKind ??
+      (options.dryRun ? "native-helper" : "os-virtual-gamepad"),
+    requiresNativeInstall: options.requiresNativeInstall ?? true,
+    requiresElevatedPermissions: options.requiresElevatedPermissions ?? false,
     ...(options.onFeedback ? { onFeedback: options.onFeedback } : {}),
     ...(options.onStdout ? { onStdout: options.onStdout } : {}),
     ...(options.onStderr ? { onStderr: options.onStderr } : {}),

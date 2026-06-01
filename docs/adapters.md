@@ -18,6 +18,30 @@ Native virtual controller drivers should use state sync rather than command
 events as their primary source of truth. A virtual device usually needs a full
 current report every time state changes.
 
+## Capability Metadata
+
+Every adapter returns a `ControllerAdapterCapabilities` object through
+`controller.capabilities()`. The original boolean fields are still present, and
+new metadata fields make backend selection easier for agents and host apps:
+
+- `supportedProfiles`: profiles accepted by the adapter
+- `supportedCommands`: command types accepted by the runtime/adapter path
+- `outputFormats`: normalized command, state, WebSocket, XInput, HID, or JSONL outputs
+- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, and `hid-gamepad-rumble`
+- `feedbackTypes`: host feedback channels such as `rumble`
+- `transport`: memory, callback, WebSocket, or native process
+- `virtualDeviceKind`: none, native helper, or OS virtual gamepad
+
+```ts
+const capabilities = controller.capabilities();
+
+if (capabilities.feedbackTypes.includes("rumble")) {
+  controller.onFeedback((event) => {
+    console.log(event.type, event.weakMotor, event.strongMotor);
+  });
+}
+```
+
 Use `native-bridge` when a separate process needs JSONL messages with packed
 XInput report bytes. Use `xinput-report` when code in the same process wants
 direct access to reports without a wire format.

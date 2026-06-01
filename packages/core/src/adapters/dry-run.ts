@@ -1,5 +1,5 @@
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, baseCapabilities } from "./adapter";
+import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
 
 export class DryRunAdapter implements ControllerAdapter {
   readonly name = "dry-run";
@@ -31,11 +31,13 @@ export class DryRunAdapter implements ControllerAdapter {
   }
 
   capabilities() {
-    return {
-      ...baseCapabilities,
+    return createAdapterCapabilities({
       supportsStateSync: true,
       supportsVirtualDevice: false,
-    };
+      outputFormats: ["normalized-command", "controller-state"],
+      transport: "memory",
+      virtualDeviceKind: "none",
+    });
   }
 
   private assertConnected(): void {

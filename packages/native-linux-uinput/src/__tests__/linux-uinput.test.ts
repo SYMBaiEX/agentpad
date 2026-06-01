@@ -72,7 +72,12 @@ describe("linux uinput adapter helpers", () => {
     await controller.disconnect();
 
     expect(calls).toHaveLength(1);
-    expect(controller.capabilities().supportsRumble).toBe(true);
+    const capabilities = controller.capabilities();
+    expect(capabilities.supportsRumble).toBe(true);
+    expect(capabilities.supportsVirtualDevice).toBe(false);
+    expect(capabilities.virtualDeviceKind).toBe("native-helper");
+    expect(capabilities.feedbackTypes).toEqual(["rumble"]);
+    expect(capabilities.reportFormats).toContain("hid-gamepad-rumble");
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");
     expect(calls[0]?.args).toEqual([
       "--dry-run",

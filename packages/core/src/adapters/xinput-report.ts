@@ -4,7 +4,7 @@ import {
   encodeXInputReport,
 } from "../hid/xinput";
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, baseCapabilities } from "./adapter";
+import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
 
 export type XInputReportSink = (event: {
   controllerId: string;
@@ -64,11 +64,13 @@ export class XInputReportAdapter implements ControllerAdapter {
   }
 
   capabilities() {
-    return {
-      ...baseCapabilities,
+    return createAdapterCapabilities({
       supportsStateSync: true,
       supportsXInputReports: true,
-    };
+      outputFormats: ["controller-state", "xinput-report"],
+      reportFormats: ["xinput"],
+      transport: "callback",
+    });
   }
 
   private assertConnected(): void {

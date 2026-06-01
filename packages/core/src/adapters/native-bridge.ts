@@ -5,7 +5,7 @@ import {
   serializeNativeBridgeMessage,
 } from "../bridge";
 import type { ControllerState, NormalizedControllerCommand } from "../types";
-import { type ControllerAdapter, baseCapabilities } from "./adapter";
+import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
 
 export type NativeBridgeWrite = (
   line: string,
@@ -56,12 +56,19 @@ export class NativeBridgeAdapter implements ControllerAdapter {
   }
 
   capabilities() {
-    return {
-      ...baseCapabilities,
+    return createAdapterCapabilities({
       supportsStateSync: true,
       supportsXInputReports: true,
       supportsNativeBridge: true,
-    };
+      outputFormats: [
+        "controller-state",
+        "xinput-report",
+        "hid-gamepad-report",
+        "native-bridge-jsonl",
+      ],
+      reportFormats: ["xinput", "hid-gamepad"],
+      transport: "callback",
+    });
   }
 
   private async emit(message: NativeBridgeMessage): Promise<void> {

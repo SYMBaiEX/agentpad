@@ -7,6 +7,7 @@ import {
   DryRunAdapter,
   NativeBridgeAdapter,
   NativeProcessBridgeAdapter,
+  WebSocketAdapter,
   XInputReportAdapter,
   createActionMap,
   createController,
@@ -107,6 +108,45 @@ describe("controller runtime", () => {
     );
 
     await controller.disconnect();
+  });
+
+  test("describes adapter emulation capabilities", () => {
+    const dryRun = new DryRunAdapter().capabilities();
+    const websocket = new WebSocketAdapter({
+      url: "ws://127.0.0.1:4317",
+    }).capabilities();
+    const xinput = new XInputReportAdapter().capabilities();
+    const nativeBridge = new NativeBridgeAdapter().capabilities();
+    const nativeProcess = new NativeProcessBridgeAdapter({
+      command: "/bin/cat",
+      supportsRumble: true,
+      virtualDeviceKind: "os-virtual-gamepad",
+    }).capabilities();
+
+    expect(dryRun.supportedProfiles).toContain("keyboard-mouse");
+    expect(dryRun.supportedCommands).toContain("combo");
+    expect(dryRun.outputFormats).toEqual([
+      "normalized-command",
+      "controller-state",
+    ]);
+    expect(dryRun.transport).toBe("memory");
+    expect(dryRun.virtualDeviceKind).toBe("none");
+
+    expect(websocket.outputFormats).toContain("websocket-json");
+    expect(websocket.transport).toBe("websocket");
+
+    expect(xinput.reportFormats).toEqual(["xinput"]);
+    expect(xinput.outputFormats).toContain("xinput-report");
+
+    expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
+    expect(nativeBridge.reportFormats).toEqual(["xinput", "hid-gamepad"]);
+
+    expect(nativeProcess.supportsVirtualDevice).toBe(true);
+    expect(nativeProcess.supportsRumble).toBe(true);
+    expect(nativeProcess.feedbackTypes).toEqual(["rumble"]);
+    expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
+    expect(nativeProcess.transport).toBe("native-process");
+    expect(nativeProcess.virtualDeviceKind).toBe("os-virtual-gamepad");
   });
 
   test("encodes controller state as XInput reports", async () => {

@@ -312,6 +312,12 @@ describe("windows VHF helpers", () => {
     await controller.press("A", 1);
     await controller.disconnect();
 
+    const capabilities = controller.capabilities();
+    expect(capabilities.supportsVirtualDevice).toBe(true);
+    expect(capabilities.virtualDeviceKind).toBe("os-virtual-gamepad");
+    expect(capabilities.supportsRumble).toBe(true);
+    expect(capabilities.feedbackTypes).toEqual(["rumble"]);
+    expect(capabilities.reportFormats).toContain("hid-gamepad-rumble");
     expect(
       defaultWindowsVhfHostBridgePath("C:\\Users\\agent\\AppData\\Local"),
     ).toBe(

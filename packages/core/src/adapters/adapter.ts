@@ -1,6 +1,8 @@
 import type { Unsubscribe } from "../events";
 import type {
   ControllerAdapterCapabilities,
+  ControllerCommandType,
+  ControllerProfileName,
   ControllerState,
   FeedbackListener,
   NormalizedControllerCommand,
@@ -18,6 +20,26 @@ export interface ControllerAdapter {
   capabilities(): ControllerAdapterCapabilities;
 }
 
+export const controllerProfileNames = [
+  "xbox",
+  "playstation",
+  "switch",
+  "generic-hid",
+  "keyboard-mouse",
+] as const satisfies readonly ControllerProfileName[];
+
+export const controllerCommandTypes = [
+  "press",
+  "release",
+  "stick",
+  "trigger",
+  "dpad",
+  "combo",
+  "sequence",
+  "wait",
+  "neutral",
+] as const satisfies readonly ControllerCommandType[];
+
 export const baseCapabilities: ControllerAdapterCapabilities = {
   supportsButtons: true,
   supportsAnalogTriggers: true,
@@ -33,4 +55,20 @@ export const baseCapabilities: ControllerAdapterCapabilities = {
   supportsVirtualDevice: false,
   requiresNativeInstall: false,
   requiresElevatedPermissions: false,
+  supportedProfiles: controllerProfileNames,
+  supportedCommands: controllerCommandTypes,
+  outputFormats: ["normalized-command"],
+  reportFormats: [],
+  feedbackTypes: [],
+  transport: "memory",
+  virtualDeviceKind: "none",
 };
+
+export function createAdapterCapabilities(
+  overrides: Partial<ControllerAdapterCapabilities> = {},
+): ControllerAdapterCapabilities {
+  return {
+    ...baseCapabilities,
+    ...overrides,
+  };
+}

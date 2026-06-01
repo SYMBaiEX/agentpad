@@ -44,7 +44,11 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
+  | "supportsVirtualDevice"
   | "supportsRumble"
+  | "virtualDeviceKind"
+  | "requiresNativeInstall"
+  | "requiresElevatedPermissions"
   | "onFeedback"
   | "onStdout"
   | "onStderr"
@@ -218,8 +222,20 @@ function commonNativeProcessBridgeOptions(
   if (options.spawn !== undefined) {
     common.spawn = options.spawn;
   }
+  if (options.supportsVirtualDevice !== undefined) {
+    common.supportsVirtualDevice = options.supportsVirtualDevice;
+  }
   if (options.supportsRumble !== undefined) {
     common.supportsRumble = options.supportsRumble;
+  }
+  if (options.virtualDeviceKind !== undefined) {
+    common.virtualDeviceKind = options.virtualDeviceKind;
+  }
+  if (options.requiresNativeInstall !== undefined) {
+    common.requiresNativeInstall = options.requiresNativeInstall;
+  }
+  if (options.requiresElevatedPermissions !== undefined) {
+    common.requiresElevatedPermissions = options.requiresElevatedPermissions;
   }
   if (options.onFeedback !== undefined) {
     common.onFeedback = options.onFeedback;

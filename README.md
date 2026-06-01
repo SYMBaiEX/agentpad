@@ -553,6 +553,22 @@ want the current complete gamepad state, not only an event like "A was pressed."
 Process-backed native helpers can additionally opt into feedback events so games
 and host drivers can send haptics back to AI agents.
 
+Every adapter exposes capability metadata through `controller.capabilities()`.
+Agents can inspect supported profiles, command types, output formats, report
+formats, feedback types, transport, and virtual-device kind before selecting a
+backend:
+
+```ts
+const capabilities = controller.capabilities();
+
+if (
+  capabilities.supportsVirtualDevice &&
+  capabilities.virtualDeviceKind === "os-virtual-gamepad"
+) {
+  console.log("native gamepad path ready", capabilities.reportFormats);
+}
+```
+
 ## Examples
 
 ```bash

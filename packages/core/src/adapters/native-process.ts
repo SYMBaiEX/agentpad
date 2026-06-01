@@ -11,12 +11,13 @@ import {
 import { AdapterError } from "../errors";
 import { EventEmitter, type Unsubscribe } from "../events";
 import type {
+  ControllerAdapterVirtualDeviceKind,
   ControllerFeedbackEvent,
   ControllerState,
   FeedbackListener,
   NormalizedControllerCommand,
 } from "../types";
-import { type ControllerAdapter, baseCapabilities } from "./adapter";
+import { type ControllerAdapter, createAdapterCapabilities } from "./adapter";
 
 export type NativeProcessBridgeWritable = {
   write(chunk: string): number | Promise<number>;
@@ -52,7 +53,11 @@ export type NativeProcessBridgeAdapterOptions = {
   waitForExitMs?: number;
   killSignal?: number | NodeJS.Signals;
   spawn?: NativeProcessBridgeSpawner;
+  supportsVirtualDevice?: boolean;
   supportsRumble?: boolean;
+  virtualDeviceKind?: ControllerAdapterVirtualDeviceKind;
+  requiresNativeInstall?: boolean;
+  requiresElevatedPermissions?: boolean;
   onFeedback?: FeedbackListener;
   onStdout?: (chunk: string) => void;
   onStderr?: (chunk: string) => void;
@@ -143,15 +148,32 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
   }
 
   capabilities() {
-    return {
-      ...baseCapabilities,
+    const supportsRumble = this.options.supportsRumble ?? false;
+    const supportsVirtualDevice = this.options.supportsVirtualDevice ?? true;
+    return createAdapterCapabilities({
       supportsStateSync: true,
       supportsXInputReports: true,
       supportsNativeBridge: true,
-      supportsRumble: this.options.supportsRumble ?? false,
-      supportsVirtualDevice: true,
-      requiresNativeInstall: true,
-    };
+      supportsRumble,
+      supportsVirtualDevice,
+      requiresNativeInstall: this.options.requiresNativeInstall ?? true,
+      requiresElevatedPermissions:
+        this.options.requiresElevatedPermissions ?? false,
+      outputFormats: [
+        "controller-state",
+        "xinput-report",
+        "hid-gamepad-report",
+        "native-bridge-jsonl",
+      ],
+      reportFormats: supportsRumble
+        ? ["xinput", "hid-gamepad", "hid-gamepad-rumble"]
+        : ["xinput", "hid-gamepad"],
+      feedbackTypes: supportsRumble ? ["rumble"] : [],
+      transport: "native-process",
+      virtualDeviceKind:
+        this.options.virtualDeviceKind ??
+        (supportsVirtualDevice ? "native-helper" : "none"),
+    });
   }
 
   private async emit(message: NativeBridgeMessage): Promise<void> {

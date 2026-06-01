@@ -13,6 +13,8 @@
   while preserving standard XInput compatibility reports
 - `native-bridge` adapter and CLI sample stream added
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
+- adapter capabilities now describe supported profiles, command types, output
+  formats, report formats, feedback channels, transport, and virtual-device kind
 - Agent Fighter example now includes a headless Chromium match-series runner
   for repeatable agent duels, telemetry polling, aggregate win/decision
   scoring, HP damage metrics, configurable quality gates, summary JSON, and

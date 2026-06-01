@@ -53,6 +53,27 @@ await playerTwo.press("B", 0.1);
 await hub.disconnectAll();
 ```
 
+## Capability Metadata
+
+```ts
+const capabilities = controller.capabilities();
+
+console.log(capabilities.supportedProfiles);
+console.log(capabilities.outputFormats);
+console.log(capabilities.reportFormats);
+
+if (capabilities.feedbackTypes.includes("rumble")) {
+  controller.onFeedback((event) => {
+    console.log(event.weakMotor, event.strongMotor);
+  });
+}
+```
+
+Use capability metadata to select a backend before starting an agent run. Native
+host bridge adapters report whether they are helper-only or an
+`os-virtual-gamepad` path, which report formats they emit, and which feedback
+channels they can surface back to agents.
+
 ## Entry Points
 
 - `@opencontroller/core`: runtime, controllers, hubs, profiles, safety, replay

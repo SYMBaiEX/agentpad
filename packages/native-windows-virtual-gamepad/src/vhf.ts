@@ -74,7 +74,11 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
+  | "supportsVirtualDevice"
   | "supportsRumble"
+  | "virtualDeviceKind"
+  | "requiresNativeInstall"
+  | "requiresElevatedPermissions"
   | "onFeedback"
   | "onStdout"
   | "onStderr"
@@ -286,9 +290,11 @@ export function createWindowsVhfHostBridgeAdapter(
       : {}),
     ...(options.killSignal ? { killSignal: options.killSignal } : {}),
     ...(options.spawn ? { spawn: options.spawn } : {}),
-    ...(options.supportsRumble !== undefined
-      ? { supportsRumble: options.supportsRumble }
-      : {}),
+    supportsVirtualDevice: options.supportsVirtualDevice ?? true,
+    supportsRumble: options.supportsRumble ?? true,
+    virtualDeviceKind: options.virtualDeviceKind ?? "os-virtual-gamepad",
+    requiresNativeInstall: options.requiresNativeInstall ?? true,
+    requiresElevatedPermissions: options.requiresElevatedPermissions ?? false,
     ...(options.onFeedback ? { onFeedback: options.onFeedback } : {}),
     ...(options.onStdout ? { onStdout: options.onStdout } : {}),
     ...(options.onStderr ? { onStderr: options.onStderr } : {}),
