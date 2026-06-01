@@ -28,12 +28,22 @@ jobs:
             createLinuxUinputBridgeAdapter,
             defaultLinuxUinputHelperPath
           } from "./packages/native-linux-uinput/dist/index.js";
+          import {
+            createWindowsVhfHostBridgeAdapter,
+            defaultWindowsVhfHostBridgePath
+          } from "./packages/native-windows-virtual-gamepad/dist/index.js";
 
           if (typeof createLinuxUinputBridgeAdapter !== "function") {
             throw new Error("Linux uinput adapter factory is not exported");
           }
           if (!defaultLinuxUinputHelperPath("/tmp/home").endsWith("opencontroller-uinput-bridge")) {
             throw new Error("Linux uinput helper path export is invalid");
+          }
+          if (typeof createWindowsVhfHostBridgeAdapter !== "function") {
+            throw new Error("Windows VHF host bridge adapter factory is not exported");
+          }
+          if (!defaultWindowsVhfHostBridgePath("C:\\Users\\ci\\AppData\\Local").endsWith("OpenControllerVhfHostBridge.exe")) {
+            throw new Error("Windows VHF host bridge path export is invalid");
           }
 
           let stdout = "";

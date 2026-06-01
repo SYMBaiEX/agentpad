@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { ControllerState } from "@opencontroller/core";
+import {
+  type ControllerState,
+  type NativeProcessBridgeSpawner,
+  createController,
+} from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   hidGamepadReportDescriptor,
@@ -10,11 +14,13 @@ import {
   createWindowsVhfDriverHeader,
   createWindowsVhfDriverSource,
   createWindowsVhfDriverSourceFiles,
+  createWindowsVhfHostBridgeAdapter,
   createWindowsVhfHostBridgeHeader,
   createWindowsVhfHostBridgeSource,
   createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
+  defaultWindowsVhfHostBridgePath,
   encodeWindowsVhfInputReport,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfInputReportForC,
@@ -152,5 +158,72 @@ describe("windows VHF helpers", () => {
       "OpenControllerVhfHostBridge.h",
       "OpenControllerVhfHostBridge.c",
     ]);
+  });
+
+  test("wraps the VHF host bridge as a native process adapter", async () => {
+    const writes: string[] = [];
+    const calls: Array<{
+      command: string;
+      args: string[];
+      env?: Record<string, string | undefined>;
+    }> = [];
+    let resolveExit: (exitCode: number) => void = () => {};
+    const spawn: NativeProcessBridgeSpawner = (command, args, options) => {
+      calls.push({ command, args, env: options.env });
+      return {
+        stdin: {
+          write(chunk) {
+            writes.push(chunk);
+            return chunk.length;
+          },
+          flush() {
+            return 0;
+          },
+          end() {
+            resolveExit(0);
+            return 0;
+          },
+        },
+        stdout: null,
+        stderr: null,
+        exited: new Promise<number>((resolve) => {
+          resolveExit = resolve;
+        }),
+        kill() {},
+      };
+    };
+    const adapter = createWindowsVhfHostBridgeAdapter({
+      hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+      devicePath: "\\\\.\\OpenControllerVhfGamepad",
+      waitForExitMs: 50,
+      spawn,
+    });
+    const controller = await createController({
+      id: "windows-player",
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("A", 1);
+    await controller.disconnect();
+
+    expect(
+      defaultWindowsVhfHostBridgePath("C:\\Users\\agent\\AppData\\Local"),
+    ).toBe(
+      "C:\\Users\\agent\\AppData\\Local\\OpenController\\bin\\OpenControllerVhfHostBridge.exe",
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe(
+      "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+    );
+    expect(calls[0]?.args).toEqual([]);
+    expect(calls[0]?.env?.OPENCONTROLLER_VHF_DEVICE_PATH).toBe(
+      "\\\\.\\OpenControllerVhfGamepad",
+    );
+    expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
+      true,
+    );
+    expect(writes.at(-1)).toContain("opencontroller.bridge.disconnect");
   });
 });

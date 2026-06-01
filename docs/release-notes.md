@@ -39,6 +39,8 @@
   VHF-backed virtual HID gamepad
 - Windows VHF asset generator now emits host bridge C source/header templates
   that stream OpenController JSONL reports to the driver with `DeviceIoControl`
+- Windows VHF helpers now export `createWindowsVhfHostBridgeAdapter` for
+  SDK-owned host bridge processes after a VHF driver package is built
 - macOS DriverKit asset generator now emits C++ source/header templates for an
   `IOUserHIDDevice` virtual gamepad dext
 

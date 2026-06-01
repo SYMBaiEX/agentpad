@@ -1,3 +1,9 @@
+import { homedir } from "node:os";
+import { win32 } from "node:path";
+import {
+  NativeProcessBridgeAdapter,
+  type NativeProcessBridgeAdapterOptions,
+} from "@opencontroller/core";
 import type { NativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
@@ -45,6 +51,23 @@ export type WindowsVhfHostBridgeSourceOptions = {
   userDevicePath?: string;
 };
 
+export type WindowsVhfHostBridgeAdapterOptions = Pick<
+  NativeProcessBridgeAdapterOptions,
+  | "args"
+  | "cwd"
+  | "env"
+  | "includeState"
+  | "waitForExitMs"
+  | "killSignal"
+  | "spawn"
+  | "onStdout"
+  | "onStderr"
+  | "onExit"
+> & {
+  hostBridgePath?: string;
+  devicePath?: string;
+};
+
 export const defaultWindowsVhfInfOptions = {
   deviceName: "OpenController Virtual HID Gamepad",
   manufacturerName: "OpenController",
@@ -75,6 +98,38 @@ export const defaultWindowsVhfHostBridgeSourceOptions = {
   ioctlFunctionCode: 0x801,
   userDevicePath: defaultWindowsVhfDriverSourceOptions.userDevicePath,
 } satisfies Required<WindowsVhfHostBridgeSourceOptions>;
+
+export function defaultWindowsVhfHostBridgePath(
+  baseDirectory = process.env.LOCALAPPDATA ??
+    win32.join(homedir(), "AppData", "Local"),
+): string {
+  return win32.join(
+    baseDirectory,
+    "OpenController",
+    "bin",
+    "OpenControllerVhfHostBridge.exe",
+  );
+}
+
+export function createWindowsVhfHostBridgeAdapter(
+  options: WindowsVhfHostBridgeAdapterOptions = {},
+): NativeProcessBridgeAdapter {
+  return new NativeProcessBridgeAdapter({
+    command: options.hostBridgePath ?? defaultWindowsVhfHostBridgePath(),
+    args: options.args ?? [],
+    ...(options.cwd ? { cwd: options.cwd } : {}),
+    env: createWindowsVhfHostBridgeEnv(options),
+    includeState: options.includeState ?? false,
+    ...(options.waitForExitMs !== undefined
+      ? { waitForExitMs: options.waitForExitMs }
+      : {}),
+    ...(options.killSignal ? { killSignal: options.killSignal } : {}),
+    ...(options.spawn ? { spawn: options.spawn } : {}),
+    ...(options.onStdout ? { onStdout: options.onStdout } : {}),
+    ...(options.onStderr ? { onStderr: options.onStderr } : {}),
+    ...(options.onExit ? { onExit: options.onExit } : {}),
+  });
+}
 
 export function windowsVhfInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
@@ -798,4 +853,16 @@ function escapeCString(value: string): string {
 
 function escapeWideCString(value: string): string {
   return escapeCString(value);
+}
+
+function createWindowsVhfHostBridgeEnv(
+  options: Pick<WindowsVhfHostBridgeAdapterOptions, "devicePath" | "env">,
+): Record<string, string | undefined> {
+  return {
+    ...process.env,
+    ...options.env,
+    ...(options.devicePath
+      ? { OPENCONTROLLER_VHF_DEVICE_PATH: options.devicePath }
+      : {}),
+  };
 }

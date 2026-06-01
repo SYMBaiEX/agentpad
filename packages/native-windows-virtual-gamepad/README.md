@@ -18,6 +18,8 @@ This package provides:
 - VHF-ready HID report descriptor and input report helpers
 - INF, WDK C source, and C-array asset generators for a maintained Windows VHF
   driver path
+- `createWindowsVhfHostBridgeAdapter` for SDK-owned user-mode host bridge
+  processes after the VHF driver and host bridge have been built
 - XUSB report helpers compatible with OpenController's XInput report format
 - `opencontroller-windows-gamepad-doctor` for legacy ViGEmBus service checks
 - documentation and tests that leave room for future maintained Windows virtual
@@ -79,6 +81,25 @@ reads OpenController native bridge JSONL from stdin, prefers direct
 `hidReportBase64` payloads, falls back to converting legacy `reportBase64`
 XInput bytes, opens the driver device path, and sends reports with
 `DeviceIoControl`.
+
+After building and reviewing that host bridge, SDK code can own the process:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createWindowsVhfHostBridgeAdapter
+} from "@opencontroller/native-windows-virtual-gamepad/vhf";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createWindowsVhfHostBridgeAdapter({
+    hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+    devicePath: "\\\\.\\OpenControllerVhfGamepad"
+  }),
+  replay: false
+});
+```
 
 ## Report Helpers
 

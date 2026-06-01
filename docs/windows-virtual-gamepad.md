@@ -84,6 +84,26 @@ stdin, prefers direct `hidReportBase64` payloads, falls back to converting
 legacy `reportBase64` XInput packets, opens the VHF driver with `CreateFileA`,
 and writes 13-byte HID reports through `DeviceIoControl`.
 
+After the driver and host bridge are built and reviewed, SDK code can spawn the
+host bridge directly:
+
+```ts
+import { createController } from "@opencontroller/core";
+import {
+  createWindowsVhfHostBridgeAdapter
+} from "@opencontroller/native-windows-virtual-gamepad/vhf";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: createWindowsVhfHostBridgeAdapter({
+    hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
+    devicePath: "\\\\.\\OpenControllerVhfGamepad"
+  }),
+  replay: false
+});
+```
+
 ## XUSB Reports
 
 ```ts
