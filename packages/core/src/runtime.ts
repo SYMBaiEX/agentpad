@@ -1,4 +1,5 @@
 import type { ControllerAdapter } from "./adapters";
+import type { Unsubscribe } from "./events";
 import {
   type ControllerProfile,
   normalizeCommand,
@@ -13,6 +14,7 @@ import type {
   ControllerCommand,
   ControllerState,
   CreateControllerOptions,
+  FeedbackListener,
   StateListener,
 } from "./types";
 
@@ -79,6 +81,10 @@ export class ControllerRuntime {
 
   onStateChange(listener: StateListener) {
     return this.state.subscribe(listener);
+  }
+
+  onFeedback(listener: FeedbackListener): Unsubscribe {
+    return this.adapter.onFeedback?.(listener) ?? (() => {});
   }
 
   capabilities() {

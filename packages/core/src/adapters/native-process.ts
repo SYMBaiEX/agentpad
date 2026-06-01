@@ -4,10 +4,18 @@ import {
   type NativeBridgeMessage,
   createNativeBridgeDisconnectMessage,
   createNativeBridgeStateMessage,
+  nativeBridgeFeedbackMessageToControllerFeedback,
+  parseNativeBridgeMessage,
   serializeNativeBridgeMessage,
 } from "../bridge";
 import { AdapterError } from "../errors";
-import type { ControllerState, NormalizedControllerCommand } from "../types";
+import { EventEmitter, type Unsubscribe } from "../events";
+import type {
+  ControllerFeedbackEvent,
+  ControllerState,
+  FeedbackListener,
+  NormalizedControllerCommand,
+} from "../types";
 import { type ControllerAdapter, baseCapabilities } from "./adapter";
 
 export type NativeProcessBridgeWritable = {
@@ -44,6 +52,8 @@ export type NativeProcessBridgeAdapterOptions = {
   waitForExitMs?: number;
   killSignal?: number | NodeJS.Signals;
   spawn?: NativeProcessBridgeSpawner;
+  supportsRumble?: boolean;
+  onFeedback?: FeedbackListener;
   onStdout?: (chunk: string) => void;
   onStderr?: (chunk: string) => void;
   onExit?: (exitCode: number) => void;
@@ -53,10 +63,14 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
   readonly name = "native-process";
   readonly platform = "all" as const;
   readonly messages: NativeBridgeMessage[] = [];
+  private readonly feedbackEvents = new EventEmitter<{
+    feedback: ControllerFeedbackEvent;
+  }>();
   private process: NativeProcessBridgeProcess | undefined;
   private exitCode: number | undefined;
   private connected = false;
   private controllerId: string | undefined;
+  private stdoutBuffer = "";
 
   constructor(private readonly options: NativeProcessBridgeAdapterOptions) {}
 
@@ -74,7 +88,14 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
     this.connected = true;
     this.exitCode = undefined;
 
-    this.consumeOutput(this.process.stdout, this.options.onStdout);
+    this.consumeOutput(
+      this.process.stdout,
+      (chunk) => {
+        this.options.onStdout?.(chunk);
+        this.consumeStdoutFeedback(chunk);
+      },
+      () => this.flushStdoutFeedback(),
+    );
     this.consumeOutput(this.process.stderr, this.options.onStderr);
     void this.process.exited.then((exitCode) => {
       this.exitCode = exitCode;
@@ -100,6 +121,10 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
     this.assertConnected();
   }
 
+  onFeedback(listener: FeedbackListener): Unsubscribe {
+    return this.feedbackEvents.on("feedback", listener);
+  }
+
   async disconnect(): Promise<void> {
     if (!this.connected) {
       return;
@@ -123,6 +148,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
       supportsStateSync: true,
       supportsXInputReports: true,
       supportsNativeBridge: true,
+      supportsRumble: this.options.supportsRumble ?? false,
       supportsVirtualDevice: true,
       requiresNativeInstall: true,
     };
@@ -175,6 +201,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
   private consumeOutput(
     stream: ReadableStream<Uint8Array> | null | undefined,
     callback: ((chunk: string) => void) | undefined,
+    onEnd?: () => void,
   ): void {
     if (!stream) {
       return;
@@ -195,12 +222,56 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         if (tail) {
           callback?.(tail);
         }
+        onEnd?.();
       } catch {
         // Output capture is diagnostic only; command writes surface separately.
       } finally {
         reader.releaseLock();
       }
     })();
+  }
+
+  private consumeStdoutFeedback(chunk: string): void {
+    this.stdoutBuffer += chunk;
+    const lines = this.stdoutBuffer.split(/\r?\n/);
+    this.stdoutBuffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      this.consumeStdoutFeedbackLine(line);
+    }
+  }
+
+  private flushStdoutFeedback(): void {
+    if (!this.stdoutBuffer.trim()) {
+      this.stdoutBuffer = "";
+      return;
+    }
+
+    this.consumeStdoutFeedbackLine(this.stdoutBuffer);
+    this.stdoutBuffer = "";
+  }
+
+  private consumeStdoutFeedbackLine(line: string): void {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    try {
+      const message = parseNativeBridgeMessage(trimmed);
+      if (message.type !== "opencontroller.bridge.feedback") {
+        return;
+      }
+      if (!this.controllerId || message.controllerId !== this.controllerId) {
+        return;
+      }
+
+      const event = nativeBridgeFeedbackMessageToControllerFeedback(message);
+      this.options.onFeedback?.(event);
+      this.feedbackEvents.emit("feedback", event);
+    } catch {
+      // Helper stdout may contain human-readable diagnostics; only JSONL feedback is consumed.
+    }
   }
 
   private assertConnected(): void {

@@ -5,12 +5,20 @@ import {
   decodeXInputReport,
   encodeXInputReport,
 } from "../hid/xinput";
-import type { ControllerProfileName, ControllerState } from "../types";
+import type {
+  ControllerFeedbackEvent,
+  ControllerProfileName,
+  ControllerState,
+} from "../types";
 
 export const nativeBridgeProtocolVersion = 1;
+export const nativeBridgeHidGamepadRumbleReportId = 2;
+export const nativeBridgeHidGamepadRumbleReportByteLength = 5;
 
 export type NativeBridgeReportFormat = "xinput";
 export type NativeBridgeHidReportFormat = "hid-gamepad";
+export type NativeBridgeFeedbackType = "rumble";
+export type NativeBridgeFeedbackReportFormat = "hid-gamepad-rumble";
 
 export type NativeBridgeHidGamepadReport = {
   reportId: 1;
@@ -45,13 +53,42 @@ export type NativeBridgeDisconnectMessage = {
   timestamp: number;
 };
 
+export type NativeBridgeRumbleFeedbackMessage = {
+  type: "opencontroller.bridge.feedback";
+  version: typeof nativeBridgeProtocolVersion;
+  controllerId: string;
+  timestamp: number;
+  feedbackType: "rumble";
+  reportFormat: "hid-gamepad-rumble";
+  reportId: typeof nativeBridgeHidGamepadRumbleReportId;
+  reportBase64: string;
+  weakMotor: number;
+  strongMotor: number;
+  leftTriggerMotor: number;
+  rightTriggerMotor: number;
+  durationMs?: number;
+};
+
+export type NativeBridgeFeedbackMessage = NativeBridgeRumbleFeedbackMessage;
+
 export type NativeBridgeMessage =
   | NativeBridgeStateMessage
-  | NativeBridgeDisconnectMessage;
+  | NativeBridgeDisconnectMessage
+  | NativeBridgeFeedbackMessage;
 
 export type CreateNativeBridgeStateMessageOptions = {
   includeState?: boolean;
   timestamp?: number;
+};
+
+export type CreateNativeBridgeRumbleFeedbackMessageOptions = {
+  controllerId: string;
+  timestamp?: number;
+  weakMotor?: number;
+  strongMotor?: number;
+  leftTriggerMotor?: number;
+  rightTriggerMotor?: number;
+  durationMs?: number;
 };
 
 export function createNativeBridgeStateMessage(
@@ -77,6 +114,40 @@ export function createNativeBridgeStateMessage(
     hidReport,
     hidReportBase64: bytesToBase64(hidBytes),
     ...(includeState ? { state } : {}),
+  };
+}
+
+export function createNativeBridgeRumbleFeedbackMessage(
+  options: CreateNativeBridgeRumbleFeedbackMessageOptions,
+): NativeBridgeRumbleFeedbackMessage {
+  const weakMotor = clampNormalized(options.weakMotor ?? 0);
+  const strongMotor = clampNormalized(options.strongMotor ?? 0);
+  const leftTriggerMotor = clampNormalized(options.leftTriggerMotor ?? 0);
+  const rightTriggerMotor = clampNormalized(options.rightTriggerMotor ?? 0);
+  const bytes = encodeNativeBridgeRumbleReport({
+    reportId: nativeBridgeHidGamepadRumbleReportId,
+    weakMotor,
+    strongMotor,
+    leftTriggerMotor,
+    rightTriggerMotor,
+  });
+
+  return {
+    type: "opencontroller.bridge.feedback",
+    version: nativeBridgeProtocolVersion,
+    controllerId: options.controllerId,
+    timestamp: options.timestamp ?? Date.now(),
+    feedbackType: "rumble",
+    reportFormat: "hid-gamepad-rumble",
+    reportId: nativeBridgeHidGamepadRumbleReportId,
+    reportBase64: bytesToBase64(bytes),
+    weakMotor,
+    strongMotor,
+    leftTriggerMotor,
+    rightTriggerMotor,
+    ...(options.durationMs !== undefined
+      ? { durationMs: options.durationMs }
+      : {}),
   };
 }
 
@@ -148,6 +219,44 @@ export function nativeBridgeMessageToHidGamepadReportBytes(
   );
 }
 
+export function nativeBridgeFeedbackMessageToRumbleReportBytes(
+  message: NativeBridgeRumbleFeedbackMessage,
+): Uint8Array {
+  const bytes = base64ToBytes(message.reportBase64);
+  const decoded = decodeNativeBridgeRumbleReport(bytes);
+
+  if (!rumbleReportsEqual(decoded, message)) {
+    throw new TypeError(
+      "Native bridge rumble report bytes do not match feedback JSON",
+    );
+  }
+
+  return bytes;
+}
+
+export function nativeBridgeFeedbackMessageToControllerFeedback(
+  message: NativeBridgeFeedbackMessage,
+): ControllerFeedbackEvent {
+  nativeBridgeFeedbackMessageToRumbleReportBytes(message);
+
+  return {
+    type: "rumble",
+    controllerId: message.controllerId,
+    timestamp: message.timestamp,
+    weakMotor: message.weakMotor,
+    strongMotor: message.strongMotor,
+    leftTriggerMotor: message.leftTriggerMotor,
+    rightTriggerMotor: message.rightTriggerMotor,
+    source: "native-bridge",
+    reportFormat: message.reportFormat,
+    reportId: message.reportId,
+    reportBase64: message.reportBase64,
+    ...(message.durationMs !== undefined
+      ? { durationMs: message.durationMs }
+      : {}),
+  };
+}
+
 export function isNativeBridgeMessage(
   value: unknown,
 ): value is NativeBridgeMessage {
@@ -168,6 +277,10 @@ export function isNativeBridgeMessage(
     return true;
   }
 
+  if (value.type === "opencontroller.bridge.feedback") {
+    return isNativeBridgeFeedbackMessage(value);
+  }
+
   return (
     value.type === "opencontroller.bridge.state" &&
     typeof value.profile === "string" &&
@@ -175,6 +288,27 @@ export function isNativeBridgeMessage(
     typeof value.reportBase64 === "string" &&
     isXInputReport(value.report) &&
     hasValidOptionalHidReport(value)
+  );
+}
+
+export function isNativeBridgeFeedbackMessage(
+  value: unknown,
+): value is NativeBridgeFeedbackMessage {
+  return (
+    isRecord(value) &&
+    value.version === nativeBridgeProtocolVersion &&
+    typeof value.controllerId === "string" &&
+    typeof value.timestamp === "number" &&
+    value.type === "opencontroller.bridge.feedback" &&
+    value.feedbackType === "rumble" &&
+    value.reportFormat === "hid-gamepad-rumble" &&
+    value.reportId === nativeBridgeHidGamepadRumbleReportId &&
+    typeof value.reportBase64 === "string" &&
+    isNormalizedNumber(value.weakMotor) &&
+    isNormalizedNumber(value.strongMotor) &&
+    isNormalizedNumber(value.leftTriggerMotor) &&
+    isNormalizedNumber(value.rightTriggerMotor) &&
+    hasValidOptionalDuration(value)
   );
 }
 
@@ -283,6 +417,53 @@ function decodeNativeBridgeHidGamepadReport(
   };
 }
 
+type NativeBridgeRumbleReport = {
+  reportId: typeof nativeBridgeHidGamepadRumbleReportId;
+  weakMotor: number;
+  strongMotor: number;
+  leftTriggerMotor: number;
+  rightTriggerMotor: number;
+};
+
+function encodeNativeBridgeRumbleReport(
+  report: NativeBridgeRumbleReport,
+): Uint8Array {
+  const bytes = new Uint8Array(nativeBridgeHidGamepadRumbleReportByteLength);
+  const view = new DataView(bytes.buffer);
+
+  view.setUint8(0, nativeBridgeHidGamepadRumbleReportId);
+  view.setUint8(1, normalizedToByte(report.weakMotor));
+  view.setUint8(2, normalizedToByte(report.strongMotor));
+  view.setUint8(3, normalizedToByte(report.leftTriggerMotor));
+  view.setUint8(4, normalizedToByte(report.rightTriggerMotor));
+
+  return bytes;
+}
+
+function decodeNativeBridgeRumbleReport(
+  bytes: Uint8Array,
+): NativeBridgeRumbleReport {
+  if (bytes.byteLength < nativeBridgeHidGamepadRumbleReportByteLength) {
+    throw new RangeError(
+      `HID gamepad rumble reports must be at least ${nativeBridgeHidGamepadRumbleReportByteLength} bytes`,
+    );
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const reportId = view.getUint8(0);
+  if (reportId !== nativeBridgeHidGamepadRumbleReportId) {
+    throw new RangeError(`Unexpected HID gamepad rumble report id ${reportId}`);
+  }
+
+  return {
+    reportId: nativeBridgeHidGamepadRumbleReportId,
+    weakMotor: view.getUint8(1),
+    strongMotor: view.getUint8(2),
+    leftTriggerMotor: view.getUint8(3),
+    rightTriggerMotor: view.getUint8(4),
+  };
+}
+
 function hidReportsEqual(
   a: NativeBridgeHidGamepadReport,
   b: NativeBridgeHidGamepadReport,
@@ -297,6 +478,48 @@ function hidReportsEqual(
     a.rightStickX === b.rightStickX &&
     a.rightStickY === b.rightStickY
   );
+}
+
+function rumbleReportsEqual(
+  report: NativeBridgeRumbleReport,
+  message: NativeBridgeRumbleFeedbackMessage,
+): boolean {
+  return (
+    report.reportId === message.reportId &&
+    report.weakMotor === normalizedToByte(message.weakMotor) &&
+    report.strongMotor === normalizedToByte(message.strongMotor) &&
+    report.leftTriggerMotor === normalizedToByte(message.leftTriggerMotor) &&
+    report.rightTriggerMotor === normalizedToByte(message.rightTriggerMotor)
+  );
+}
+
+function hasValidOptionalDuration(value: Record<string, unknown>): boolean {
+  return (
+    value.durationMs === undefined ||
+    (typeof value.durationMs === "number" &&
+      Number.isFinite(value.durationMs) &&
+      value.durationMs >= 0)
+  );
+}
+
+function isNormalizedNumber(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 1
+  );
+}
+
+function clampNormalized(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, value));
+}
+
+function normalizedToByte(value: number): number {
+  return Math.round(clampNormalized(value) * 255);
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

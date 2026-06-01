@@ -5,6 +5,7 @@ import type {
   ControllerCommand,
   CreateControllerOptions,
   DpadDirection,
+  FeedbackListener,
   StateListener,
   StickName,
 } from "./types";
@@ -105,6 +106,10 @@ export class Controller {
 
   onStateChange(callback: StateListener) {
     return this.runtime.onStateChange(callback);
+  }
+
+  onFeedback(callback: FeedbackListener) {
+    return this.runtime.onFeedback(callback);
   }
 
   capabilities() {

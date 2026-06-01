@@ -74,6 +74,8 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
+  | "supportsRumble"
+  | "onFeedback"
   | "onStdout"
   | "onStderr"
   | "onExit"
@@ -284,6 +286,10 @@ export function createWindowsVhfHostBridgeAdapter(
       : {}),
     ...(options.killSignal ? { killSignal: options.killSignal } : {}),
     ...(options.spawn ? { spawn: options.spawn } : {}),
+    ...(options.supportsRumble !== undefined
+      ? { supportsRumble: options.supportsRumble }
+      : {}),
+    ...(options.onFeedback ? { onFeedback: options.onFeedback } : {}),
     ...(options.onStdout ? { onStdout: options.onStdout } : {}),
     ...(options.onStderr ? { onStderr: options.onStderr } : {}),
     ...(options.onExit ? { onExit: options.onExit } : {}),

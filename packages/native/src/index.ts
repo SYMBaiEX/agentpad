@@ -44,6 +44,8 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
+  | "supportsRumble"
+  | "onFeedback"
   | "onStdout"
   | "onStderr"
   | "onExit"
@@ -215,6 +217,12 @@ function commonNativeProcessBridgeOptions(
   }
   if (options.spawn !== undefined) {
     common.spawn = options.spawn;
+  }
+  if (options.supportsRumble !== undefined) {
+    common.supportsRumble = options.supportsRumble;
+  }
+  if (options.onFeedback !== undefined) {
+    common.onFeedback = options.onFeedback;
   }
   if (options.onStdout !== undefined) {
     common.onStdout = options.onStdout;

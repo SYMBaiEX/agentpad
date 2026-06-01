@@ -96,6 +96,25 @@ export type ControllerState = {
   updatedAt: number;
 };
 
+export type ControllerRumbleFeedbackEvent = {
+  type: "rumble";
+  controllerId: string;
+  timestamp: number;
+  weakMotor: number;
+  strongMotor: number;
+  leftTriggerMotor: number;
+  rightTriggerMotor: number;
+  durationMs?: number;
+  source?: string;
+  reportFormat?: "hid-gamepad-rumble";
+  reportId?: number;
+  reportBase64?: string;
+};
+
+export type ControllerFeedbackEvent = ControllerRumbleFeedbackEvent;
+
+export type FeedbackListener = (event: ControllerFeedbackEvent) => void;
+
 export type ControllerAdapterCapabilities = {
   supportsButtons: boolean;
   supportsAnalogTriggers: boolean;

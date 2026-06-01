@@ -116,3 +116,7 @@ Effect inputs are normalized from `0` to `1` and encoded as unsigned bytes. The
 descriptor uses a vendor-defined output report because HID gamepad haptics are
 not consistently standardized across platforms. Native host bridges should
 translate this report to the platform's preferred rumble API when available.
+Helpers can report host haptics back to the SDK by emitting an
+`opencontroller.bridge.feedback` JSONL message whose `reportFormat` is
+`"hid-gamepad-rumble"`; process adapters surface those messages through
+`controller.onFeedback(...)`.

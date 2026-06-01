@@ -321,8 +321,9 @@ const rumble = encodeHidGamepadRumbleReport({
 HID reports are the handoff point for descriptor-backed virtual device APIs.
 The report shape includes 16 buttons, four signed stick axes, and two trigger
 axes. OpenController also defines a compact vendor output report for rumble
-channels so native drivers have a shared haptics contract to implement. See
-[HID Gamepad Reports](docs/hid-gamepad-reports.md).
+channels so native drivers have a shared haptics contract to implement. Native
+helpers can also send rumble feedback back to agents through
+`controller.onFeedback(...)`. See [HID Gamepad Reports](docs/hid-gamepad-reports.md).
 
 ### Native Bridge JSONL
 
@@ -365,9 +366,16 @@ const controller = await createController({
   profile: "xbox",
   adapter: new NativeProcessBridgeAdapter({
     command: "/home/me/.opencontroller/bin/opencontroller-uinput-bridge",
-    includeState: false
+    includeState: false,
+    supportsRumble: true
   }),
   replay: false
+});
+
+controller.onFeedback((event) => {
+  if (event.type === "rumble") {
+    console.log("rumble", event.weakMotor, event.strongMotor);
+  }
 });
 
 await controller.press("A", 80);
@@ -392,7 +400,8 @@ const controller = await createController({
 ```
 
 This adapter spawns a helper process, streams native bridge JSONL to stdin,
-sends a disconnect message, closes stdin, and surfaces non-zero helper exits.
+sends a disconnect message, closes stdin, surfaces non-zero helper exits, and
+can parse helper stdout feedback JSONL for host-side rumble events.
 
 macOS DriverKit projects can use the same native process pattern once a signed
 host app/bridge is available:
@@ -531,6 +540,8 @@ Current adapters:
 Runtime adapters can also opt into full state synchronization. This is the
 important boundary for virtual controller emulation: native drivers generally
 want the current complete gamepad state, not only an event like "A was pressed."
+Process-backed native helpers can additionally opt into feedback events so games
+and host drivers can send haptics back to AI agents.
 
 ## Examples
 

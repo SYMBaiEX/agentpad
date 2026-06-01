@@ -38,6 +38,8 @@
   virtual device backends
 - HID rumble output report descriptor and codecs added as the shared haptics
   contract for native virtual device backends
+- native bridge feedback messages added so helper stdout can report HID rumble
+  output events through `controller.onFeedback(...)`
 - Windows VHF helpers added for HID descriptor/report bytes, C-array assets,
   and a VHF lower-filter INF template
 - `@opencontroller/native-macos-driverkit` package added with DriverKit HID

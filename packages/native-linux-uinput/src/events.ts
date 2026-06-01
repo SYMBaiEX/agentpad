@@ -44,6 +44,9 @@ export function linuxEventsFromNativeBridgeMessage(
   if (message.type === "opencontroller.bridge.disconnect") {
     return linuxNeutralEvents();
   }
+  if (message.type === "opencontroller.bridge.feedback") {
+    return [];
+  }
 
   const bytes = nativeBridgeMessageToHidGamepadReportBytes(message);
   return linuxEventsFromHidGamepadReport(decodeHidGamepadReport(bytes));

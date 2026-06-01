@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type ControllerFeedbackEvent,
   DryRunAdapter,
   NativeBridgeAdapter,
   NativeProcessBridgeAdapter,
@@ -10,6 +11,7 @@ import {
   createActionMap,
   createController,
   createControllerHub,
+  createNativeBridgeRumbleFeedbackMessage,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeXInputReport,
@@ -23,9 +25,12 @@ import {
   hidGamepadRumbleOutputReportDescriptor,
   hidGamepadRumbleReportByteLength,
   hidGamepadRumbleReportId,
+  nativeBridgeFeedbackMessageToControllerFeedback,
+  nativeBridgeFeedbackMessageToRumbleReportBytes,
   nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage,
+  serializeNativeBridgeMessage,
   xInputButtonBits,
 } from "../index";
 
@@ -177,6 +182,51 @@ describe("controller runtime", () => {
     expect(hidGamepadReportDescriptorWithRumble.byteLength).toBeGreaterThan(
       hidGamepadReportDescriptor.byteLength,
     );
+  });
+
+  test("round-trips native bridge rumble feedback messages", () => {
+    const message = createNativeBridgeRumbleFeedbackMessage({
+      controllerId: "player-1",
+      timestamp: 123,
+      weakMotor: 0.25,
+      strongMotor: 1,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 0.5,
+      durationMs: 80,
+    });
+
+    const parsed = parseNativeBridgeMessage(
+      serializeNativeBridgeMessage(message),
+    );
+    expect(parsed.type).toBe("opencontroller.bridge.feedback");
+    if (parsed.type !== "opencontroller.bridge.feedback") {
+      throw new Error("Expected a native bridge feedback message");
+    }
+
+    const bytes = nativeBridgeFeedbackMessageToRumbleReportBytes(parsed);
+    const report = decodeHidGamepadRumbleReport(bytes);
+    const feedback = nativeBridgeFeedbackMessageToControllerFeedback(parsed);
+
+    expect(bytes.byteLength).toBe(hidGamepadRumbleReportByteLength);
+    expect(report.reportId).toBe(hidGamepadRumbleReportId);
+    expect(report.weakMotor).toBe(64);
+    expect(report.strongMotor).toBe(255);
+    expect(report.leftTriggerMotor).toBe(0);
+    expect(report.rightTriggerMotor).toBe(128);
+    expect(feedback).toEqual({
+      type: "rumble",
+      controllerId: "player-1",
+      timestamp: 123,
+      weakMotor: 0.25,
+      strongMotor: 1,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 0.5,
+      durationMs: 80,
+      source: "native-bridge",
+      reportFormat: "hid-gamepad-rumble",
+      reportId: hidGamepadRumbleReportId,
+      reportBase64: message.reportBase64,
+    });
   });
 
   test("encodes system buttons in HID gamepad reports without changing XInput reports", async () => {
@@ -338,6 +388,112 @@ describe("controller runtime", () => {
     expect(killed).toBe(false);
   });
 
+  test("surfaces native process rumble feedback from helper stdout", async () => {
+    const lines: string[] = [];
+    const stdoutChunks: string[] = [];
+    const feedbackEvents: ControllerFeedbackEvent[] = [];
+    const encoder = new TextEncoder();
+    let stdoutController:
+      | ReadableStreamDefaultController<Uint8Array>
+      | undefined;
+    let resolveExit: (code: number) => void = () => {};
+    const exited = new Promise<number>((resolve) => {
+      resolveExit = resolve;
+    });
+    const stdout = new ReadableStream<Uint8Array>({
+      start(controller) {
+        stdoutController = controller;
+      },
+    });
+    const adapter = new NativeProcessBridgeAdapter({
+      command: "opencontroller-host-bridge",
+      includeState: false,
+      waitForExitMs: 50,
+      supportsRumble: true,
+      onStdout(chunk) {
+        stdoutChunks.push(chunk);
+      },
+      spawn() {
+        return {
+          stdin: {
+            write(line) {
+              lines.push(line);
+              return line.length;
+            },
+            flush() {
+              return 0;
+            },
+            end() {
+              resolveExit(0);
+              return 0;
+            },
+          },
+          stdout,
+          exited,
+          kill() {
+            resolveExit(0);
+          },
+        };
+      },
+    });
+    const controller = await createController({
+      id: "player-1",
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+    const unsubscribe = controller.onFeedback((event) => {
+      feedbackEvents.push(event);
+    });
+
+    if (!stdoutController) {
+      throw new Error("Expected stdout controller to be available");
+    }
+
+    const ignored = createNativeBridgeRumbleFeedbackMessage({
+      controllerId: "player-2",
+      timestamp: 122,
+      strongMotor: 1,
+    });
+    const accepted = createNativeBridgeRumbleFeedbackMessage({
+      controllerId: "player-1",
+      timestamp: 123,
+      weakMotor: 0.5,
+      strongMotor: 0.25,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 1,
+      durationMs: 50,
+    });
+    const acceptedLine = serializeNativeBridgeMessage(accepted);
+
+    stdoutController.enqueue(
+      encoder.encode(`helper ready\n${serializeNativeBridgeMessage(ignored)}`),
+    );
+    stdoutController.enqueue(encoder.encode(acceptedLine.slice(0, 8)));
+    stdoutController.enqueue(encoder.encode(acceptedLine.slice(8)));
+
+    await waitFor(() => feedbackEvents.length === 1);
+
+    expect(controller.capabilities().supportsRumble).toBe(true);
+    expect(stdoutChunks.join("")).toContain("helper ready");
+    expect(feedbackEvents[0]).toMatchObject({
+      type: "rumble",
+      controllerId: "player-1",
+      timestamp: 123,
+      weakMotor: 0.5,
+      strongMotor: 0.25,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 1,
+      durationMs: 50,
+      source: "native-bridge",
+    });
+
+    unsubscribe();
+    stdoutController.close();
+    await controller.disconnect();
+    expect(lines.at(-1)).toContain("opencontroller.bridge.disconnect");
+  });
+
   test("writes replay command events", async () => {
     const dir = await mkdtemp(join(tmpdir(), "opencontroller-replay-"));
     cleanupDirs.push(dir);
@@ -403,3 +559,13 @@ describe("controller runtime", () => {
     await hub.disconnectAll();
   });
 });
+
+async function waitFor(predicate: () => boolean): Promise<void> {
+  const startedAt = Date.now();
+  while (!predicate()) {
+    if (Date.now() - startedAt > 500) {
+      throw new Error("Timed out waiting for condition");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}

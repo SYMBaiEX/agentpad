@@ -54,6 +54,7 @@ describe("native host bridge facade", () => {
     const adapter = createNativeHostBridgeAdapter({
       platform: "linux",
       waitForExitMs: 50,
+      supportsRumble: true,
       spawn,
       linux: {
         controllerId: "native-player",
@@ -64,6 +65,7 @@ describe("native host bridge facade", () => {
       },
     });
 
+    expect(adapter.capabilities().supportsRumble).toBe(true);
     await driveAdapter(adapter);
 
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");

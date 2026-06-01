@@ -9,6 +9,7 @@ The current protocol is intentionally small:
 - version: `1`
 - report format: `xinput`
 - report payload: 12-byte XInput-compatible report encoded as base64
+- feedback: optional native-helper JSONL output for host haptics such as rumble
 - lifecycle: state messages followed by an optional disconnect message
 
 This protocol is the contract for Linux `uinput`, Windows virtual gamepad/HID,
@@ -67,9 +68,16 @@ const controller = await createController({
   profile: "xbox",
   adapter: new NativeProcessBridgeAdapter({
     command: "/home/me/.opencontroller/bin/opencontroller-uinput-bridge",
-    includeState: false
+    includeState: false,
+    supportsRumble: true
   }),
   replay: false
+});
+
+controller.onFeedback((event) => {
+  if (event.type === "rumble") {
+    console.log(event.weakMotor, event.strongMotor);
+  }
 });
 ```
 
@@ -127,10 +135,39 @@ Descriptor-backed native drivers should prefer `hidReportBase64`, which is the
 Native bridges should neutralize and release the virtual device when they
 receive a disconnect message or when the stream closes unexpectedly.
 
+## Feedback Message
+
+Native helpers can emit JSONL feedback messages on stdout. The SDK still passes
+all stdout chunks to `onStdout`, but it also parses complete JSON lines with this
+shape and surfaces them through `controller.onFeedback(...)`.
+
+```json
+{
+  "type": "opencontroller.bridge.feedback",
+  "version": 1,
+  "controllerId": "player-1",
+  "timestamp": 1770000000000,
+  "feedbackType": "rumble",
+  "reportFormat": "hid-gamepad-rumble",
+  "reportId": 2,
+  "reportBase64": "AkD/AIU=",
+  "weakMotor": 0.25,
+  "strongMotor": 1,
+  "leftTriggerMotor": 0,
+  "rightTriggerMotor": 0.52,
+  "durationMs": 80
+}
+```
+
+`reportBase64` is the 5-byte HID rumble output report documented in
+[HID Gamepad Reports](hid-gamepad-reports.md). The normalized motor fields make
+the same event easy for agents to consume without decoding bytes.
+
 ## Parse Messages
 
 ```ts
 import {
+  nativeBridgeFeedbackMessageToControllerFeedback,
   nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage
@@ -142,6 +179,11 @@ if (message.type === "opencontroller.bridge.state") {
   const xinputBytes = nativeBridgeMessageToReportBytes(message);
   const hidBytes = nativeBridgeMessageToHidGamepadReportBytes(message);
   // Write the payload required by the platform virtual-device backend.
+}
+
+if (message.type === "opencontroller.bridge.feedback") {
+  const feedback = nativeBridgeFeedbackMessageToControllerFeedback(message);
+  // Forward haptics back to the agent, telemetry, or replay pipeline.
 }
 ```
 

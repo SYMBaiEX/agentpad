@@ -1,6 +1,8 @@
+import type { Unsubscribe } from "../events";
 import type {
   ControllerAdapterCapabilities,
   ControllerState,
+  FeedbackListener,
   NormalizedControllerCommand,
 } from "../types";
 
@@ -10,6 +12,7 @@ export interface ControllerAdapter {
   connect(): Promise<void>;
   send(command: NormalizedControllerCommand): Promise<void>;
   syncState?(state: ControllerState): Promise<void>;
+  onFeedback?(listener: FeedbackListener): Unsubscribe;
   neutral(command?: NormalizedControllerCommand): Promise<void>;
   disconnect(): Promise<void>;
   capabilities(): ControllerAdapterCapabilities;
