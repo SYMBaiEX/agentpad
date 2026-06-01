@@ -36,3 +36,12 @@ opencontroller native doctor --backend all --json
 
 The `--check` flag sets a non-zero exit code when the selected backend is not
 ready, which makes it useful in local setup scripts and CI smoke checks.
+
+To stage the native backend assets from the same CLI surface, use:
+
+```bash
+opencontroller native setup --backend current
+```
+
+The setup command dispatches to the Linux, Windows, or macOS setup workflow and
+prints reviewed commands without hiding privileged driver or permission changes.

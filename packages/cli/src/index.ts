@@ -96,6 +96,7 @@ Usage:
   opencontroller replay ./replays/session/events.jsonl
   opencontroller bridge --id player-1
   opencontroller native doctor --backend current
+  opencontroller native setup --backend current
   opencontroller native test --backend linux-uinput --dry-run
   opencontroller adapters
 `);

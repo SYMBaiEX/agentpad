@@ -58,6 +58,26 @@ Backend-specific options are passed to the underlying platform package. Common
 native process options such as `env`, `cwd`, `waitForExitMs`, and output hooks
 can be passed at the top level.
 
+## Prepare A Native Backend
+
+Use the unified setup command when you want the platform-specific setup workflow
+without remembering each package binary:
+
+```bash
+opencontroller native setup --backend current
+```
+
+The command dispatches to the Linux uinput helper build, Windows VHF setup kit,
+or macOS DriverKit setup kit. It writes reviewed setup assets and commands only;
+it does not install drivers, sign packages, alter udev rules, activate System
+Extensions, or make privileged system changes.
+
+```bash
+opencontroller native setup --backend linux-uinput --output ~/.opencontroller/bin/opencontroller-uinput-bridge
+opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
+opencontroller native setup --backend macos-driverkit --output ./opencontroller-macos-driverkit
+```
+
 ## Smoke Test A Native Bridge
 
 The CLI can send a short button, stick, trigger, and neutral sequence through

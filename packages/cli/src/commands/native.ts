@@ -8,18 +8,27 @@ import {
 } from "@opencontroller/native";
 import {
   type LinuxUinputDiagnostics,
+  type LinuxUinputSetupPlan,
   diagnoseLinuxUinput,
   formatLinuxUinputDiagnostics,
+  formatLinuxUinputSetupPlan,
+  prepareLinuxUinputSetup,
 } from "@opencontroller/native-linux-uinput";
 import {
   type MacosDriverKitDiagnostics,
+  type MacosDriverKitSetupPlan,
   diagnoseMacosDriverKit,
   formatMacosDriverKitDiagnostics,
+  formatMacosDriverKitSetupPlan,
+  prepareMacosDriverKitSetup,
 } from "@opencontroller/native-macos-driverkit";
 import {
+  type WindowsVhfSetupPlan,
   type WindowsVirtualGamepadDiagnostics,
   diagnoseWindowsVirtualGamepad,
+  formatWindowsVhfSetupPlan,
   formatWindowsVirtualGamepadDiagnostics,
+  prepareWindowsVhfSetup,
 } from "@opencontroller/native-windows-virtual-gamepad";
 
 export type NativeCommandFlags = Record<string, string | boolean | undefined>;
@@ -70,6 +79,25 @@ export type NativeTestAction = {
   trigger: string;
 };
 
+export type NativeSetupBackendPlan =
+  | LinuxUinputSetupPlan
+  | WindowsVhfSetupPlan
+  | MacosDriverKitSetupPlan;
+
+export type NativeSetupPlan = {
+  backend: NativeHostBridgeBackendId;
+  platform: NodeJS.Platform;
+  plan: NativeSetupBackendPlan;
+  formatted: string;
+};
+
+export type PrepareNativeSetupOptions = {
+  platform?: NodeJS.Platform;
+  prepareLinux?: typeof prepareLinuxUinputSetup;
+  prepareWindows?: typeof prepareWindowsVhfSetup;
+  prepareMacos?: typeof prepareMacosDriverKitSetup;
+};
+
 const backendIds = [
   "linux-uinput",
   "windows-virtual-gamepad",
@@ -89,6 +117,9 @@ export async function nativeCommand(
     case "test":
       await nativeTestCommand(flags);
       return;
+    case "setup":
+      await nativeSetupCommand(flags);
+      return;
     case "help":
     case "--help":
     case "-h":
@@ -96,6 +127,83 @@ export async function nativeCommand(
       return;
     default:
       throw new Error(`Unknown native command: ${subcommand}`);
+  }
+}
+
+export async function nativeSetupCommand(
+  flags: NativeCommandFlags,
+): Promise<void> {
+  const result = await prepareNativeSetup(flags);
+
+  if (booleanFlag(flags, "json")) {
+    console.log(
+      JSON.stringify(
+        {
+          backend: result.backend,
+          platform: result.platform,
+          plan: result.plan,
+        },
+        null,
+        2,
+      ),
+    );
+  } else {
+    console.log(result.formatted);
+  }
+}
+
+export async function prepareNativeSetup(
+  flags: NativeCommandFlags,
+  options: PrepareNativeSetupOptions = {},
+): Promise<NativeSetupPlan> {
+  const platform = options.platform ?? process.platform;
+  const selection =
+    stringFlag(flags, "backend") ?? stringFlag(flags, "platform") ?? "current";
+  if (normalizeNativeBackendSelection(selection) === "all") {
+    throw new Error(
+      "Native setup runs one backend. Use current or a single backend.",
+    );
+  }
+
+  const backend = resolveNativeHostBridgeBackend({
+    backend: selection,
+    platform,
+  });
+
+  switch (backend) {
+    case "linux-uinput": {
+      const plan = await (options.prepareLinux ?? prepareLinuxUinputSetup)(
+        createLinuxNativeSetupOptions(flags, platform),
+      );
+      return {
+        backend,
+        platform,
+        plan,
+        formatted: formatLinuxUinputSetupPlan(plan),
+      };
+    }
+    case "windows-vhf": {
+      const plan = await (options.prepareWindows ?? prepareWindowsVhfSetup)(
+        createWindowsNativeSetupOptions(flags, platform),
+      );
+      return {
+        backend,
+        platform,
+        plan,
+        formatted: formatWindowsVhfSetupPlan(plan),
+      };
+    }
+    case "macos-driverkit": {
+      const plan = await (options.prepareMacos ?? prepareMacosDriverKitSetup)(
+        createMacosNativeSetupOptions(flags, platform),
+      );
+      return {
+        backend,
+        platform,
+        plan,
+        formatted: formatMacosDriverKitSetupPlan(plan),
+      };
+    }
   }
 }
 
@@ -274,6 +382,7 @@ export function normalizeNativeBackendSelection(
       return "linux-uinput";
     case "windows":
     case "win32":
+    case "windows-vhf":
     case "windows-virtual-gamepad":
     case "virtual-gamepad":
     case "vhf":
@@ -424,6 +533,93 @@ function nativeTestAction(profile: ControllerProfileName): NativeTestAction {
   }
 }
 
+function createLinuxNativeSetupOptions(
+  flags: NativeCommandFlags,
+  platform: NodeJS.Platform,
+): Parameters<typeof prepareLinuxUinputSetup>[0] {
+  const options: Parameters<typeof prepareLinuxUinputSetup>[0] = { platform };
+  const outputPath =
+    stringFlag(flags, "output") ?? stringFlag(flags, "helper-path");
+  const cc = stringFlag(flags, "cc");
+  const udevGroup = stringFlag(flags, "udev-group");
+
+  if (outputPath) {
+    options.outputPath = outputPath;
+  }
+  if (cc) {
+    options.cc = cc;
+  }
+  if (udevGroup) {
+    options.udevGroup = udevGroup;
+  }
+
+  return options;
+}
+
+function createWindowsNativeSetupOptions(
+  flags: NativeCommandFlags,
+  platform: NodeJS.Platform,
+): Parameters<typeof prepareWindowsVhfSetup>[0] {
+  const options: Parameters<typeof prepareWindowsVhfSetup>[0] = { platform };
+  const outputDirectory = stringFlag(flags, "output");
+  const hostBridgePath = stringFlag(flags, "host-bridge-path");
+  const devicePath = stringFlag(flags, "device-path");
+
+  if (outputDirectory) {
+    options.outputDirectory = outputDirectory;
+  }
+  if (hostBridgePath) {
+    options.hostBridgePath = hostBridgePath;
+  }
+  if (devicePath) {
+    options.devicePath = devicePath;
+  }
+
+  return options;
+}
+
+function createMacosNativeSetupOptions(
+  flags: NativeCommandFlags,
+  platform: NodeJS.Platform,
+): Parameters<typeof prepareMacosDriverKitSetup>[0] {
+  const options: Parameters<typeof prepareMacosDriverKitSetup>[0] = {
+    platform,
+  };
+  const bundle: NonNullable<
+    Parameters<typeof prepareMacosDriverKitSetup>[0]
+  >["bundle"] = {};
+  const outputDirectory = stringFlag(flags, "output");
+  const hostBridgePath = stringFlag(flags, "host-bridge-path");
+  const appBundleIdentifier = stringFlag(flags, "app-bundle-id");
+  const driverBundleIdentifier = stringFlag(flags, "driver-bundle-id");
+  const driverClassName = stringFlag(flags, "driver-class-name");
+  const teamIdentifier = stringFlag(flags, "team-id");
+
+  if (outputDirectory) {
+    options.outputDirectory = outputDirectory;
+  }
+  if (hostBridgePath) {
+    options.hostBridgePath = hostBridgePath;
+  }
+  if (appBundleIdentifier) {
+    bundle.appBundleIdentifier = appBundleIdentifier;
+  }
+  if (driverBundleIdentifier) {
+    bundle.driverBundleIdentifier = driverBundleIdentifier;
+  }
+  if (driverClassName) {
+    bundle.driverClassName = driverClassName;
+  }
+  if (teamIdentifier) {
+    bundle.teamIdentifier = teamIdentifier;
+  }
+  if (Object.keys(bundle).length > 0) {
+    options.bundle = bundle;
+  }
+
+  return options;
+}
+
 function createLinuxNativeTestOptions(
   flags: NativeCommandFlags,
   dryRun: boolean,
@@ -527,6 +723,8 @@ Usage:
   opencontroller native doctor --backend all
   opencontroller native doctor --backend linux-uinput --json
   opencontroller native doctor --backend macos-driverkit --check
+  opencontroller native setup --backend current
+  opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
   opencontroller native test --backend linux-uinput --dry-run
   opencontroller native test --backend current
   opencontroller native test --backend windows-vhf --host-bridge-path ./OpenControllerVhfHostBridge.exe

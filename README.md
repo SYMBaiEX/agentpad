@@ -463,6 +463,8 @@ opencontroller replay ./replays/session/events.jsonl
 opencontroller bridge --id player-1
 opencontroller native doctor --backend current
 opencontroller native doctor --backend all --json
+opencontroller native setup --backend current
+opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
 opencontroller native test --backend linux-uinput --dry-run
 opencontroller native test --backend current
 opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
@@ -474,6 +476,11 @@ Use `opencontroller native doctor --backend current --check` in setup scripts
 when you want a non-zero exit code unless the host's native backend is ready.
 The command can also target `linux-uinput`, `windows-virtual-gamepad`, or
 `macos-driverkit` directly.
+
+Use `opencontroller native setup` to prepare the current host backend through
+one CLI entrypoint. It dispatches to the Linux uinput helper build, Windows VHF
+kit generator, or macOS DriverKit kit generator while keeping privileged system
+changes explicit and reviewed.
 
 Use `opencontroller native test` after a backend is installed to push a small
 button, stick, trigger, and neutral sequence through the selected native host

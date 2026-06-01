@@ -133,6 +133,28 @@ jobs:
           grep -q "No privileged system changes were made" /tmp/opencontroller-macos-driverkit/README.md
           grep -q "System Extension activation" /tmp/opencontroller-macos-driverkit/README.md
       - run: |
+          bun packages/cli/dist/index.js native setup \
+            --backend windows-vhf \
+            --output /tmp/opencontroller-cli-windows-vhf \
+            --json |
+            tee /tmp/opencontroller-cli-windows-vhf-setup.json
+          grep -q '"backend": "windows-vhf"' /tmp/opencontroller-cli-windows-vhf-setup.json
+          test -f /tmp/opencontroller-cli-windows-vhf/driver/OpenControllerVhfGamepad.inf
+          bun packages/cli/dist/index.js native setup \
+            --backend macos-driverkit \
+            --output /tmp/opencontroller-cli-macos-driverkit \
+            --json |
+            tee /tmp/opencontroller-cli-macos-driverkit-setup.json
+          grep -q '"backend": "macos-driverkit"' /tmp/opencontroller-cli-macos-driverkit-setup.json
+          test -f /tmp/opencontroller-cli-macos-driverkit/driverkit-extension/Info.plist
+          bun packages/cli/dist/index.js native setup \
+            --backend current \
+            --output /tmp/opencontroller-cli-uinput-bridge \
+            --json |
+            tee /tmp/opencontroller-cli-linux-setup.json
+          grep -q '"backend": "linux-uinput"' /tmp/opencontroller-cli-linux-setup.json
+          test -x /tmp/opencontroller-cli-uinput-bridge
+      - run: |
           bun packages/native-linux-uinput/dist/bin/setup.js \
             --output /tmp/opencontroller-uinput-bridge-setup \
             --json |
