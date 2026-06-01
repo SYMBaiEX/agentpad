@@ -65,9 +65,12 @@ opencontroller bridge --id player-1 | OPENCONTROLLER_CONTROLLER_ID=player-1 ~/.o
 
 The helper creates an OpenController virtual gamepad, applies each state report,
 neutralizes on disconnect, and destroys the virtual device when the stream ends.
-It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
+It prefers PlayStation `profileHidReportBase64` payloads for touchpad contacts,
+falls back to descriptor-backed `hidReportBase64`, and then falls back to the
 legacy XInput-compatible `reportBase64` payload for older bridge streams.
-Descriptor-backed payloads map Home/Guide/PS to Linux `BTN_MODE`.
+Descriptor-backed payloads map Home/Guide/PS to Linux `BTN_MODE`; PlayStation
+profile payloads also map touch contacts to Linux multitouch events such as
+`BTN_TOUCH`, `ABS_MT_SLOT`, `ABS_MT_POSITION_X`, and `ABS_MT_PRESSURE`.
 The helper also advertises Linux `FF_RUMBLE`; when a game uploads and plays a
 rumble effect through evdev, the helper converts the weak/strong magnitudes into
 OpenController's shared HID rumble feedback JSONL on stdout.

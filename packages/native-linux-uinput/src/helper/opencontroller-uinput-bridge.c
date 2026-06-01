@@ -14,6 +14,9 @@
 #define OC_XINPUT_REPORT_BYTES 12
 #define OC_HID_REPORT_BYTES 13
 #define OC_HID_REPORT_ID 1
+#define OC_PLAYSTATION_REPORT_BYTES 47
+#define OC_PLAYSTATION_REPORT_ID 3
+#define OC_PLAYSTATION_TOUCH_CONTACTS 2
 #define OC_RUMBLE_REPORT_BYTES 5
 #define OC_RUMBLE_REPORT_ID 2
 #define OC_RUMBLE_REPORT_BASE64_BYTES 8
@@ -33,6 +36,20 @@ struct oc_report {
   int16_t left_y;
   int16_t right_x;
   int16_t right_y;
+};
+
+struct oc_touch_contact {
+  uint8_t id;
+  int active;
+  uint16_t x;
+  uint16_t y;
+  uint8_t pressure;
+};
+
+struct oc_playstation_report {
+  struct oc_report gamepad;
+  int touchpad_pressed;
+  struct oc_touch_contact contacts[OC_PLAYSTATION_TOUCH_CONTACTS];
 };
 
 struct oc_button_map {
@@ -138,13 +155,21 @@ static int setup_device(int fd, const char *name) {
       return -1;
     }
   }
+  if (ioctl(fd, UI_SET_KEYBIT, BTN_TOUCH) < 0) {
+    return -1;
+  }
 
   if (ioctl(fd, UI_SET_ABSBIT, ABS_X) < 0 ||
       ioctl(fd, UI_SET_ABSBIT, ABS_Y) < 0 ||
       ioctl(fd, UI_SET_ABSBIT, ABS_RX) < 0 ||
       ioctl(fd, UI_SET_ABSBIT, ABS_RY) < 0 ||
       ioctl(fd, UI_SET_ABSBIT, ABS_Z) < 0 ||
-      ioctl(fd, UI_SET_ABSBIT, ABS_RZ) < 0) {
+      ioctl(fd, UI_SET_ABSBIT, ABS_RZ) < 0 ||
+      ioctl(fd, UI_SET_ABSBIT, ABS_MT_SLOT) < 0 ||
+      ioctl(fd, UI_SET_ABSBIT, ABS_MT_TRACKING_ID) < 0 ||
+      ioctl(fd, UI_SET_ABSBIT, ABS_MT_POSITION_X) < 0 ||
+      ioctl(fd, UI_SET_ABSBIT, ABS_MT_POSITION_Y) < 0 ||
+      ioctl(fd, UI_SET_ABSBIT, ABS_MT_PRESSURE) < 0) {
     return -1;
   }
 
@@ -153,7 +178,12 @@ static int setup_device(int fd, const char *name) {
       set_abs(fd, ABS_RX, -32768, 32767) < 0 ||
       set_abs(fd, ABS_RY, -32768, 32767) < 0 ||
       set_abs(fd, ABS_Z, 0, 255) < 0 ||
-      set_abs(fd, ABS_RZ, 0, 255) < 0) {
+      set_abs(fd, ABS_RZ, 0, 255) < 0 ||
+      set_abs(fd, ABS_MT_SLOT, 0, OC_PLAYSTATION_TOUCH_CONTACTS - 1) < 0 ||
+      set_abs(fd, ABS_MT_TRACKING_ID, -1, 255) < 0 ||
+      set_abs(fd, ABS_MT_POSITION_X, 0, 65535) < 0 ||
+      set_abs(fd, ABS_MT_POSITION_Y, 0, 65535) < 0 ||
+      set_abs(fd, ABS_MT_PRESSURE, 0, 255) < 0) {
     return -1;
   }
 
@@ -178,6 +208,10 @@ static int setup_device(int fd, const char *name) {
 
 static int16_t read_i16_le(const uint8_t *bytes) {
   return (int16_t)(bytes[0] | (bytes[1] << 8));
+}
+
+static uint16_t read_u16_le(const uint8_t *bytes) {
+  return (uint16_t)(bytes[0] | (bytes[1] << 8));
 }
 
 static void decode_xinput_report(
@@ -208,7 +242,37 @@ static int decode_hid_report(const uint8_t bytes[OC_HID_REPORT_BYTES],
   return 0;
 }
 
-static int apply_report(int fd, const struct oc_report *report) {
+static int decode_playstation_report(
+    const uint8_t bytes[OC_PLAYSTATION_REPORT_BYTES],
+    struct oc_playstation_report *report) {
+  size_t index;
+
+  if (bytes[0] != OC_PLAYSTATION_REPORT_ID) {
+    return -1;
+  }
+
+  report->gamepad.buttons = read_u16_le(&bytes[1]);
+  report->gamepad.left_x = read_i16_le(&bytes[3]);
+  report->gamepad.left_y = read_i16_le(&bytes[5]);
+  report->gamepad.right_x = read_i16_le(&bytes[7]);
+  report->gamepad.right_y = read_i16_le(&bytes[9]);
+  report->gamepad.left_trigger = bytes[11];
+  report->gamepad.right_trigger = bytes[12];
+  report->touchpad_pressed = bytes[13] != 0;
+
+  for (index = 0; index < OC_PLAYSTATION_TOUCH_CONTACTS; index++) {
+    size_t offset = 15 + index * 7;
+    report->contacts[index].id = bytes[offset];
+    report->contacts[index].active = bytes[offset + 1] != 0;
+    report->contacts[index].x = read_u16_le(&bytes[offset + 2]);
+    report->contacts[index].y = read_u16_le(&bytes[offset + 4]);
+    report->contacts[index].pressure = bytes[offset + 6];
+  }
+
+  return 0;
+}
+
+static int apply_report_events(int fd, const struct oc_report *report) {
   size_t index;
   for (index = 0; index < sizeof(button_map) / sizeof(button_map[0]);
        index++) {
@@ -223,12 +287,55 @@ static int apply_report(int fd, const struct oc_report *report) {
       emit_event(fd, EV_ABS, ABS_RX, report->right_x) < 0 ||
       emit_event(fd, EV_ABS, ABS_RY, invert_axis(report->right_y)) < 0 ||
       emit_event(fd, EV_ABS, ABS_Z, report->left_trigger) < 0 ||
-      emit_event(fd, EV_ABS, ABS_RZ, report->right_trigger) < 0 ||
-      emit_syn(fd) < 0) {
+      emit_event(fd, EV_ABS, ABS_RZ, report->right_trigger) < 0) {
     return -1;
   }
 
   return 0;
+}
+
+static int apply_report(int fd, const struct oc_report *report) {
+  if (apply_report_events(fd, report) < 0) {
+    return -1;
+  }
+
+  return emit_syn(fd);
+}
+
+static int apply_touchpad_report(
+    int fd, const struct oc_playstation_report *report) {
+  size_t index;
+  int touch_active = report->touchpad_pressed;
+
+  for (index = 0; index < OC_PLAYSTATION_TOUCH_CONTACTS; index++) {
+    if (report->contacts[index].active) {
+      touch_active = 1;
+      break;
+    }
+  }
+
+  if (emit_event(fd, EV_KEY, BTN_TOUCH, touch_active) < 0) {
+    return -1;
+  }
+
+  for (index = 0; index < OC_PLAYSTATION_TOUCH_CONTACTS; index++) {
+    const struct oc_touch_contact *contact = &report->contacts[index];
+
+    if (emit_event(fd, EV_ABS, ABS_MT_SLOT, (int)index) < 0 ||
+        emit_event(fd, EV_ABS, ABS_MT_TRACKING_ID,
+                   contact->active ? contact->id : -1) < 0) {
+      return -1;
+    }
+
+    if (contact->active &&
+        (emit_event(fd, EV_ABS, ABS_MT_POSITION_X, contact->x) < 0 ||
+         emit_event(fd, EV_ABS, ABS_MT_POSITION_Y, contact->y) < 0 ||
+         emit_event(fd, EV_ABS, ABS_MT_PRESSURE, contact->pressure) < 0)) {
+      return -1;
+    }
+  }
+
+  return emit_syn(fd);
 }
 
 static int invert_axis(int16_t value) {
@@ -318,6 +425,12 @@ static int extract_hid_report_base64(
                               OC_HID_REPORT_BYTES);
 }
 
+static int extract_profile_hid_report_base64(
+    const char *line, uint8_t output[OC_PLAYSTATION_REPORT_BYTES]) {
+  return extract_base64_field(line, "\"profileHidReportBase64\":\"", output,
+                              OC_PLAYSTATION_REPORT_BYTES);
+}
+
 static int extract_xinput_report_base64(
     const char *line, uint8_t output[OC_XINPUT_REPORT_BYTES]) {
   return extract_base64_field(line, "\"reportBase64\":\"", output,
@@ -356,9 +469,16 @@ static int line_matches_controller_id(const char *line,
 }
 
 static int parse_bridge_line(const char *line, struct oc_report *report) {
+  uint8_t profile_bytes[OC_PLAYSTATION_REPORT_BYTES];
   uint8_t hid_bytes[OC_HID_REPORT_BYTES];
   uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
+  struct oc_playstation_report profile_report;
 
+  if (extract_profile_hid_report_base64(line, profile_bytes) == 0 &&
+      decode_playstation_report(profile_bytes, &profile_report) == 0) {
+    *report = profile_report.gamepad;
+    return 0;
+  }
   if (extract_hid_report_base64(line, hid_bytes) == 0) {
     return decode_hid_report(hid_bytes, report);
   }
@@ -368,6 +488,16 @@ static int parse_bridge_line(const char *line, struct oc_report *report) {
 
   decode_xinput_report(xinput_bytes, report);
   return 0;
+}
+
+static int parse_playstation_bridge_line(
+    const char *line, struct oc_playstation_report *report) {
+  uint8_t profile_bytes[OC_PLAYSTATION_REPORT_BYTES];
+
+  if (extract_profile_hid_report_base64(line, profile_bytes) < 0) {
+    return -1;
+  }
+  return decode_playstation_report(profile_bytes, report);
 }
 
 static int is_enabled_flag(const char *value) {
@@ -384,11 +514,27 @@ static void print_decoded_report(const char *kind,
   fflush(stdout);
 }
 
+static void print_decoded_playstation_report(
+    const char *kind, const struct oc_playstation_report *report) {
+  printf(
+      "%s touch=%d contact0=%u:%d:%u:%u:%u contact1=%u:%d:%u:%u:%u\n", kind,
+      report->touchpad_pressed, (unsigned int)report->contacts[0].id,
+      report->contacts[0].active, (unsigned int)report->contacts[0].x,
+      (unsigned int)report->contacts[0].y,
+      (unsigned int)report->contacts[0].pressure,
+      (unsigned int)report->contacts[1].id, report->contacts[1].active,
+      (unsigned int)report->contacts[1].x,
+      (unsigned int)report->contacts[1].y,
+      (unsigned int)report->contacts[1].pressure);
+  fflush(stdout);
+}
+
 static int run_dry_run(const char *controller_id) {
   char line[OC_LINE_MAX];
 
   while (fgets(line, sizeof(line), stdin) != NULL) {
     struct oc_report report;
+    struct oc_playstation_report playstation_report;
 
     if (!line_matches_controller_id(line, controller_id)) {
       continue;
@@ -405,6 +551,9 @@ static int run_dry_run(const char *controller_id) {
     }
 
     print_decoded_report("state", &report);
+    if (parse_playstation_bridge_line(line, &playstation_report) == 0) {
+      print_decoded_playstation_report("profile", &playstation_report);
+    }
   }
 
   return 0;
@@ -416,6 +565,7 @@ static int process_bridge_line(int fd, const char *line,
                                size_t feedback_controller_id_size,
                                int *should_stop) {
   struct oc_report report;
+  struct oc_playstation_report playstation_report;
 
   *should_stop = 0;
   if (!line_matches_controller_id(line, controller_id)) {
@@ -435,6 +585,13 @@ static int process_bridge_line(int fd, const char *line,
 
   if (parse_bridge_line(line, &report) < 0) {
     return 0;
+  }
+
+  if (parse_playstation_bridge_line(line, &playstation_report) == 0) {
+    if (apply_report_events(fd, &report) < 0) {
+      return -1;
+    }
+    return apply_touchpad_report(fd, &playstation_report);
   }
 
   return apply_report(fd, &report);

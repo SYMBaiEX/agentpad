@@ -106,9 +106,13 @@ The helper:
 
 - opens `/dev/uinput`
 - creates an `OpenController Virtual Gamepad`
-- prefers descriptor-backed `hidReportBase64` payloads and falls back to legacy
-  `reportBase64` XInput payloads
+- prefers PlayStation `profileHidReportBase64` payloads for touchpad contacts,
+  falls back to descriptor-backed `hidReportBase64`, and then falls back to
+  legacy `reportBase64` XInput payloads
 - maps OpenController gamepad reports to Linux gamepad event codes
+- maps PlayStation touchpad contacts to Linux multitouch event codes:
+  `BTN_TOUCH`, `ABS_MT_SLOT`, `ABS_MT_TRACKING_ID`, `ABS_MT_POSITION_X`,
+  `ABS_MT_POSITION_Y`, and `ABS_MT_PRESSURE`
 - emits `SYN_REPORT` after each state update
 - advertises Linux `FF_RUMBLE`, handles uinput upload/erase/playback callbacks,
   and emits `opencontroller.bridge.feedback` JSONL for weak/strong rumble

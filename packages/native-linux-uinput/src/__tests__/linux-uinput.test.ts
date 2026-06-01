@@ -109,6 +109,19 @@ describe("linux uinput adapter helpers", () => {
     expect(source).toContain("O_RDWR | O_NONBLOCK");
   });
 
+  test("helper source consumes PlayStation profile HID touchpad reports", async () => {
+    const source = await readFile(linuxUinputHelperSourcePath, "utf8");
+
+    expect(source).toContain("OC_PLAYSTATION_REPORT_BYTES 47");
+    expect(source).toContain("profileHidReportBase64");
+    expect(source).toContain("decode_playstation_report");
+    expect(source).toContain("apply_touchpad_report");
+    expect(source).toContain("ABS_MT_SLOT");
+    expect(source).toContain("ABS_MT_POSITION_X");
+    expect(source).toContain("ABS_MT_PRESSURE");
+    expect(source).toContain("BTN_TOUCH");
+  });
+
   test("prepares a safe Linux helper setup plan", async () => {
     const buildOptions: unknown[] = [];
     const plan = await prepareLinuxUinputSetup({

@@ -1,10 +1,15 @@
 import type { NativeBridgeMessage } from "@opencontroller/core/bridge";
-import { nativeBridgeMessageToHidGamepadReportBytes } from "@opencontroller/core/bridge";
+import {
+  nativeBridgeMessageToHidGamepadReportBytes,
+  nativeBridgeMessageToProfileHidReportBytes,
+} from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
+  type HidPlayStationExtendedReport,
   type XInputGamepadReport,
   createHidGamepadReport,
   decodeHidGamepadReport,
+  decodeHidPlayStationExtendedReport,
   hidGamepadButtonBits,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
@@ -48,6 +53,13 @@ export function linuxEventsFromNativeBridgeMessage(
     return [];
   }
 
+  const profileBytes = nativeBridgeMessageToProfileHidReportBytes(message);
+  if (profileBytes) {
+    return linuxEventsFromHidPlayStationExtendedReport(
+      decodeHidPlayStationExtendedReport(profileBytes),
+    );
+  }
+
   const bytes = nativeBridgeMessageToHidGamepadReportBytes(message);
   return linuxEventsFromHidGamepadReport(decodeHidGamepadReport(bytes));
 }
@@ -81,6 +93,71 @@ export function linuxEventsFromHidGamepadReport(
     { type: "EV_SYN", code: "SYN_REPORT", value: 0 },
   );
 
+  return events;
+}
+
+export function linuxEventsFromHidPlayStationExtendedReport(
+  report: HidPlayStationExtendedReport,
+): LinuxInputEventPlan[] {
+  const events = linuxEventsFromHidGamepadReport({
+    reportId: 1,
+    buttons: report.buttons,
+    leftTrigger: report.leftTrigger,
+    rightTrigger: report.rightTrigger,
+    leftStickX: report.leftStickX,
+    leftStickY: report.leftStickY,
+    rightStickX: report.rightStickX,
+    rightStickY: report.rightStickY,
+  }).filter((event) => event.type !== "EV_SYN");
+  const activeContacts = report.touchpadContacts.filter(
+    (contact) => contact.active,
+  );
+
+  events.push({
+    type: "EV_KEY",
+    code: "BTN_TOUCH",
+    value: report.touchpadPressed || activeContacts.length > 0 ? 1 : 0,
+  });
+
+  for (let slot = 0; slot < report.touchpadContacts.length; slot += 1) {
+    const contact = report.touchpadContacts[slot];
+    if (!contact) {
+      continue;
+    }
+
+    events.push({
+      type: "EV_ABS",
+      code: "ABS_MT_SLOT",
+      value: slot,
+    });
+    events.push({
+      type: "EV_ABS",
+      code: "ABS_MT_TRACKING_ID",
+      value: contact.active ? contact.id : -1,
+    });
+
+    if (contact.active) {
+      events.push(
+        {
+          type: "EV_ABS",
+          code: "ABS_MT_POSITION_X",
+          value: contact.x,
+        },
+        {
+          type: "EV_ABS",
+          code: "ABS_MT_POSITION_Y",
+          value: contact.y,
+        },
+        {
+          type: "EV_ABS",
+          code: "ABS_MT_PRESSURE",
+          value: contact.pressure,
+        },
+      );
+    }
+  }
+
+  events.push({ type: "EV_SYN", code: "SYN_REPORT", value: 0 });
   return events;
 }
 

@@ -32,6 +32,8 @@
   and `/dev/uinput` helper source
 - Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`
   payloads and falls back to legacy XInput payloads
+- Linux `uinput` helper now consumes PlayStation `profileHidReportBase64`
+  payloads and maps touchpad contacts to Linux multitouch events
 - Linux `uinput` helper now supports dry-run JSONL decoding, and CI compiles
   and smoke-tests the real C helper parser
 - Linux `uinput` helper now supports `--controller-id` and

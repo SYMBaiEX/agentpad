@@ -4,6 +4,7 @@ import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import { hidGamepadButtonBits } from "@opencontroller/core/hid";
 import {
   linuxEventsFromHidGamepadReport,
+  linuxEventsFromHidPlayStationExtendedReport,
   linuxEventsFromNativeBridgeMessage,
   linuxEventsFromXInputReport,
 } from "../events";
@@ -128,8 +129,130 @@ describe("linux uinput event mapping", () => {
     expect(find(events, "ABS_RX")).toBe(2345);
     expect(find(events, "ABS_RY")).toBe(2345);
   });
+
+  test("maps PlayStation profile HID reports to Linux multitouch events", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "playstation",
+      connected: true,
+      buttons: {
+        CROSS: true,
+        CIRCLE: false,
+        SQUARE: false,
+        TRIANGLE: false,
+        L1: false,
+        R1: false,
+        L2: false,
+        R2: false,
+        SHARE: false,
+        OPTIONS: false,
+        PS: false,
+        L3: false,
+        R3: false,
+        TOUCHPAD: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        L2: 0,
+        R2: 0.25,
+      },
+      sticks: {
+        left: { x: 0.5, y: -0.5 },
+        right: { x: 0, y: 0 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: true,
+        contacts: [
+          {
+            id: 7,
+            active: true,
+            x: 0.25,
+            y: 0.75,
+            pressure: 0.5,
+          },
+        ],
+      },
+      motion: {
+        acceleration: { x: 0, y: 0, z: 1 },
+        gyroscope: { x: 0, y: 0, z: 0 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const events = linuxEventsFromNativeBridgeMessage(message);
+    const {
+      profileHidReportFormat: _profileHidReportFormat,
+      profileHidReport: _profileHidReport,
+      profileHidReportBase64: _profileHidReportBase64,
+      ...withoutProfileHid
+    } = message;
+    const legacyEvents = linuxEventsFromNativeBridgeMessage(withoutProfileHid);
+
+    expect(find(events, "BTN_SOUTH")).toBe(1);
+    expect(find(events, "ABS_RZ")).toBe(64);
+    expect(find(events, "BTN_TOUCH")).toBe(1);
+    expect(values(events, "ABS_MT_SLOT")).toEqual([0, 1]);
+    expect(values(events, "ABS_MT_TRACKING_ID")).toEqual([7, -1]);
+    expect(find(events, "ABS_MT_POSITION_X")).toBe(16384);
+    expect(find(events, "ABS_MT_POSITION_Y")).toBe(49151);
+    expect(find(events, "ABS_MT_PRESSURE")).toBe(128);
+    expect(find(legacyEvents, "BTN_TOUCH")).toBeUndefined();
+  });
+
+  test("maps PlayStation profile HID reports directly", () => {
+    const events = linuxEventsFromHidPlayStationExtendedReport({
+      reportId: 3,
+      buttons: hidGamepadButtonBits.HOME,
+      leftTrigger: 0,
+      rightTrigger: 0,
+      leftStickX: 0,
+      leftStickY: 0,
+      rightStickX: 0,
+      rightStickY: 0,
+      touchpadPressed: false,
+      touchpadContacts: [
+        { id: 1, active: false, x: 0, y: 0, pressure: 0 },
+        { id: 2, active: true, x: 65535, y: 1, pressure: 255 },
+      ],
+      accelerationX: 0,
+      accelerationY: 0,
+      accelerationZ: 0,
+      gyroscopeX: 0,
+      gyroscopeY: 0,
+      gyroscopeZ: 0,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    });
+
+    expect(find(events, "BTN_MODE")).toBe(1);
+    expect(find(events, "BTN_TOUCH")).toBe(1);
+    expect(values(events, "ABS_MT_SLOT")).toEqual([0, 1]);
+    expect(values(events, "ABS_MT_TRACKING_ID")).toEqual([-1, 2]);
+    expect(find(events, "ABS_MT_POSITION_X")).toBe(65535);
+    expect(find(events, "ABS_MT_POSITION_Y")).toBe(1);
+    expect(find(events, "ABS_MT_PRESSURE")).toBe(255);
+  });
 });
 
 function find(events: Array<{ code: string; value: number }>, code: string) {
   return events.find((event) => event.code === code)?.value;
+}
+
+function values(events: Array<{ code: string; value: number }>, code: string) {
+  return events
+    .filter((event) => event.code === code)
+    .map((event) => event.value);
 }
