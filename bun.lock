@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "agentpad",
+      "name": "opencontroller",
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
         "@types/bun": "^1.2.15",
@@ -19,29 +19,29 @@
       },
     },
     "examples/agent-fighter": {
-      "name": "@agentpad/example-agent-fighter",
+      "name": "@opencontroller/example-agent-fighter",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
+        "@opencontroller/core": "workspace:*",
       },
     },
     "examples/basic-dry-run": {
-      "name": "@agentpad/example-basic-dry-run",
+      "name": "@opencontroller/example-basic-dry-run",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
+        "@opencontroller/core": "workspace:*",
       },
     },
     "examples/obs-overlay": {
-      "name": "@agentpad/example-obs-overlay",
+      "name": "@opencontroller/example-obs-overlay",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
-        "@agentpad/overlay": "workspace:*",
+        "@opencontroller/core": "workspace:*",
+        "@opencontroller/overlay": "workspace:*",
       },
     },
     "examples/react-overlay": {
-      "name": "@agentpad/example-react-overlay",
+      "name": "@opencontroller/example-react-overlay",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
-        "@agentpad/overlay": "workspace:*",
+        "@opencontroller/core": "workspace:*",
+        "@opencontroller/overlay": "workspace:*",
         "@vitejs/plugin-react": "^4.5.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
@@ -50,20 +50,20 @@
       },
     },
     "examples/websocket-bridge": {
-      "name": "@agentpad/example-websocket-bridge",
+      "name": "@opencontroller/example-websocket-bridge",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
+        "@opencontroller/core": "workspace:*",
       },
     },
     "packages/cli": {
-      "name": "@agentpad/cli",
+      "name": "@opencontroller/cli",
       "version": "0.1.0",
       "bin": {
-        "agentpad": "./dist/index.js",
+        "opencontroller": "./dist/index.js",
       },
       "dependencies": {
-        "@agentpad/core": "workspace:*",
-        "@agentpad/overlay": "workspace:*",
+        "@opencontroller/core": "workspace:*",
+        "@opencontroller/overlay": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -71,7 +71,7 @@
       },
     },
     "packages/core": {
-      "name": "@agentpad/core",
+      "name": "@opencontroller/core",
       "version": "0.1.0",
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -79,10 +79,10 @@
       },
     },
     "packages/overlay": {
-      "name": "@agentpad/overlay",
+      "name": "@opencontroller/overlay",
       "version": "0.1.0",
       "dependencies": {
-        "@agentpad/core": "workspace:*",
+        "@opencontroller/core": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -96,21 +96,21 @@
     },
   },
   "packages": {
-    "@agentpad/cli": ["@agentpad/cli@workspace:packages/cli"],
+    "@opencontroller/cli": ["@opencontroller/cli@workspace:packages/cli"],
 
-    "@agentpad/core": ["@agentpad/core@workspace:packages/core"],
+    "@opencontroller/core": ["@opencontroller/core@workspace:packages/core"],
 
-    "@agentpad/example-agent-fighter": ["@agentpad/example-agent-fighter@workspace:examples/agent-fighter"],
+    "@opencontroller/example-agent-fighter": ["@opencontroller/example-agent-fighter@workspace:examples/agent-fighter"],
 
-    "@agentpad/example-basic-dry-run": ["@agentpad/example-basic-dry-run@workspace:examples/basic-dry-run"],
+    "@opencontroller/example-basic-dry-run": ["@opencontroller/example-basic-dry-run@workspace:examples/basic-dry-run"],
 
-    "@agentpad/example-obs-overlay": ["@agentpad/example-obs-overlay@workspace:examples/obs-overlay"],
+    "@opencontroller/example-obs-overlay": ["@opencontroller/example-obs-overlay@workspace:examples/obs-overlay"],
 
-    "@agentpad/example-react-overlay": ["@agentpad/example-react-overlay@workspace:examples/react-overlay"],
+    "@opencontroller/example-react-overlay": ["@opencontroller/example-react-overlay@workspace:examples/react-overlay"],
 
-    "@agentpad/example-websocket-bridge": ["@agentpad/example-websocket-bridge@workspace:examples/websocket-bridge"],
+    "@opencontroller/example-websocket-bridge": ["@opencontroller/example-websocket-bridge@workspace:examples/websocket-bridge"],
 
-    "@agentpad/overlay": ["@agentpad/overlay@workspace:packages/overlay"],
+    "@opencontroller/overlay": ["@opencontroller/overlay@workspace:packages/overlay"],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 

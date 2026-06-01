@@ -1,11 +1,11 @@
 {
-  "name": "@agentpad/example-websocket-bridge",
+  "name": "@opencontroller/example-websocket-bridge",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun run index.ts"
   },
   "dependencies": {
-    "@agentpad/core": "workspace:*"
+    "@opencontroller/core": "workspace:*"
   }
 }

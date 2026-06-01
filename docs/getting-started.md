@@ -11,7 +11,7 @@ bun run build
 Create a dry-run controller:
 
 ```ts
-import { createController } from "@agentpad/core";
+import { createController } from "@opencontroller/core";
 
 const controller = await createController({
   profile: "xbox",

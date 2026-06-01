@@ -3,8 +3,8 @@ import {
   type ControllerState,
   createInitialControllerState,
   resolveProfile,
-} from "@agentpad/core/browser";
-import { ControllerOverlay } from "@agentpad/overlay";
+} from "@opencontroller/core/browser";
+import { ControllerOverlay } from "@opencontroller/overlay";
 import { type ReactNode, useMemo, useState } from "react";
 
 type VisualProfile = Exclude<ControllerProfileName, "keyboard-mouse">;
@@ -150,7 +150,7 @@ export function App() {
 
   return (
     <main>
-      <section className="surface" aria-label="AgentPad controller lab">
+      <section className="surface" aria-label="OpenController controller lab">
         <div className="toolbar">
           <div className="tabs" aria-label="Controller profile">
             {visualProfiles.map((item) => (

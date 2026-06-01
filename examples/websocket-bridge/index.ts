@@ -1,4 +1,4 @@
-import { createController } from "@agentpad/core";
+import { createController } from "@opencontroller/core";
 
 const server = Bun.serve({
   port: 7777,
@@ -7,7 +7,7 @@ const server = Bun.serve({
       return undefined;
     }
     return new Response(
-      "AgentPad WebSocket bridge listening on ws://localhost:7777/controller",
+      "OpenController WebSocket bridge listening on ws://localhost:7777/controller",
     );
   },
   websocket: {

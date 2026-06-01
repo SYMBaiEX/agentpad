@@ -4,7 +4,7 @@ import {
   type ControllerState,
   createInitialControllerState,
   resolveProfile,
-} from "@agentpad/core";
+} from "@opencontroller/core";
 import type { ServerWebSocket } from "bun";
 import { type OverlayThemeName, resolveOverlayTheme } from "../themes";
 
@@ -110,7 +110,7 @@ function renderOverlayHtml(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AgentPad Overlay</title>
+    <title>OpenController Overlay</title>
     <style>
       html, body {
         width: 100%;
@@ -200,7 +200,7 @@ function renderOverlayHtml(
 
       function render() {
         const config = profileConfig();
-        app.innerHTML = '<svg viewBox="0 0 640 360" role="img" aria-label="AgentPad controller overlay"><rect width="640" height="360" fill="' + (theme.transparent ? "transparent" : theme.background) + '"></rect><path d="' + config.shell + '" fill="' + theme.shell + '" stroke="' + theme.shellStroke + '" stroke-width="4"></path>' + trigger(126, 48, config.leftTrigger, analog(config.leftTrigger)) + trigger(398, 48, config.rightTrigger, analog(config.rightTrigger)) + stick(210, 204, state.sticks.left) + stick(396, 224, state.sticks.right) + circle(470, 176, 20, config.text[0], pressed(config.labels[0])) + circle(510, 216, 20, config.text[1], pressed(config.labels[1])) + circle(430, 216, 20, config.text[2], pressed(config.labels[2])) + circle(470, 256, 20, config.text[3], pressed(config.labels[3])) + '</svg>';
+        app.innerHTML = '<svg viewBox="0 0 640 360" role="img" aria-label="OpenController controller overlay"><rect width="640" height="360" fill="' + (theme.transparent ? "transparent" : theme.background) + '"></rect><path d="' + config.shell + '" fill="' + theme.shell + '" stroke="' + theme.shellStroke + '" stroke-width="4"></path>' + trigger(126, 48, config.leftTrigger, analog(config.leftTrigger)) + trigger(398, 48, config.rightTrigger, analog(config.rightTrigger)) + stick(210, 204, state.sticks.left) + stick(396, 224, state.sticks.right) + circle(470, 176, 20, config.text[0], pressed(config.labels[0])) + circle(510, 216, 20, config.text[1], pressed(config.labels[1])) + circle(430, 216, 20, config.text[2], pressed(config.labels[2])) + circle(470, 256, 20, config.text[3], pressed(config.labels[3])) + '</svg>';
       }
 
       render();

@@ -3,7 +3,7 @@ import {
   type ControllerState,
   createInitialControllerState,
   resolveProfile,
-} from "@agentpad/core/browser";
+} from "@opencontroller/core/browser";
 import { type OverlayThemeName, resolveOverlayTheme } from "../themes";
 import { GenericOverlay } from "./GenericOverlay";
 import { PlayStationOverlay } from "./PlayStationOverlay";

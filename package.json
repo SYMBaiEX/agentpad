@@ -1,16 +1,16 @@
 {
-  "name": "agentpad",
+  "name": "opencontroller",
   "version": "0.1.0",
   "private": true,
   "description": "Bun-first TypeScript SDK for AI-agent virtual controller control, overlays, safety, and replay logs.",
   "type": "module",
-  "homepage": "https://github.com/SYMBaiEX/agentpad#readme",
+  "homepage": "https://github.com/SYMBaiEX/OpenController#readme",
   "bugs": {
-    "url": "https://github.com/SYMBaiEX/agentpad/issues"
+    "url": "https://github.com/SYMBaiEX/OpenController/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SYMBaiEX/agentpad.git"
+    "url": "git+https://github.com/SYMBaiEX/OpenController.git"
   },
   "workspaces": [
     "packages/core",
@@ -19,7 +19,7 @@
     "examples/*"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --concurrency=1",
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo examples/*/dist examples/*/tsconfig.tsbuildinfo .turbo output",
     "dev:fighter": "bun --cwd examples/agent-fighter dev",
     "dev:overlay": "bun --cwd examples/obs-overlay dev",

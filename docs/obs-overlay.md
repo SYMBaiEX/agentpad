@@ -3,7 +3,7 @@
 Start the overlay server:
 
 ```bash
-agentpad overlay --profile xbox --port 4317
+opencontroller overlay --profile xbox --port 4317
 ```
 
 Add this URL as an OBS browser source:

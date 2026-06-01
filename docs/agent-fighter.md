@@ -1,6 +1,6 @@
 # Agent Fighter
 
-Agent Fighter is a complete two-player browser game example for AgentPad.
+Agent Fighter is a complete two-player browser game example for OpenController.
 
 Run it:
 
@@ -22,16 +22,16 @@ http://127.0.0.1:5173/controllers
 
 Agents start stopped by default. Start, stop, and reset controls live on the
 controller telemetry page. The OpenAI decision loop is also guarded by
-`AGENTPAD_OPENAI_ACTIONS_PER_MINUTE` to prevent runaway action volume.
+`OPENCONTROLLER_OPENAI_ACTIONS_PER_MINUTE` to prevent runaway action volume.
 
-The controller agent loop ticks at `AGENTPAD_AGENT_TICK_MS` (16ms by default)
+The controller agent loop ticks at `OPENCONTROLLER_AGENT_TICK_MS` (16ms by default)
 so trained/local policies can make frame-level decisions. The OpenAI sample
-policy defaults to `AGENTPAD_OPENAI_DECISION_MS=0`; model latency and the
+policy defaults to `OPENCONTROLLER_OPENAI_DECISION_MS=0`; model latency and the
 per-minute action cap are the practical constraints.
 
 The game reads controller state from two equivalent sources:
 
-- AgentPad controllers connected over WebSocket
+- OpenController controllers connected over WebSocket
 - physical controllers through the browser Gamepad API
 
 Two autonomous agents start with the server. If `OPENAI_API_KEY` is present,

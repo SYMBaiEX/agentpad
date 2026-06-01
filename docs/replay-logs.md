@@ -27,5 +27,5 @@ replays/session-001/
 Inspect a replay:
 
 ```bash
-agentpad replay ./replays/session-001/events.jsonl
+opencontroller replay ./replays/session-001/events.jsonl
 ```

@@ -1,4 +1,4 @@
-import type { ControllerState } from "@agentpad/core";
+import type { ControllerState } from "@opencontroller/core";
 import type { OverlayTheme } from "../themes";
 
 export type OverlaySize = "sm" | "md" | "lg" | "xl";

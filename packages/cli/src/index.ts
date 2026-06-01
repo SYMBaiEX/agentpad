@@ -78,15 +78,15 @@ function stringFlags(flags: Flags): Record<string, string | undefined> {
 }
 
 function printHelp(): void {
-  console.log(`AgentPad CLI
+  console.log(`OpenController CLI
 
 Usage:
-  agentpad init
-  agentpad doctor
-  agentpad test --profile xbox --adapter dry-run
-  agentpad overlay --profile xbox --port 4317
-  agentpad replay ./replays/session/events.jsonl
-  agentpad adapters
+  opencontroller init
+  opencontroller doctor
+  opencontroller test --profile xbox --adapter dry-run
+  opencontroller overlay --profile xbox --port 4317
+  opencontroller replay ./replays/session/events.jsonl
+  opencontroller adapters
 `);
 }
 

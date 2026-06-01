@@ -85,7 +85,7 @@ describe("controller runtime", () => {
   });
 
   test("writes replay command events", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "agentpad-replay-"));
+    const dir = await mkdtemp(join(tmpdir(), "opencontroller-replay-"));
     cleanupDirs.push(dir);
     const controller = await createController({
       profile: "playstation",

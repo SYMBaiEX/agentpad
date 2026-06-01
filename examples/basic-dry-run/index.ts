@@ -2,7 +2,7 @@ import {
   createActionMap,
   createController,
   xboxActionPreset,
-} from "@agentpad/core";
+} from "@opencontroller/core";
 
 const controller = await createController({
   profile: "xbox",

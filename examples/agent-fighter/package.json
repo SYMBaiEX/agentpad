@@ -1,5 +1,5 @@
 {
-  "name": "@agentpad/example-agent-fighter",
+  "name": "@opencontroller/example-agent-fighter",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@agentpad/core": "workspace:*"
+    "@opencontroller/core": "workspace:*"
   }
 }

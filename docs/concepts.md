@@ -1,6 +1,6 @@
 # Concepts
 
-AgentPad has four core concepts:
+OpenController has four core concepts:
 
 - Controller profile: the logical shape of a controller, such as Xbox or PlayStation.
 - Controller runtime: the queue, safety guard, state store, replay logger, and adapter.

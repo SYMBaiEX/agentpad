@@ -1,6 +1,6 @@
 # Safety
 
-AgentPad includes safety checks before commands reach an adapter.
+OpenController includes safety checks before commands reach an adapter.
 
 Default checks:
 
@@ -27,5 +27,5 @@ const controller = await createController({
 });
 ```
 
-AgentPad should be used for local, controlled, and permissioned environments.
+OpenController should be used for local, controlled, and permissioned environments.
 Do not use it for stealth automation or online competitive game automation.

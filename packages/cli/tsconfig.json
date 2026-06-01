@@ -6,10 +6,10 @@
     "composite": true,
     "baseUrl": "../..",
     "paths": {
-      "@agentpad/core": ["packages/core/src/index.ts"],
-      "@agentpad/core/*": ["packages/core/src/*"],
-      "@agentpad/overlay": ["packages/overlay/src/index.ts"],
-      "@agentpad/overlay/*": ["packages/overlay/src/*"]
+      "@opencontroller/core": ["packages/core/src/index.ts"],
+      "@opencontroller/core/*": ["packages/core/src/*"],
+      "@opencontroller/overlay": ["packages/overlay/src/index.ts"],
+      "@opencontroller/overlay/*": ["packages/overlay/src/*"]
     }
   },
   "include": ["src"],

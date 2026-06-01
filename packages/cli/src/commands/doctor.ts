@@ -1,4 +1,4 @@
-import { createController } from "@agentpad/core";
+import { createController } from "@opencontroller/core";
 
 export async function doctorCommand(): Promise<void> {
   const controller = await createController({
@@ -21,7 +21,7 @@ export async function doctorCommand(): Promise<void> {
     ["Dry-run capabilities", JSON.stringify(capabilities)],
   ];
 
-  printTable("AgentPad Doctor", rows);
+  printTable("OpenController Doctor", rows);
 }
 
 function printTable(title: string, rows: string[][]): void {

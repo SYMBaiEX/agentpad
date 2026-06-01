@@ -1,9 +1,11 @@
 import { readFile } from "node:fs/promises";
-import type { ReplayEvent } from "@agentpad/core";
+import type { ReplayEvent } from "@opencontroller/core";
 
 export async function replayCommand(path: string | undefined): Promise<void> {
   if (!path) {
-    throw new Error("Usage: agentpad replay ./replays/session/events.jsonl");
+    throw new Error(
+      "Usage: opencontroller replay ./replays/session/events.jsonl",
+    );
   }
 
   const raw = await readFile(path, "utf8");
@@ -15,7 +17,7 @@ export async function replayCommand(path: string | undefined): Promise<void> {
   const errors = events.filter((event) => event.type === "error");
   const states = events.filter((event) => event.type === "state");
 
-  console.log("AgentPad Replay Summary");
+  console.log("OpenController Replay Summary");
   console.log(`  file: ${path}`);
   console.log(`  events: ${events.length}`);
   console.log(`  commands: ${commands.length}`);

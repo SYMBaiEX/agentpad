@@ -9,7 +9,7 @@ import {
   createControllerHub,
   createInitialControllerState,
   resolveProfile,
-} from "@agentpad/core";
+} from "@opencontroller/core";
 import type { ServerWebSocket } from "bun";
 
 type PlayerId = "player-1" | "player-2";
@@ -163,16 +163,19 @@ const agentStyles: Record<PlayerId, string> = {
 const openAiMaxRequestsPerMinute = Math.max(
   1,
   Number(
-    Bun.env.AGENTPAD_OPENAI_ACTIONS_PER_MINUTE ??
-      Bun.env.AGENTPAD_OPENAI_REQUESTS_PER_MINUTE ??
+    Bun.env.OPENCONTROLLER_OPENAI_ACTIONS_PER_MINUTE ??
+      Bun.env.OPENCONTROLLER_OPENAI_REQUESTS_PER_MINUTE ??
       "160",
   ),
 );
 const openAiDecisionMs = Math.max(
   0,
-  Number(Bun.env.AGENTPAD_OPENAI_DECISION_MS ?? "0"),
+  Number(Bun.env.OPENCONTROLLER_OPENAI_DECISION_MS ?? "0"),
 );
-const agentTickMs = Math.max(1, Number(Bun.env.AGENTPAD_AGENT_TICK_MS ?? "16"));
+const agentTickMs = Math.max(
+  1,
+  Number(Bun.env.OPENCONTROLLER_AGENT_TICK_MS ?? "16"),
+);
 const profile = resolveProfile("xbox");
 const controllerStates: Record<PlayerId, ControllerState> = {
   "player-1": createInitialControllerState("player-1", profile),
@@ -201,7 +204,7 @@ for (const playerId of playerIds) {
   controllerStates[playerId].connected = true;
 }
 
-const requestedPort = Number(Bun.env.AGENTPAD_FIGHTER_PORT ?? "5173");
+const requestedPort = Number(Bun.env.OPENCONTROLLER_FIGHTER_PORT ?? "5173");
 const server = Bun.serve<SocketData>({
   port: requestedPort,
   hostname: "127.0.0.1",

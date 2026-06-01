@@ -36,7 +36,7 @@ export class ReplayLogger {
           id: this.config.sessionId ?? this.dir.split("/").at(-1),
           controllerId: this.controllerId,
           profile: this.profile,
-          source: this.config.source ?? "agentpad",
+          source: this.config.source ?? "opencontroller",
           startedAt: new Date().toISOString(),
           metadata: this.config.metadata ?? {},
         },

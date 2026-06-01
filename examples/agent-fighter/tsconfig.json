@@ -6,8 +6,8 @@
     "composite": true,
     "baseUrl": "../..",
     "paths": {
-      "@agentpad/core": ["packages/core/src/index.ts"],
-      "@agentpad/core/*": ["packages/core/src/*"]
+      "@opencontroller/core": ["packages/core/src/index.ts"],
+      "@opencontroller/core/*": ["packages/core/src/*"]
     }
   },
   "include": ["server.ts"],

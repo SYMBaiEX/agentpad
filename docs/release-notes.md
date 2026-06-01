@@ -4,9 +4,9 @@
 
 Initial release:
 
-- `@agentpad/core`
-- `@agentpad/overlay`
-- `@agentpad/cli`
+- `@opencontroller/core`
+- `@opencontroller/overlay`
+- `@opencontroller/cli`
 - Xbox and PlayStation profiles
 - Switch and generic HID profile support
 - universal profile mapping

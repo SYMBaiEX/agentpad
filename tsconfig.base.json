@@ -5,11 +5,11 @@
     "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "@agentpad/core": ["packages/core/src/index.ts"],
-      "@agentpad/core/*": ["packages/core/src/*"],
-      "@agentpad/core/browser": ["packages/core/src/browser.ts"],
-      "@agentpad/overlay": ["packages/overlay/src/index.ts"],
-      "@agentpad/overlay/*": ["packages/overlay/src/*"]
+      "@opencontroller/core": ["packages/core/src/index.ts"],
+      "@opencontroller/core/*": ["packages/core/src/*"],
+      "@opencontroller/core/browser": ["packages/core/src/browser.ts"],
+      "@opencontroller/overlay": ["packages/overlay/src/index.ts"],
+      "@opencontroller/overlay/*": ["packages/overlay/src/*"]
     },
     "strict": true,
     "exactOptionalPropertyTypes": true,

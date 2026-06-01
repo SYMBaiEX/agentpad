@@ -1,5 +1,5 @@
-import { createController } from "@agentpad/core";
-import { createOverlayServer } from "@agentpad/overlay/server";
+import { createController } from "@opencontroller/core";
+import { createOverlayServer } from "@opencontroller/overlay/server";
 
 const controller = await createController({
   profile: "xbox",

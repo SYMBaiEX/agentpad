@@ -1,15 +1,15 @@
 {
-  "name": "@agentpad/core",
+  "name": "@opencontroller/core",
   "version": "0.1.0",
-  "description": "Core AgentPad controller runtime for AI-agent virtual controller control.",
+  "description": "Core OpenController controller runtime for AI-agent virtual controller control.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SYMBaiEX/agentpad.git",
+    "url": "git+https://github.com/SYMBaiEX/OpenController.git",
     "directory": "packages/core"
   },
-  "keywords": ["ai", "controller", "gamepad", "agentpad"],
+  "keywords": ["ai", "controller", "gamepad", "opencontroller"],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

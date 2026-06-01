@@ -1,4 +1,4 @@
-import type { ControllerState } from "@agentpad/core";
+import type { ControllerState } from "@opencontroller/core";
 import { type OverlayThemeName, resolveOverlayTheme } from "../themes";
 
 export type CanvasRendererOptions = {

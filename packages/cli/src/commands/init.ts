@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 
 export async function initCommand(): Promise<void> {
-  await mkdir("agentpad", { recursive: true });
+  await mkdir("opencontroller", { recursive: true });
   await writeFile(
-    "agentpad/actions.ts",
-    `import { createActionMap, type Controller } from "@agentpad/core";
+    "opencontroller/actions.ts",
+    `import { createActionMap, type Controller } from "@opencontroller/core";
 
 export function createDefaultActions(controller: Controller) {
   return createActionMap(controller, {
@@ -16,5 +16,5 @@ export function createDefaultActions(controller: Controller) {
 }
 `,
   );
-  console.log("Created agentpad/actions.ts");
+  console.log("Created opencontroller/actions.ts");
 }

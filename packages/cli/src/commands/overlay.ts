@@ -1,8 +1,11 @@
-import { type ControllerProfileName, createController } from "@agentpad/core";
+import {
+  type ControllerProfileName,
+  createController,
+} from "@opencontroller/core";
 import {
   type OverlayThemeName,
   createOverlayServer,
-} from "@agentpad/overlay/server";
+} from "@opencontroller/overlay/server";
 
 export type OverlayCommandOptions = {
   profile?: string;
@@ -31,7 +34,7 @@ export async function overlayCommand(
     controller,
   });
 
-  console.log(`AgentPad overlay running at ${server.url}`);
+  console.log(`OpenController overlay running at ${server.url}`);
 
   const interval = setInterval(() => {
     void demoTick(controller, profile);

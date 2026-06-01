@@ -4,7 +4,7 @@ The overlay package renders controller state without requiring a physical
 controller.
 
 ```tsx
-import { ControllerOverlay } from "@agentpad/overlay";
+import { ControllerOverlay } from "@opencontroller/overlay";
 
 <ControllerOverlay
   profile="xbox"

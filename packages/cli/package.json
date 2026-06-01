@@ -1,17 +1,17 @@
 {
-  "name": "@agentpad/cli",
+  "name": "@opencontroller/cli",
   "version": "0.1.0",
-  "description": "Command line tools for AgentPad.",
+  "description": "Command line tools for OpenController.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SYMBaiEX/agentpad.git",
+    "url": "git+https://github.com/SYMBaiEX/OpenController.git",
     "directory": "packages/cli"
   },
-  "keywords": ["ai", "controller", "gamepad", "cli", "agentpad"],
+  "keywords": ["ai", "controller", "gamepad", "cli", "opencontroller"],
   "bin": {
-    "agentpad": "./dist/index.js"
+    "opencontroller": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,8 +30,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@agentpad/core": "^0.1.0",
-    "@agentpad/overlay": "^0.1.0"
+    "@opencontroller/core": "^0.1.0",
+    "@opencontroller/overlay": "^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",
