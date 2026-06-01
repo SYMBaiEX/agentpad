@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import {
   type PrepareWindowsVhfSetupOptions,
+  type WindowsVhfReportProfile,
   formatWindowsVhfSetupPlan,
   prepareWindowsVhfSetup,
 } from "../vhf";
@@ -19,6 +20,7 @@ try {
   const outputDirectory = stringFlag(flags, "output");
   const hostBridgePath = stringFlag(flags, "host-bridge-path");
   const devicePath = stringFlag(flags, "device-path");
+  const reportProfile = reportProfileFlag(flags, "report-profile");
 
   if (outputDirectory) {
     options.outputDirectory = outputDirectory;
@@ -28,6 +30,16 @@ try {
   }
   if (devicePath) {
     options.devicePath = devicePath;
+  }
+  if (reportProfile) {
+    options.driver = {
+      ...(options.driver ?? {}),
+      reportProfile,
+    };
+    options.hostBridge = {
+      ...(options.hostBridge ?? {}),
+      reportProfile,
+    };
   }
 
   const plan = await prepareWindowsVhfSetup(options);
@@ -79,6 +91,20 @@ function booleanFlag(flags: Flags, key: string): boolean {
   return flags[key] === true || flags[key] === "true";
 }
 
+function reportProfileFlag(
+  flags: Flags,
+  key: string,
+): WindowsVhfReportProfile | undefined {
+  const value = flags[key];
+  if (value === undefined || value === false) {
+    return undefined;
+  }
+  if (value === "generic" || value === "playstation") {
+    return value;
+  }
+  throw new Error(`--${key} must be generic or playstation`);
+}
+
 function printHelp(): void {
   console.log(`OpenController Windows VHF Setup
 
@@ -91,6 +117,7 @@ Options:
   --output <dir>              Directory for generated driver and host files
   --host-bridge-path <path>   Final reviewed host bridge executable path
   --device-path <path>        Windows device path exposed by the driver
+  --report-profile <name>     generic or playstation HID report profile
   --json                      Print the setup plan as JSON
 
 This command writes source templates and reviewed commands only. It does not

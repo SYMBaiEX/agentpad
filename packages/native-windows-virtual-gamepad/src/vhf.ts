@@ -5,15 +5,21 @@ import {
   NativeProcessBridgeAdapter,
   type NativeProcessBridgeAdapterOptions,
 } from "@opencontroller/core";
-import type { NativeBridgeStateMessage } from "@opencontroller/core/bridge";
+import {
+  type NativeBridgeStateMessage,
+  nativeBridgeMessageToProfileHidReportBytes,
+} from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
+  type HidPlayStationExtendedReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
+  decodeHidPlayStationExtendedReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
+  encodeHidPlayStationExtendedReport,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
   hidGamepadReportDescriptorWithRumble,
@@ -21,15 +27,29 @@ import {
   hidGamepadReportId,
   hidGamepadRumbleReportByteLength,
   hidGamepadRumbleReportId,
+  hidPlayStationExtendedReportByteLength,
+  hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithRumble,
+  hidPlayStationExtendedReportId,
 } from "@opencontroller/core/hid";
 
+export type WindowsVhfReportProfile = "generic" | "playstation";
 export type WindowsVhfInputReport = HidGamepadReport;
+export type WindowsVhfPlayStationInputReport = HidPlayStationExtendedReport;
 export type WindowsVhfRumbleReport = HidGamepadRumbleReport;
 
 export const windowsVhfHidReportDescriptor = hidGamepadReportDescriptor;
 export const windowsVhfHidReportDescriptorWithRumble =
   hidGamepadReportDescriptorWithRumble;
 export const windowsVhfInputReportByteLength = hidGamepadReportByteLength;
+export const windowsVhfPlayStationHidReportDescriptor =
+  hidPlayStationExtendedReportDescriptor;
+export const windowsVhfPlayStationHidReportDescriptorWithRumble =
+  hidPlayStationExtendedReportDescriptorWithRumble;
+export const windowsVhfPlayStationInputReportByteLength =
+  hidPlayStationExtendedReportByteLength;
+export const windowsVhfPlayStationInputReportId =
+  hidPlayStationExtendedReportId;
 export const windowsVhfRumbleReportId = hidGamepadRumbleReportId;
 export const windowsVhfRumbleReportByteLength =
   hidGamepadRumbleReportByteLength;
@@ -47,6 +67,7 @@ export type WindowsVhfInfOptions = {
 };
 
 export type WindowsVhfDriverSourceOptions = {
+  reportProfile?: WindowsVhfReportProfile;
   driverName?: string;
   headerFileName?: string;
   vendorId?: number;
@@ -59,6 +80,7 @@ export type WindowsVhfDriverSourceOptions = {
 };
 
 export type WindowsVhfHostBridgeSourceOptions = {
+  reportProfile?: WindowsVhfReportProfile;
   bridgeName?: string;
   headerFileName?: string;
   ioctlFunctionCode?: number;
@@ -132,6 +154,7 @@ export const defaultWindowsVhfInfOptions = {
 } satisfies Required<WindowsVhfInfOptions>;
 
 export const defaultWindowsVhfDriverSourceOptions = {
+  reportProfile: "generic",
   driverName: "OpenControllerVhfGamepad",
   headerFileName: "OpenControllerVhfGamepad.h",
   vendorId: 0x4f43,
@@ -144,11 +167,42 @@ export const defaultWindowsVhfDriverSourceOptions = {
 } satisfies Required<WindowsVhfDriverSourceOptions>;
 
 export const defaultWindowsVhfHostBridgeSourceOptions = {
+  reportProfile: "generic",
   bridgeName: "OpenControllerVhfHostBridge",
   headerFileName: "OpenControllerVhfHostBridge.h",
   ioctlFunctionCode: 0x801,
   userDevicePath: defaultWindowsVhfDriverSourceOptions.userDevicePath,
 } satisfies Required<WindowsVhfHostBridgeSourceOptions>;
+
+type WindowsVhfReportSpec = {
+  profile: WindowsVhfReportProfile;
+  descriptorWithRumble: Uint8Array;
+  inputReportByteLength: number;
+  inputReportId: number;
+  prefersProfileHidReport: boolean;
+};
+
+function windowsVhfReportSpec(
+  profile: WindowsVhfReportProfile = "generic",
+): WindowsVhfReportSpec {
+  if (profile === "playstation") {
+    return {
+      profile,
+      descriptorWithRumble: windowsVhfPlayStationHidReportDescriptorWithRumble,
+      inputReportByteLength: windowsVhfPlayStationInputReportByteLength,
+      inputReportId: windowsVhfPlayStationInputReportId,
+      prefersProfileHidReport: true,
+    };
+  }
+
+  return {
+    profile: "generic",
+    descriptorWithRumble: windowsVhfHidReportDescriptorWithRumble,
+    inputReportByteLength: windowsVhfInputReportByteLength,
+    inputReportId: hidGamepadReportId,
+    prefersProfileHidReport: false,
+  };
+}
 
 export function defaultWindowsVhfHostBridgePath(
   baseDirectory = process.env.LOCALAPPDATA ??
@@ -344,6 +398,38 @@ export function windowsVhfInputReportBytesFromNativeBridgeMessage(
   );
 }
 
+export function windowsVhfPlayStationInputReportFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): WindowsVhfPlayStationInputReport {
+  const bytes = nativeBridgeMessageToProfileHidReportBytes(message);
+  if (!bytes) {
+    throw new TypeError(
+      "Native bridge message does not include a PlayStation profile HID report",
+    );
+  }
+  return decodeHidPlayStationExtendedReport(bytes);
+}
+
+export function encodeWindowsVhfPlayStationInputReport(
+  report: WindowsVhfPlayStationInputReport,
+): Uint8Array {
+  return encodeHidPlayStationExtendedReport(report);
+}
+
+export function decodeWindowsVhfPlayStationInputReport(
+  bytes: Uint8Array,
+): WindowsVhfPlayStationInputReport {
+  return decodeHidPlayStationExtendedReport(bytes);
+}
+
+export function windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): Uint8Array {
+  return encodeWindowsVhfPlayStationInputReport(
+    windowsVhfPlayStationInputReportFromNativeBridgeMessage(message),
+  );
+}
+
 export function formatWindowsVhfHidDescriptorForC(
   symbolName = "OpenControllerHidReportDescriptor",
 ): string {
@@ -351,6 +437,19 @@ export function formatWindowsVhfHidDescriptorForC(
     storageClass: "static const UCHAR",
     columns: 12,
   });
+}
+
+export function formatWindowsVhfPlayStationHidDescriptorForC(
+  symbolName = "OpenControllerPlayStationHidReportDescriptor",
+): string {
+  return formatCByteArray(
+    symbolName,
+    windowsVhfPlayStationHidReportDescriptorWithRumble,
+    {
+      storageClass: "static const UCHAR",
+      columns: 12,
+    },
+  );
 }
 
 export function formatWindowsVhfInputReportForC(
@@ -361,6 +460,20 @@ export function formatWindowsVhfInputReportForC(
     storageClass: "static const UCHAR",
     columns: 13,
   });
+}
+
+export function formatWindowsVhfPlayStationInputReportForC(
+  report: WindowsVhfPlayStationInputReport,
+  symbolName = "OpenControllerPlayStationSampleInputReport",
+): string {
+  return formatCByteArray(
+    symbolName,
+    encodeWindowsVhfPlayStationInputReport(report),
+    {
+      storageClass: "static const UCHAR",
+      columns: 13,
+    },
+  );
 }
 
 export function createWindowsVhfInf(
@@ -432,6 +545,7 @@ export function createWindowsVhfDriverHeader(
   };
   const guard = `${toCIdentifier(merged.driverName).toUpperCase()}_H`;
   const prefix = toCIdentifier(merged.driverName).toUpperCase();
+  const reportSpec = windowsVhfReportSpec(merged.reportProfile);
 
   return [
     "#pragma once",
@@ -456,7 +570,7 @@ export function createWindowsVhfDriverHeader(
     "",
     "typedef struct _OPENCONTROLLER_DEVICE_CONTEXT {",
     "  VHFHANDLE VhfHandle;",
-    `  UCHAR InputReport[${windowsVhfInputReportByteLength}];`,
+    `  UCHAR InputReport[${reportSpec.inputReportByteLength}];`,
     `  UCHAR RumbleReport[${windowsVhfRumbleReportByteLength}];`,
     "  BOOLEAN HasRumbleReport;",
     "  ULONG RumbleSequence;",
@@ -487,21 +601,22 @@ export function createWindowsVhfDriverSource(
     ...options,
   };
   const prefix = toCIdentifier(merged.driverName).toUpperCase();
+  const reportSpec = windowsVhfReportSpec(merged.reportProfile);
 
   return [
     `#include "${merged.headerFileName}"`,
     "",
     formatCByteArray(
       "OpenControllerHidReportDescriptor",
-      windowsVhfHidReportDescriptorWithRumble,
+      reportSpec.descriptorWithRumble,
       {
         storageClass: "static UCHAR",
         columns: 12,
       },
     ),
     "",
-    `static const ULONG OpenControllerInputReportLength = ${windowsVhfInputReportByteLength};`,
-    `static const UCHAR OpenControllerInputReportId = ${hidGamepadReportId};`,
+    `static const ULONG OpenControllerInputReportLength = ${reportSpec.inputReportByteLength};`,
+    `static const UCHAR OpenControllerInputReportId = ${reportSpec.inputReportId};`,
     `static const ULONG OpenControllerRumbleReportLength = ${windowsVhfRumbleReportByteLength};`,
     `static const UCHAR OpenControllerRumbleReportId = ${windowsVhfRumbleReportId};`,
     "",
@@ -779,6 +894,7 @@ export function createWindowsVhfHostBridgeHeader(
   };
   const guard = `${toCIdentifier(merged.bridgeName).toUpperCase()}_H`;
   const prefix = toCIdentifier(merged.bridgeName).toUpperCase();
+  const reportSpec = windowsVhfReportSpec(merged.reportProfile);
 
   return [
     "#pragma once",
@@ -789,8 +905,9 @@ export function createWindowsVhfHostBridgeHeader(
     "#include <windows.h>",
     "",
     "#define OPENCONTROLLER_XINPUT_REPORT_BYTES 12",
-    `#define OPENCONTROLLER_HID_REPORT_BYTES ${windowsVhfInputReportByteLength}`,
-    "#define OPENCONTROLLER_HID_REPORT_ID 1",
+    `#define OPENCONTROLLER_HID_REPORT_BYTES ${reportSpec.inputReportByteLength}`,
+    `#define OPENCONTROLLER_HID_REPORT_ID ${reportSpec.inputReportId}`,
+    `#define OPENCONTROLLER_PROFILE_HID_REPORT ${reportSpec.prefersProfileHidReport ? 1 : 0}`,
     `#define OPENCONTROLLER_RUMBLE_REPORT_BYTES ${windowsVhfRumbleReportByteLength}`,
     `#define OPENCONTROLLER_RUMBLE_REPORT_ID ${windowsVhfRumbleReportId}`,
     "#define OPENCONTROLLER_RUMBLE_REPORT_BASE64_BYTES 8",
@@ -831,6 +948,30 @@ export function createWindowsVhfHostBridgeSource(
     ...options,
   };
   const prefix = toCIdentifier(merged.bridgeName).toUpperCase();
+  const reportSpec = windowsVhfReportSpec(merged.reportProfile);
+  const profileExtractionLines = reportSpec.prefersProfileHidReport
+    ? [
+        "    if (opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
+        "      if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
+        "        if (opencontroller_extract_xinput_report_base64(line, xinputBytes) != 0) {",
+        "          continue;",
+        "        }",
+        "",
+        "        opencontroller_decode_xinput_report(xinputBytes, &xinputReport);",
+        "        opencontroller_encode_hid_report(&xinputReport, hidReport);",
+        "      }",
+        "    }",
+      ]
+    : [
+        "    if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
+        "      if (opencontroller_extract_xinput_report_base64(line, xinputBytes) != 0) {",
+        "        continue;",
+        "      }",
+        "",
+        "      opencontroller_decode_xinput_report(xinputBytes, &xinputReport);",
+        "      opencontroller_encode_hid_report(&xinputReport, hidReport);",
+        "    }",
+      ];
 
   return [
     `#include "${merged.headerFileName}"`,
@@ -847,6 +988,10 @@ export function createWindowsVhfHostBridgeSource(
     "  const char *controllerId",
     ");",
     "static int opencontroller_extract_hid_report_base64(",
+    "  const char *line,",
+    "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ");",
+    "static int opencontroller_extract_profile_hid_report_base64(",
     "  const char *line,",
     "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
     ");",
@@ -990,14 +1135,7 @@ export function createWindowsVhfHostBridgeSource(
     "      break;",
     "    }",
     "",
-    "    if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
-    "      if (opencontroller_extract_xinput_report_base64(line, xinputBytes) != 0) {",
-    "        continue;",
-    "      }",
-    "",
-    "      opencontroller_decode_xinput_report(xinputBytes, &xinputReport);",
-    "      opencontroller_encode_hid_report(&xinputReport, hidReport);",
-    "    }",
+    ...profileExtractionLines,
     "",
     "    if (opencontroller_submit_hid_report(device, hidReport) != 0) {",
     '      fprintf(stderr, "opencontroller-vhf-host: DeviceIoControl failed: %lu\\n", GetLastError());',
@@ -1106,6 +1244,14 @@ export function createWindowsVhfHostBridgeSource(
     '  return opencontroller_extract_base64_field(line, "\\"hidReportBase64\\":\\"", output, OPENCONTROLLER_HID_REPORT_BYTES);',
     "}",
     "",
+    "static int opencontroller_extract_profile_hid_report_base64(",
+    "  const char *line,",
+    "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
+    ")",
+    "{",
+    '  return opencontroller_extract_base64_field(line, "\\"profileHidReportBase64\\":\\"", output, OPENCONTROLLER_HID_REPORT_BYTES);',
+    "}",
+    "",
     "static int opencontroller_extract_xinput_report_base64(",
     "  const char *line,",
     "  uint8_t output[OPENCONTROLLER_XINPUT_REPORT_BYTES]",
@@ -1174,6 +1320,7 @@ export function createWindowsVhfHostBridgeSource(
     "  uint8_t output[OPENCONTROLLER_HID_REPORT_BYTES]",
     ")",
     "{",
+    "  memset(output, 0, OPENCONTROLLER_HID_REPORT_BYTES);",
     "  output[0] = OPENCONTROLLER_HID_REPORT_ID;",
     "  output[1] = (uint8_t)(report->buttons & 0xff);",
     "  output[2] = (uint8_t)((report->buttons >> 8) & 0xff);",

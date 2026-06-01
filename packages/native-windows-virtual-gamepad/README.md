@@ -78,6 +78,7 @@ opencontroller-windows-vhf-assets --driver-h
 opencontroller-windows-vhf-assets --host-c
 opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
+opencontroller-windows-vhf-assets --driver-c --report-profile playstation
 ```
 
 ```ts
@@ -86,6 +87,7 @@ import {
   createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
+  windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const bytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
@@ -94,12 +96,35 @@ const driverSourceFiles = createWindowsVhfDriverSourceFiles();
 const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles();
 ```
 
+The generic VHF assets use the shared 13-byte HID gamepad report by default.
+Generate a matching PlayStation driver and host bridge with
+`reportProfile: "playstation"` when the virtual device should expose
+OpenController's 47-byte `hid-playstation-extended` report:
+
+```ts
+const driverSourceFiles = createWindowsVhfDriverSourceFiles({
+  reportProfile: "playstation"
+});
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles({
+  reportProfile: "playstation"
+});
+
+const bytes =
+  windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(message);
+```
+
+The setup command accepts the same profile flag:
+
+```bash
+opencontroller-windows-vhf-setup --report-profile playstation
+```
+
 The generated INF template includes the VHF lower filter declaration required
 for a HID source driver. Treat it as source material for a real signed driver
 package, not as an installer.
 
 The generated C source wires the OpenController HID descriptor with rumble
-output into VHF, submits 13-byte input reports through `VhfReadReportSubmit`,
+output into VHF, submits input reports through `VhfReadReportSubmit`,
 and captures HID output reports through `EvtVhfAsyncOperationWriteReport`. Treat
 it as the WDK project starting point, then add signing, installation, and the
 generated user-mode host bridge.
@@ -113,6 +138,10 @@ thread and prints `opencontroller.bridge.feedback` JSONL on stdout for
 `controller.onFeedback(...)`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
 `--controller-id` to bind a host bridge process to one controller from a shared
 multi-agent stream.
+
+When generated with `reportProfile: "playstation"`, the host bridge prefers
+`profileHidReportBase64` so PlayStation touchpad and motion bytes reach the VHF
+driver instead of being reduced to the common gamepad subset.
 
 After building and reviewing that host bridge, SDK code can own the process:
 

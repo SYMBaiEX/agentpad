@@ -13,6 +13,10 @@ import {
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
   hidGamepadRumbleReportId,
+  hidPlayStationExtendedReportByteLength,
+  hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithRumble,
+  hidPlayStationExtendedReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -28,15 +32,24 @@ import {
   decodeWindowsVhfRumbleReport,
   defaultWindowsVhfHostBridgePath,
   encodeWindowsVhfInputReport,
+  encodeWindowsVhfPlayStationInputReport,
   encodeWindowsVhfRumbleReport,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfInputReportForC,
+  formatWindowsVhfPlayStationHidDescriptorForC,
+  formatWindowsVhfPlayStationInputReportForC,
   formatWindowsVhfSetupPlan,
   prepareWindowsVhfSetup,
   windowsVhfHidReportDescriptor,
   windowsVhfHidReportDescriptorWithRumble,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfInputReportFromNativeBridgeMessage,
+  windowsVhfPlayStationHidReportDescriptor,
+  windowsVhfPlayStationHidReportDescriptorWithRumble,
+  windowsVhfPlayStationInputReportByteLength,
+  windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
+  windowsVhfPlayStationInputReportFromNativeBridgeMessage,
+  windowsVhfPlayStationInputReportId,
   windowsVhfRumbleReportByteLength,
 } from "../vhf";
 
@@ -48,6 +61,12 @@ describe("windows VHF helpers", () => {
     expect(Array.from(windowsVhfHidReportDescriptorWithRumble)).toEqual(
       Array.from(hidGamepadReportDescriptorWithRumble),
     );
+    expect(Array.from(windowsVhfPlayStationHidReportDescriptor)).toEqual(
+      Array.from(hidPlayStationExtendedReportDescriptor),
+    );
+    expect(
+      Array.from(windowsVhfPlayStationHidReportDescriptorWithRumble),
+    ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
   });
 
   test("creates VHF rumble output report bytes", () => {
@@ -114,6 +133,90 @@ describe("windows VHF helpers", () => {
     expect(decoded).toEqual(report);
   });
 
+  test("creates PlayStation VHF input report bytes from native bridge messages", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "playstation",
+      connected: true,
+      buttons: {
+        CROSS: true,
+        CIRCLE: false,
+        SQUARE: false,
+        TRIANGLE: false,
+        L1: false,
+        R1: false,
+        L2: false,
+        R2: false,
+        SHARE: false,
+        OPTIONS: false,
+        PS: false,
+        L3: false,
+        R3: false,
+        TOUCHPAD: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        L2: 0,
+        R2: 0.5,
+      },
+      sticks: {
+        left: { x: 0, y: 0 },
+        right: { x: 0, y: 0 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: true,
+        contacts: [
+          {
+            id: 4,
+            active: true,
+            x: 0.25,
+            y: 0.75,
+            pressure: 0.5,
+          },
+        ],
+      },
+      motion: {
+        acceleration: { x: 0, y: 0, z: 1 },
+        gyroscope: { x: 0, y: 0, z: 0 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const report =
+      windowsVhfPlayStationInputReportFromNativeBridgeMessage(message);
+    const bytes =
+      windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(message);
+
+    expect(bytes.byteLength).toBe(windowsVhfPlayStationInputReportByteLength);
+    expect(windowsVhfPlayStationInputReportByteLength).toBe(
+      hidPlayStationExtendedReportByteLength,
+    );
+    expect(report.reportId).toBe(windowsVhfPlayStationInputReportId);
+    expect(windowsVhfPlayStationInputReportId).toBe(
+      hidPlayStationExtendedReportId,
+    );
+    expect(report.touchpadPressed).toBe(true);
+    expect(report.touchpadContacts[0]).toEqual({
+      id: 4,
+      active: true,
+      x: 16384,
+      y: 49151,
+      pressure: 128,
+    });
+  });
+
   test("formats descriptor and report arrays for WDK driver source", () => {
     const report = {
       reportId: hidGamepadReportId,
@@ -141,6 +244,45 @@ describe("windows VHF helpers", () => {
     expect(
       decodeWindowsVhfInputReport(encodeWindowsVhfInputReport(report)),
     ).toEqual(report);
+  });
+
+  test("formats PlayStation descriptor and report arrays for WDK driver source", () => {
+    const report = {
+      reportId: hidPlayStationExtendedReportId,
+      buttons: xInputButtonBits.A,
+      leftTrigger: 0,
+      rightTrigger: 128,
+      leftStickX: 0,
+      leftStickY: 0,
+      rightStickX: 0,
+      rightStickY: 0,
+      touchpadPressed: true,
+      touchpadContacts: [
+        { id: 1, active: true, x: 65535, y: 0, pressure: 255 },
+        { id: 0, active: false, x: 0, y: 0, pressure: 0 },
+      ],
+      accelerationX: 0,
+      accelerationY: 0,
+      accelerationZ: 32767,
+      gyroscopeX: 0,
+      gyroscopeY: 0,
+      gyroscopeZ: 0,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    } as const;
+
+    const descriptor = formatWindowsVhfPlayStationHidDescriptorForC();
+    const inputReport = formatWindowsVhfPlayStationInputReportForC(report);
+
+    expect(descriptor).toContain(
+      "static const UCHAR OpenControllerPlayStationHidReportDescriptor[]",
+    );
+    expect(descriptor).toContain("0x85, 0x03");
+    expect(inputReport).toContain(
+      "static const UCHAR OpenControllerPlayStationSampleInputReport[]",
+    );
+    expect(encodeWindowsVhfPlayStationInputReport(report).byteLength).toBe(47);
   });
 
   test("creates an INF template that loads VHF as a lower filter", () => {
@@ -189,6 +331,21 @@ describe("windows VHF helpers", () => {
     ]);
   });
 
+  test("creates PlayStation WDK VHF driver source templates", () => {
+    const header = createWindowsVhfDriverHeader({
+      reportProfile: "playstation",
+    });
+    const source = createWindowsVhfDriverSource({
+      reportProfile: "playstation",
+    });
+
+    expect(header).toContain("InputReport[47]");
+    expect(source).toContain("OpenControllerInputReportLength = 47");
+    expect(source).toContain("OpenControllerInputReportId = 3");
+    expect(source).toContain("0x85, 0x03");
+    expect(source).toContain("0x95, 0x22");
+  });
+
   test("creates Windows host bridge source templates for VHF IOCTL writes", () => {
     const header = createWindowsVhfHostBridgeHeader();
     const source = createWindowsVhfHostBridgeSource();
@@ -231,6 +388,29 @@ describe("windows VHF helpers", () => {
     ]);
   });
 
+  test("creates PlayStation Windows host bridge source templates", () => {
+    const header = createWindowsVhfHostBridgeHeader({
+      reportProfile: "playstation",
+    });
+    const source = createWindowsVhfHostBridgeSource({
+      reportProfile: "playstation",
+    });
+
+    expect(header).toContain("OPENCONTROLLER_HID_REPORT_BYTES 47");
+    expect(header).toContain("OPENCONTROLLER_HID_REPORT_ID 3");
+    expect(header).toContain("OPENCONTROLLER_PROFILE_HID_REPORT 1");
+    expect(source).toContain("profileHidReportBase64");
+    expect(source).toContain(
+      [
+        "if (opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
+        "      if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
+      ].join("\n"),
+    );
+    expect(source).toContain(
+      "memset(output, 0, OPENCONTROLLER_HID_REPORT_BYTES)",
+    );
+  });
+
   test("prepares a reviewed Windows VHF setup kit", async () => {
     const outputDirectory = await mkdtemp(
       join(tmpdir(), "opencontroller-vhf-"),
@@ -267,6 +447,41 @@ describe("windows VHF helpers", () => {
       expect(hostBridgeHeader).toContain("OpenControllerTestGamepad");
       expect(formatted).toContain("OpenController Windows VHF Setup");
       expect(formatted).toContain("No privileged system changes were made.");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("prepares a PlayStation Windows VHF setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-vhf-playstation-"),
+    );
+
+    try {
+      const plan = await prepareWindowsVhfSetup({
+        outputDirectory,
+        platform: "linux",
+        driver: {
+          reportProfile: "playstation",
+        },
+        hostBridge: {
+          reportProfile: "playstation",
+        },
+      });
+      const driverHeader = await readFile(plan.driverHeaderPath, "utf8");
+      const hostBridgeHeader = await readFile(
+        plan.hostBridgeHeaderPath,
+        "utf8",
+      );
+      const hostBridgeSource = await readFile(
+        plan.hostBridgeSourcePath,
+        "utf8",
+      );
+
+      expect(driverHeader).toContain("InputReport[47]");
+      expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_BYTES 47");
+      expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_ID 3");
+      expect(hostBridgeSource).toContain("profileHidReportBase64");
     } finally {
       await rm(outputDirectory, { recursive: true, force: true });
     }

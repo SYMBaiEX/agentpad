@@ -79,6 +79,7 @@ opencontroller-windows-vhf-assets --driver-h
 opencontroller-windows-vhf-assets --host-c
 opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
+opencontroller-windows-vhf-assets --driver-c --report-profile playstation
 ```
 
 ```ts
@@ -87,6 +88,7 @@ import {
   createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
+  windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const reportBytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
@@ -99,9 +101,36 @@ The descriptor and input report bytes come from the shared
 [HID Gamepad Reports](hid-gamepad-reports.md) contract. The INF template includes
 the required `LowerFilters` entry for `vhf`.
 
+The default generated VHF driver uses the generic 13-byte HID gamepad report.
+For a PlayStation-oriented virtual device that carries touchpad contacts and
+motion vectors, generate the driver and host bridge with matching report
+profiles:
+
+```ts
+const driverSourceFiles = createWindowsVhfDriverSourceFiles({
+  reportProfile: "playstation"
+});
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles({
+  reportProfile: "playstation"
+});
+
+const playstationBytes =
+  windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(message);
+```
+
+The PlayStation profile uses the 47-byte `hid-playstation-extended` report and
+the host bridge prefers `profileHidReportBase64` before falling back to generic
+HID or XInput payloads.
+
+The setup helper accepts the same profile flag:
+
+```bash
+opencontroller-windows-vhf-setup --report-profile playstation
+```
+
 The generated driver source is a WDK/KMDF starting point that wires the shared
 descriptor with rumble output into `VHF_CONFIG_INIT`, creates and starts a VHF
-device, accepts a 13-byte OpenController HID input report through a buffered
+device, accepts an OpenController HID input report through a buffered
 IOCTL, and submits it with `VhfReadReportSubmit`. It also registers
 `EvtVhfAsyncOperationWriteReport` so host HID output reports can be captured as
 5-byte rumble packets and exposed to the user-mode host bridge through a read
@@ -111,7 +140,7 @@ before installation.
 The generated host bridge C source reads OpenController native bridge JSONL from
 stdin, prefers direct `hidReportBase64` payloads, falls back to converting
 legacy `reportBase64` XInput packets, opens the VHF driver with `CreateFileA`,
-and writes 13-byte HID reports through `DeviceIoControl`. A background feedback
+and writes HID reports through `DeviceIoControl`. A background feedback
 thread polls the driver's rumble IOCTL and emits `opencontroller.bridge.feedback`
 JSONL on stdout so `NativeProcessBridgeAdapter` can surface host haptics through
 `controller.onFeedback(...)`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass

@@ -4,7 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/SYMBaiEX/OpenController)](https://github.com/SYMBaiEX/OpenController/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-OpenController is a Bun-first TypeScript SDK for giving AI agents a real
+OpenController is a Bun-first TypeScript framework for giving AI agents a real
 controller interface.
 
 Instead of building one-off tools for every game, simulator, overlay, emulator,
@@ -37,7 +37,7 @@ controller is already the shared language for games, emulators, robotics
 simulators, browser experiments, overlays, accessibility tooling, and testing
 harnesses.
 
-OpenController turns that language into an SDK:
+OpenController turns that language into a reusable controller layer:
 
 - agent code can express intent as controller actions
 - apps can consume input through a stable state stream
@@ -72,11 +72,11 @@ online competitive game automation.
 
 ## Where It Stands
 
-OpenController is ready to use as a source SDK today. The core runtime, package
+OpenController is ready to use from source today. The core runtime, package
 layout, CLI, overlays, examples, docs, CI, release notes, and npm package
 manifests are in place.
 
-The SDK surface is complete enough for local builds, demos, browser games,
+The developer surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, touchpad/motion state, and
 native bridge prototyping. It is not yet a full cross-platform native virtual
 controller driver stack. The current emulation boundary is the adapter layer,
