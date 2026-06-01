@@ -4,11 +4,15 @@ import type { ControllerState } from "../types";
 import { createHidGamepadButtonMask } from "./hid-buttons";
 import { type XInputGamepadReport, createXInputReport } from "./xinput";
 
-export const hidGamepadReportId = 1;
-export const hidGamepadReportByteLength = 13;
+export const hidGamepadInputReportId = 1;
+export const hidGamepadReportId = hidGamepadInputReportId;
+export const hidGamepadInputReportByteLength = 13;
+export const hidGamepadReportByteLength = hidGamepadInputReportByteLength;
+export const hidGamepadRumbleReportId = 2;
+export const hidGamepadRumbleReportByteLength = 5;
 
 export type HidGamepadReport = {
-  reportId: typeof hidGamepadReportId;
+  reportId: typeof hidGamepadInputReportId;
   buttons: number;
   leftTrigger: number;
   rightTrigger: number;
@@ -16,6 +20,21 @@ export type HidGamepadReport = {
   leftStickY: number;
   rightStickX: number;
   rightStickY: number;
+};
+
+export type HidGamepadRumbleReport = {
+  reportId: typeof hidGamepadRumbleReportId;
+  weakMotor: number;
+  strongMotor: number;
+  leftTriggerMotor: number;
+  rightTriggerMotor: number;
+};
+
+export type HidGamepadRumbleEffect = {
+  weakMotor?: number;
+  strongMotor?: number;
+  leftTriggerMotor?: number;
+  rightTriggerMotor?: number;
 };
 
 export const hidGamepadReportDescriptor = Uint8Array.from([
@@ -83,6 +102,35 @@ export const hidGamepadReportDescriptor = Uint8Array.from([
   0xc0, // End Collection
 ]);
 
+export const hidGamepadRumbleOutputReportDescriptor = Uint8Array.from([
+  0x85,
+  hidGamepadRumbleReportId, // Report ID
+  0x06,
+  0x00,
+  0xff, // Usage Page (Vendor Defined)
+  0x19,
+  0x01, // Usage Minimum (Rumble channel 1)
+  0x29,
+  0x04, // Usage Maximum (Rumble channel 4)
+  0x15,
+  0x00, // Logical Minimum (0)
+  0x26,
+  0xff,
+  0x00, // Logical Maximum (255)
+  0x75,
+  0x08, // Report Size (8)
+  0x95,
+  0x04, // Report Count (4)
+  0x91,
+  0x02, // Output (Data, Variable, Absolute)
+]);
+
+export const hidGamepadReportDescriptorWithRumble = Uint8Array.from([
+  ...hidGamepadReportDescriptor.slice(0, -1),
+  ...hidGamepadRumbleOutputReportDescriptor,
+  0xc0, // End Collection
+]);
+
 export function createHidGamepadReport(
   stateOrReport: ControllerState | XInputGamepadReport,
 ): HidGamepadReport {
@@ -103,6 +151,18 @@ export function createHidGamepadReport(
     leftStickY: report.leftStickY,
     rightStickX: report.rightStickX,
     rightStickY: report.rightStickY,
+  };
+}
+
+export function createHidGamepadRumbleReport(
+  effect: HidGamepadRumbleEffect = {},
+): HidGamepadRumbleReport {
+  return {
+    reportId: hidGamepadRumbleReportId,
+    weakMotor: toU8(effect.weakMotor ?? 0),
+    strongMotor: toU8(effect.strongMotor ?? 0),
+    leftTriggerMotor: toU8(effect.leftTriggerMotor ?? 0),
+    rightTriggerMotor: toU8(effect.rightTriggerMotor ?? 0),
   };
 }
 
@@ -136,6 +196,25 @@ export function encodeHidGamepadReport(
   return bytes;
 }
 
+export function encodeHidGamepadRumbleReport(
+  effectOrReport: HidGamepadRumbleEffect | HidGamepadRumbleReport,
+): Uint8Array {
+  const report =
+    "reportId" in effectOrReport
+      ? effectOrReport
+      : createHidGamepadRumbleReport(effectOrReport);
+  const bytes = new Uint8Array(hidGamepadRumbleReportByteLength);
+  const view = new DataView(bytes.buffer);
+
+  view.setUint8(0, report.reportId);
+  view.setUint8(1, clampByte(report.weakMotor));
+  view.setUint8(2, clampByte(report.strongMotor));
+  view.setUint8(3, clampByte(report.leftTriggerMotor));
+  view.setUint8(4, clampByte(report.rightTriggerMotor));
+
+  return bytes;
+}
+
 export function decodeHidGamepadReport(bytes: Uint8Array): HidGamepadReport {
   if (bytes.byteLength < hidGamepadReportByteLength) {
     throw new RangeError(
@@ -161,4 +240,44 @@ export function decodeHidGamepadReport(bytes: Uint8Array): HidGamepadReport {
     leftTrigger: view.getUint8(11),
     rightTrigger: view.getUint8(12),
   };
+}
+
+export function decodeHidGamepadRumbleReport(
+  bytes: Uint8Array,
+): HidGamepadRumbleReport {
+  if (bytes.byteLength < hidGamepadRumbleReportByteLength) {
+    throw new RangeError(
+      `HID gamepad rumble reports must be at least ${hidGamepadRumbleReportByteLength} bytes`,
+    );
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const reportId = view.getUint8(0);
+  if (reportId !== hidGamepadRumbleReportId) {
+    throw new RangeError(
+      `Unexpected HID gamepad rumble report id ${reportId}; expected ${hidGamepadRumbleReportId}`,
+    );
+  }
+
+  return {
+    reportId: hidGamepadRumbleReportId,
+    weakMotor: view.getUint8(1),
+    strongMotor: view.getUint8(2),
+    leftTriggerMotor: view.getUint8(3),
+    rightTriggerMotor: view.getUint8(4),
+  };
+}
+
+function toU8(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(1, Math.max(0, value)) * 255);
+}
+
+function clampByte(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(255, Math.max(0, value)));
 }

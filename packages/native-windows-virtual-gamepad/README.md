@@ -15,7 +15,8 @@ Upstream context:
 
 This package provides:
 
-- VHF-ready HID report descriptor and input report helpers
+- VHF-ready HID report descriptor, input report helpers, and rumble output
+  report codecs
 - INF, WDK C source, and C-array asset generators for a maintained Windows VHF
   driver path
 - `createWindowsVhfHostBridgeAdapter` for SDK-owned user-mode host bridge

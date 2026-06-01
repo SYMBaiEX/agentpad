@@ -9,7 +9,8 @@ Extension activation.
 
 This package provides:
 
-- DriverKit-ready HID report descriptor and input report helpers
+- DriverKit-ready HID report descriptor, input report helpers, and rumble
+  output report codecs
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation
 - `createMacosDriverKitHostBridgeAdapter` for SDK-owned host bridge processes

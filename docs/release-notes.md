@@ -36,6 +36,8 @@
   helpers and legacy ViGEmBus diagnostics
 - HID gamepad report descriptor and encoder added for descriptor-backed native
   virtual device backends
+- HID rumble output report descriptor and codecs added as the shared haptics
+  contract for native virtual device backends
 - Windows VHF helpers added for HID descriptor/report bytes, C-array assets,
   and a VHF lower-filter INF template
 - `@opencontroller/native-macos-driverkit` package added with DriverKit HID

@@ -10,7 +10,9 @@ import {
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
+  hidGamepadRumbleReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -23,14 +25,18 @@ import {
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
   decodeMacosDriverKitInputReport,
+  decodeMacosDriverKitRumbleReport,
   defaultMacosDriverKitHostBridgePath,
   encodeMacosDriverKitInputReport,
+  encodeMacosDriverKitRumbleReport,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitInputReportForCpp,
   formatMacosDriverKitSetupPlan,
   macosDriverKitHidReportDescriptor,
+  macosDriverKitHidReportDescriptorWithRumble,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitInputReportFromNativeBridgeMessage,
+  macosDriverKitRumbleReportByteLength,
   prepareMacosDriverKitSetup,
 } from "../driverkit";
 
@@ -39,6 +45,25 @@ describe("macOS DriverKit helpers", () => {
     expect(Array.from(macosDriverKitHidReportDescriptor)).toEqual(
       Array.from(hidGamepadReportDescriptor),
     );
+    expect(Array.from(macosDriverKitHidReportDescriptorWithRumble)).toEqual(
+      Array.from(hidGamepadReportDescriptorWithRumble),
+    );
+  });
+
+  test("creates DriverKit rumble output report bytes", () => {
+    const bytes = encodeMacosDriverKitRumbleReport({
+      weakMotor: 0.5,
+      strongMotor: 1,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 0.25,
+    });
+    const report = decodeMacosDriverKitRumbleReport(bytes);
+
+    expect(bytes.byteLength).toBe(macosDriverKitRumbleReportByteLength);
+    expect(report.reportId).toBe(hidGamepadRumbleReportId);
+    expect(report.weakMotor).toBe(128);
+    expect(report.strongMotor).toBe(255);
+    expect(report.rightTriggerMotor).toBe(64);
   });
 
   test("creates DriverKit input report bytes from native bridge messages", () => {
@@ -131,6 +156,12 @@ describe("macOS DriverKit helpers", () => {
       "Contents/Library/SystemExtensions",
     );
     expect(manifest.inputReportByteLength).toBe(13);
+    expect(manifest.hidReportDescriptorWithRumbleBytes.length).toBeGreaterThan(
+      manifest.hidReportDescriptorBytes.length,
+    );
+    expect(manifest.rumbleReportByteLength).toBe(
+      macosDriverKitRumbleReportByteLength,
+    );
     expect(manifest.requiredEntitlements).toContain(
       "com.apple.developer.driverkit.userclient-access",
     );

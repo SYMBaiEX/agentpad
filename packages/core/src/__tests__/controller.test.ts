@@ -11,12 +11,18 @@ import {
   createController,
   createControllerHub,
   decodeHidGamepadReport,
+  decodeHidGamepadRumbleReport,
   decodeXInputReport,
   encodeHidGamepadReport,
+  encodeHidGamepadRumbleReport,
   hidGamepadButtonBits,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
+  hidGamepadRumbleOutputReportDescriptor,
+  hidGamepadRumbleReportByteLength,
+  hidGamepadRumbleReportId,
   nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage,
@@ -148,6 +154,29 @@ describe("controller runtime", () => {
     expect(report.leftStickY).toBe(32767);
 
     await controller.disconnect();
+  });
+
+  test("encodes HID gamepad rumble output reports", () => {
+    const bytes = encodeHidGamepadRumbleReport({
+      weakMotor: 0.25,
+      strongMotor: 1,
+      leftTriggerMotor: -1,
+      rightTriggerMotor: 2,
+    });
+    const report = decodeHidGamepadRumbleReport(bytes);
+
+    expect(bytes.byteLength).toBe(hidGamepadRumbleReportByteLength);
+    expect(report.reportId).toBe(hidGamepadRumbleReportId);
+    expect(report.weakMotor).toBe(64);
+    expect(report.strongMotor).toBe(255);
+    expect(report.leftTriggerMotor).toBe(0);
+    expect(report.rightTriggerMotor).toBe(255);
+    expect(hidGamepadRumbleOutputReportDescriptor.byteLength).toBeGreaterThan(
+      0,
+    );
+    expect(hidGamepadReportDescriptorWithRumble.byteLength).toBeGreaterThan(
+      hidGamepadReportDescriptor.byteLength,
+    );
   });
 
   test("encodes system buttons in HID gamepad reports without changing XInput reports", async () => {

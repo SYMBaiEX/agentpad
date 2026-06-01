@@ -8,18 +8,31 @@ import {
 import type { NativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
+  type HidGamepadRumbleEffect,
+  type HidGamepadRumbleReport,
   decodeHidGamepadReport,
+  decodeHidGamepadRumbleReport,
   encodeHidGamepadReport,
+  encodeHidGamepadRumbleReport,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
   hidGamepadReportId,
+  hidGamepadRumbleReportByteLength,
+  hidGamepadRumbleReportId,
 } from "@opencontroller/core/hid";
 
 export type WindowsVhfInputReport = HidGamepadReport;
+export type WindowsVhfRumbleReport = HidGamepadRumbleReport;
 
 export const windowsVhfHidReportDescriptor = hidGamepadReportDescriptor;
+export const windowsVhfHidReportDescriptorWithRumble =
+  hidGamepadReportDescriptorWithRumble;
 export const windowsVhfInputReportByteLength = hidGamepadReportByteLength;
+export const windowsVhfRumbleReportId = hidGamepadRumbleReportId;
+export const windowsVhfRumbleReportByteLength =
+  hidGamepadRumbleReportByteLength;
 
 export type WindowsVhfInfOptions = {
   deviceName?: string;
@@ -293,6 +306,18 @@ export function decodeWindowsVhfInputReport(
   bytes: Uint8Array,
 ): WindowsVhfInputReport {
   return decodeHidGamepadReport(bytes);
+}
+
+export function encodeWindowsVhfRumbleReport(
+  effectOrReport: HidGamepadRumbleEffect | WindowsVhfRumbleReport,
+): Uint8Array {
+  return encodeHidGamepadRumbleReport(effectOrReport);
+}
+
+export function decodeWindowsVhfRumbleReport(
+  bytes: Uint8Array,
+): WindowsVhfRumbleReport {
+  return decodeHidGamepadRumbleReport(bytes);
 }
 
 export function windowsVhfInputReportBytesFromNativeBridgeMessage(

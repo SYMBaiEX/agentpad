@@ -306,16 +306,23 @@ local bridge needs.
 ```ts
 import {
   encodeHidGamepadReport,
+  encodeHidGamepadRumbleReport,
   hidGamepadReportDescriptor
 } from "@opencontroller/core/hid";
 
 const descriptor = hidGamepadReportDescriptor;
 const bytes = encodeHidGamepadReport(controller.getState());
+const rumble = encodeHidGamepadRumbleReport({
+  weakMotor: 0.25,
+  strongMotor: 0.8
+});
 ```
 
 HID reports are the handoff point for descriptor-backed virtual device APIs.
 The report shape includes 16 buttons, four signed stick axes, and two trigger
-axes. See [HID Gamepad Reports](docs/hid-gamepad-reports.md).
+axes. OpenController also defines a compact vendor output report for rumble
+channels so native drivers have a shared haptics contract to implement. See
+[HID Gamepad Reports](docs/hid-gamepad-reports.md).
 
 ### Native Bridge JSONL
 

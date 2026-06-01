@@ -8,17 +8,30 @@ import {
 import type { NativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   type HidGamepadReport,
+  type HidGamepadRumbleEffect,
+  type HidGamepadRumbleReport,
   decodeHidGamepadReport,
+  decodeHidGamepadRumbleReport,
   encodeHidGamepadReport,
+  encodeHidGamepadRumbleReport,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
+  hidGamepadRumbleReportByteLength,
+  hidGamepadRumbleReportId,
 } from "@opencontroller/core/hid";
 
 export type MacosDriverKitInputReport = HidGamepadReport;
+export type MacosDriverKitRumbleReport = HidGamepadRumbleReport;
 
 export const macosDriverKitHidReportDescriptor = hidGamepadReportDescriptor;
+export const macosDriverKitHidReportDescriptorWithRumble =
+  hidGamepadReportDescriptorWithRumble;
 export const macosDriverKitInputReportByteLength = hidGamepadReportByteLength;
+export const macosDriverKitRumbleReportId = hidGamepadRumbleReportId;
+export const macosDriverKitRumbleReportByteLength =
+  hidGamepadRumbleReportByteLength;
 
 export type MacosDriverKitBundleOptions = {
   appBundleIdentifier?: string;
@@ -293,6 +306,18 @@ export function decodeMacosDriverKitInputReport(
   return decodeHidGamepadReport(bytes);
 }
 
+export function encodeMacosDriverKitRumbleReport(
+  effectOrReport: HidGamepadRumbleEffect | MacosDriverKitRumbleReport,
+): Uint8Array {
+  return encodeHidGamepadRumbleReport(effectOrReport);
+}
+
+export function decodeMacosDriverKitRumbleReport(
+  bytes: Uint8Array,
+): MacosDriverKitRumbleReport {
+  return decodeHidGamepadRumbleReport(bytes);
+}
+
 export function macosDriverKitInputReportBytesFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
 ): Uint8Array {
@@ -433,7 +458,12 @@ export function createMacosDriverKitAssetManifest(
     systemExtensionPath: `Contents/Library/SystemExtensions/${merged.driverBundleIdentifier}.dext`,
     driverClassName: merged.driverClassName,
     hidReportDescriptorBytes: Array.from(macosDriverKitHidReportDescriptor),
+    hidReportDescriptorWithRumbleBytes: Array.from(
+      macosDriverKitHidReportDescriptorWithRumble,
+    ),
     inputReportByteLength: macosDriverKitInputReportByteLength,
+    rumbleReportByteLength: macosDriverKitRumbleReportByteLength,
+    rumbleReportId: macosDriverKitRumbleReportId,
     requiredEntitlements: [
       "com.apple.developer.driverkit",
       "com.apple.developer.driverkit.family.hid.virtual.device",

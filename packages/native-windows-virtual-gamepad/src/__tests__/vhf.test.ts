@@ -10,7 +10,9 @@ import {
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
+  hidGamepadRumbleReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -23,15 +25,19 @@ import {
   createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
+  decodeWindowsVhfRumbleReport,
   defaultWindowsVhfHostBridgePath,
   encodeWindowsVhfInputReport,
+  encodeWindowsVhfRumbleReport,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfInputReportForC,
   formatWindowsVhfSetupPlan,
   prepareWindowsVhfSetup,
   windowsVhfHidReportDescriptor,
+  windowsVhfHidReportDescriptorWithRumble,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfInputReportFromNativeBridgeMessage,
+  windowsVhfRumbleReportByteLength,
 } from "../vhf";
 
 describe("windows VHF helpers", () => {
@@ -39,6 +45,25 @@ describe("windows VHF helpers", () => {
     expect(Array.from(windowsVhfHidReportDescriptor)).toEqual(
       Array.from(hidGamepadReportDescriptor),
     );
+    expect(Array.from(windowsVhfHidReportDescriptorWithRumble)).toEqual(
+      Array.from(hidGamepadReportDescriptorWithRumble),
+    );
+  });
+
+  test("creates VHF rumble output report bytes", () => {
+    const bytes = encodeWindowsVhfRumbleReport({
+      weakMotor: 0.5,
+      strongMotor: 1,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 0.25,
+    });
+    const report = decodeWindowsVhfRumbleReport(bytes);
+
+    expect(bytes.byteLength).toBe(windowsVhfRumbleReportByteLength);
+    expect(report.reportId).toBe(hidGamepadRumbleReportId);
+    expect(report.weakMotor).toBe(128);
+    expect(report.strongMotor).toBe(255);
+    expect(report.rightTriggerMotor).toBe(64);
   });
 
   test("creates VHF input report bytes from native bridge messages", () => {
