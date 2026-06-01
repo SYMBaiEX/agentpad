@@ -16,7 +16,8 @@ Upstream context:
 This package provides:
 
 - VHF-ready HID report descriptor and input report helpers
-- INF and C-array asset generators for a maintained Windows VHF driver path
+- INF, WDK C source, and C-array asset generators for a maintained Windows VHF
+  driver path
 - XUSB report helpers compatible with OpenController's XInput report format
 - `opencontroller-windows-gamepad-doctor` for legacy ViGEmBus service checks
 - documentation and tests that leave room for future maintained Windows virtual
@@ -43,22 +44,31 @@ template inputs for that driver.
 
 ```bash
 opencontroller-windows-vhf-assets --descriptor-c
+opencontroller-windows-vhf-assets --driver-c
+opencontroller-windows-vhf-assets --driver-h
 opencontroller-windows-vhf-assets --inf
 ```
 
 ```ts
 import {
+  createWindowsVhfDriverSourceFiles,
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const bytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
 const inf = createWindowsVhfInf();
+const sourceFiles = createWindowsVhfDriverSourceFiles();
 ```
 
 The generated INF template includes the VHF lower filter declaration required
 for a HID source driver. Treat it as source material for a real signed driver
 package, not as an installer.
+
+The generated C source wires the OpenController HID descriptor into VHF and
+submits 13-byte input reports through `VhfReadReportSubmit`. Treat it as the
+WDK project starting point, then add signing, installation, and a user-mode host
+bridge that writes the buffered IOCTL.
 
 ## Report Helpers
 

@@ -25,6 +25,11 @@ export type MacosDriverKitBundleOptions = {
   teamIdentifier?: string;
 };
 
+export type MacosDriverKitDriverSourceOptions = MacosDriverKitBundleOptions & {
+  headerFileName?: string;
+  sourceFileName?: string;
+};
+
 export const defaultMacosDriverKitBundleOptions = {
   appBundleIdentifier: "com.opencontroller.app",
   driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
@@ -36,6 +41,12 @@ export const defaultMacosDriverKitBundleOptions = {
   productId: 0x0001,
   teamIdentifier: "TEAMID",
 } satisfies Required<MacosDriverKitBundleOptions>;
+
+export const defaultMacosDriverKitDriverSourceOptions = {
+  ...defaultMacosDriverKitBundleOptions,
+  headerFileName: "OpenControllerVirtualGamepadDriver.h",
+  sourceFileName: "OpenControllerVirtualGamepadDriver.cpp",
+} satisfies Required<MacosDriverKitDriverSourceOptions>;
 
 export function macosDriverKitInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
@@ -206,6 +217,197 @@ export function createMacosDriverKitAssetManifest(
   };
 }
 
+export function createMacosDriverKitDriverHeader(
+  options: MacosDriverKitDriverSourceOptions = {},
+): string {
+  const merged = {
+    ...defaultMacosDriverKitDriverSourceOptions,
+    ...options,
+  };
+  const className = toCppIdentifier(merged.driverClassName);
+  const guard = `${className.toUpperCase()}_H`;
+
+  return [
+    "#pragma once",
+    "",
+    `#ifndef ${guard}`,
+    `#define ${guard}`,
+    "",
+    "#include <DriverKit/IOMemoryDescriptor.h>",
+    "#include <DriverKit/OSData.h>",
+    "#include <DriverKit/OSDictionary.h>",
+    "#include <HIDDriverKit/IOUserHIDDevice.h>",
+    "",
+    `class ${className} final : public IOUserHIDDevice {`,
+    `  OSDeclareDefaultStructors(${className})`,
+    "",
+    "public:",
+    "  bool init() override;",
+    "  void free() override;",
+    "  OSDictionary *newDeviceDescription() override;",
+    "  OSData *newReportDescriptor() override;",
+    "  kern_return_t getReport(",
+    "    IOMemoryDescriptor *report,",
+    "    IOHIDReportType reportType,",
+    "    IOOptionBits options,",
+    "    uint32_t completionTimeout,",
+    "    OSAction *action",
+    "  ) override;",
+    "  kern_return_t updateInputReport(const uint8_t *bytes, uint32_t length);",
+    "",
+    "private:",
+    `  uint8_t inputReport[${macosDriverKitInputReportByteLength}];`,
+    "};",
+    "",
+    `#endif  // ${guard}`,
+    "",
+  ].join("\n");
+}
+
+export function createMacosDriverKitDriverSource(
+  options: MacosDriverKitDriverSourceOptions = {},
+): string {
+  const merged = {
+    ...defaultMacosDriverKitDriverSourceOptions,
+    ...options,
+  };
+  const className = toCppIdentifier(merged.driverClassName);
+
+  return [
+    `#include "${merged.headerFileName}"`,
+    "",
+    "#include <string.h>",
+    "",
+    "#include <DriverKit/OSData.h>",
+    "#include <DriverKit/OSNumber.h>",
+    "#include <DriverKit/OSString.h>",
+    "#include <HIDDriverKit/HIDDriverKit.h>",
+    "",
+    formatMacosDriverKitHidDescriptorForCpp(),
+    "",
+    `static const uint8_t openControllerNeutralInputReport[${macosDriverKitInputReportByteLength}] = {`,
+    "  0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,",
+    "  0x00, 0x00, 0x00, 0x00, 0x00, 0x00",
+    "};",
+    "",
+    `OSDefineMetaClassAndStructors(${className}, IOUserHIDDevice)`,
+    "",
+    `bool ${className}::init()`,
+    "{",
+    "  if (!super::init()) {",
+    "    return false;",
+    "  }",
+    "",
+    "  memcpy(",
+    "    inputReport,",
+    "    openControllerNeutralInputReport,",
+    "    sizeof(inputReport)",
+    "  );",
+    "  return true;",
+    "}",
+    "",
+    `void ${className}::free()`,
+    "{",
+    "  super::free();",
+    "}",
+    "",
+    `OSData *${className}::newReportDescriptor()`,
+    "{",
+    "  return OSData::withBytes(",
+    "    openControllerHidReportDescriptor,",
+    "    sizeof(openControllerHidReportDescriptor)",
+    "  );",
+    "}",
+    "",
+    `OSDictionary *${className}::newDeviceDescription()`,
+    "{",
+    "  OSDictionary *description = OSDictionary::withCapacity(8);",
+    "  if (description == nullptr) {",
+    "    return nullptr;",
+    "  }",
+    "",
+    `  description->setObject(kIOHIDVendorIDKey, OSNumber::withNumber(${merged.vendorId}, 32));`,
+    `  description->setObject(kIOHIDProductIDKey, OSNumber::withNumber(${merged.productId}, 32));`,
+    '  description->setObject(kIOHIDTransportKey, OSString::withCString("Virtual"));',
+    `  description->setObject(kIOHIDManufacturerKey, OSString::withCString("OpenController"));`,
+    `  description->setObject(kIOHIDProductKey, OSString::withCString("${escapeCString(
+      merged.productName,
+    )}"));`,
+    "  description->setObject(kIOHIDVersionNumberKey, OSNumber::withNumber(1, 32));",
+    "  description->setObject(kIOHIDCountryCodeKey, OSNumber::withNumber(0, 32));",
+    "  description->setObject(kIOHIDReportIntervalKey, OSNumber::withNumber(1000, 32));",
+    "",
+    "  return description;",
+    "}",
+    "",
+    `kern_return_t ${className}::getReport(`,
+    "  IOMemoryDescriptor *report,",
+    "  IOHIDReportType reportType,",
+    "  IOOptionBits options,",
+    "  uint32_t completionTimeout,",
+    "  OSAction *action",
+    ")",
+    "{",
+    "  (void)completionTimeout;",
+    "",
+    "  if (reportType != kIOHIDReportTypeInput) {",
+    "    return kIOReturnUnsupported;",
+    "  }",
+    "",
+    "  if ((options & 0xff) != openControllerNeutralInputReport[0]) {",
+    "    return kIOReturnUnsupported;",
+    "  }",
+    "",
+    "  uint64_t bytesWritten = 0;",
+    "  kern_return_t result = report->writeBytes(",
+    "    0,",
+    "    inputReport,",
+    "    sizeof(inputReport),",
+    "    &bytesWritten",
+    "  );",
+    "",
+    "  if (action != nullptr) {",
+    "    CompleteReport(",
+    "      report,",
+    "      result,",
+    "      static_cast<uint32_t>(bytesWritten),",
+    "      action",
+    "    );",
+    "  }",
+    "",
+    "  return result;",
+    "}",
+    "",
+    `kern_return_t ${className}::updateInputReport(`,
+    "  const uint8_t *bytes,",
+    "  uint32_t length",
+    ")",
+    "{",
+    "  if (bytes == nullptr || length != sizeof(inputReport)) {",
+    "    return kIOReturnBadArgument;",
+    "  }",
+    "",
+    "  memcpy(inputReport, bytes, sizeof(inputReport));",
+    "  return kIOReturnSuccess;",
+    "}",
+    "",
+  ].join("\n");
+}
+
+export function createMacosDriverKitDriverSourceFiles(
+  options: MacosDriverKitDriverSourceOptions = {},
+): Record<string, string> {
+  const merged = {
+    ...defaultMacosDriverKitDriverSourceOptions,
+    ...options,
+  };
+
+  return {
+    [merged.headerFileName]: createMacosDriverKitDriverHeader(merged),
+    [merged.sourceFileName]: createMacosDriverKitDriverSource(merged),
+  };
+}
+
 function formatCppByteArray(
   symbolName: string,
   bytes: Uint8Array,
@@ -276,4 +478,17 @@ function escapeXml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
+}
+
+function escapeCString(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function toCppIdentifier(value: string): string {
+  const identifier = value.replaceAll(/[^A-Za-z0-9_]/g, "_");
+  if (/^[A-Za-z_]/.test(identifier)) {
+    return identifier;
+  }
+
+  return `_${identifier}`;
 }

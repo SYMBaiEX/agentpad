@@ -202,7 +202,7 @@ The Linux native package adds:
 The Windows native package adds:
 
 - VHF-ready HID descriptor and input report helpers
-- INF and C-array asset generators for a maintained Windows VHF driver path
+- INF, WDK C source, and C-array asset generators for a maintained Windows VHF driver path
 - XUSB report helpers
 - legacy ViGEmBus service diagnostics
 - `opencontroller-windows-gamepad-doctor`
@@ -211,7 +211,7 @@ The macOS native package adds:
 
 - DriverKit-ready HID descriptor and input report helpers
 - Info.plist and entitlement templates for a virtual HID gamepad dext
-- C++ byte-array asset generation for DriverKit source
+- C++ DriverKit source and byte-array asset generation
 - `opencontroller-macos-driverkit-doctor`
 
 ### Core API
@@ -498,8 +498,8 @@ Included:
 - HID gamepad report descriptor and encoder
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
-- Windows VHF/HID virtual gamepad asset helpers
-- macOS DriverKit virtual HID asset helpers
+- Windows VHF/HID virtual gamepad source and asset helpers
+- macOS DriverKit virtual HID source and asset helpers
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows

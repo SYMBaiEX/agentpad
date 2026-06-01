@@ -44,6 +44,8 @@ It cannot verify Apple Developer Program entitlement approval.
 
 ```bash
 opencontroller-macos-driverkit-assets --descriptor-cpp
+opencontroller-macos-driverkit-assets --driver-cpp
+opencontroller-macos-driverkit-assets --driver-h
 opencontroller-macos-driverkit-assets --info-plist
 opencontroller-macos-driverkit-assets --dext-entitlements
 opencontroller-macos-driverkit-assets --host-entitlements
@@ -52,20 +54,26 @@ opencontroller-macos-driverkit-assets --manifest
 
 ```ts
 import {
+  createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-macos-driverkit/driverkit";
 
 const reportBytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
 const infoPlist = createMacosDriverKitInfoPlist();
+const sourceFiles = createMacosDriverKitDriverSourceFiles();
 ```
 
 The descriptor and input report bytes come from the shared
 [HID Gamepad Reports](hid-gamepad-reports.md) contract.
 
+The generated C++ source is a DriverKit starting point for an `IOUserHIDDevice`
+subclass. It returns the shared OpenController report descriptor, publishes the
+virtual gamepad description, keeps a neutral 13-byte input report, and exposes an
+`updateInputReport` entry point for the future host app/user-client bridge.
+
 ## Current Limitations
 
-- no macOS DriverKit source target yet
 - no host app SystemExtensions activation flow yet
 - no signing, notarization, or entitlement automation
 - no automatic driver installation

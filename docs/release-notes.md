@@ -23,6 +23,10 @@
   assets, plist/entitlement templates, and local authoring diagnostics
 - `opencontroller native doctor` added as a unified CLI readiness check for
   Linux `uinput`, Windows virtual gamepad, and macOS DriverKit backends
+- Windows VHF asset generator now emits WDK C source/header templates for a
+  VHF-backed virtual HID gamepad
+- macOS DriverKit asset generator now emits C++ source/header templates for an
+  `IOUserHIDDevice` virtual gamepad dext
 
 ## v0.1.0
 

@@ -7,6 +7,9 @@ import {
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
+  createWindowsVhfDriverHeader,
+  createWindowsVhfDriverSource,
+  createWindowsVhfDriverSourceFiles,
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
   encodeWindowsVhfInputReport,
@@ -98,5 +101,24 @@ describe("windows VHF helpers", () => {
     expect(inf).toContain("Root\\OpenControllerVhfGamepad");
     expect(inf).toContain('HKR,,"LowerFilters",0x00010000,"vhf"');
     expect(inf).toContain("OpenControllerVhfGamepad.sys");
+  });
+
+  test("creates WDK VHF driver source templates", () => {
+    const header = createWindowsVhfDriverHeader();
+    const source = createWindowsVhfDriverSource();
+    const files = createWindowsVhfDriverSourceFiles();
+
+    expect(header).toContain("#include <vhf.h>");
+    expect(header).toContain("IOCTL_OPENCONTROLLERVHFGAMEPAD_SUBMIT_REPORT");
+    expect(header).toContain("VHFHANDLE VhfHandle");
+    expect(source).toContain("VHF_CONFIG_INIT");
+    expect(source).toContain("VhfCreate(&vhfConfig");
+    expect(source).toContain("VhfStart(context->VhfHandle)");
+    expect(source).toContain("VhfReadReportSubmit(context->VhfHandle");
+    expect(source).toContain("OpenControllerInputReportLength = 13");
+    expect(Object.keys(files)).toEqual([
+      "OpenControllerVhfGamepad.h",
+      "OpenControllerVhfGamepad.c",
+    ]);
   });
 });

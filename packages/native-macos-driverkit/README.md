@@ -11,7 +11,7 @@ This package provides:
 
 - DriverKit-ready HID report descriptor and input report helpers
 - Info.plist and entitlement templates for a virtual HID gamepad dext
-- C++ byte-array asset generation for DriverKit source
+- C++ DriverKit source and byte-array asset generation
 - `opencontroller-macos-driverkit-doctor` for local tool checks
 
 Upstream context:
@@ -24,6 +24,8 @@ Upstream context:
 
 ```bash
 opencontroller-macos-driverkit-assets --descriptor-cpp
+opencontroller-macos-driverkit-assets --driver-cpp
+opencontroller-macos-driverkit-assets --driver-h
 opencontroller-macos-driverkit-assets --info-plist
 opencontroller-macos-driverkit-assets --dext-entitlements
 opencontroller-macos-driverkit-assets --host-entitlements
@@ -32,17 +34,23 @@ opencontroller-macos-driverkit-assets --manifest
 
 ```ts
 import {
+  createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-macos-driverkit/driverkit";
 
 const bytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
 const infoPlist = createMacosDriverKitInfoPlist();
+const sourceFiles = createMacosDriverKitDriverSourceFiles();
 ```
 
 The generated assets are source material for a DriverKit project. Review the
 bundle identifiers, team identifier, entitlements, and IOKit personality before
 building or signing a real dext.
+
+The generated C++ source subclasses `IOUserHIDDevice`, returns the shared
+OpenController report descriptor, exposes a neutral input report, and leaves the
+host app/user-client update path explicit.
 
 ## Diagnose
 

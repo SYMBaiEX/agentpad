@@ -8,6 +8,9 @@ import {
 } from "@opencontroller/core/hid";
 import {
   createMacosDriverKitAssetManifest,
+  createMacosDriverKitDriverHeader,
+  createMacosDriverKitDriverSource,
+  createMacosDriverKitDriverSourceFiles,
   createMacosDriverKitEntitlements,
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
@@ -120,5 +123,25 @@ describe("macOS DriverKit helpers", () => {
     expect(manifest.requiredEntitlements).toContain(
       "com.apple.developer.driverkit.userclient-access",
     );
+  });
+
+  test("creates DriverKit C++ source templates", () => {
+    const header = createMacosDriverKitDriverHeader();
+    const source = createMacosDriverKitDriverSource();
+    const files = createMacosDriverKitDriverSourceFiles();
+
+    expect(header).toContain("class OpenControllerVirtualGamepadDriver");
+    expect(header).toContain("newReportDescriptor() override");
+    expect(header).toContain("updateInputReport");
+    expect(source).toContain(
+      "OSDefineMetaClassAndStructors(OpenControllerVirtualGamepadDriver",
+    );
+    expect(source).toContain("OSData::withBytes");
+    expect(source).toContain("kIOHIDVendorIDKey");
+    expect(source).toContain("openControllerNeutralInputReport[13]");
+    expect(Object.keys(files)).toEqual([
+      "OpenControllerVirtualGamepadDriver.h",
+      "OpenControllerVirtualGamepadDriver.cpp",
+    ]);
   });
 });

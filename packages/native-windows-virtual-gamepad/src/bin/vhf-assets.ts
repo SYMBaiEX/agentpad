@@ -1,5 +1,10 @@
 #!/usr/bin/env bun
-import { createWindowsVhfInf, formatWindowsVhfHidDescriptorForC } from "../vhf";
+import {
+  createWindowsVhfDriverHeader,
+  createWindowsVhfDriverSource,
+  createWindowsVhfInf,
+  formatWindowsVhfHidDescriptorForC,
+} from "../vhf";
 
 const args = new Set(process.argv.slice(2));
 
@@ -8,6 +13,8 @@ if (args.has("--help") || args.has("-h")) {
 
 Usage:
   opencontroller-windows-vhf-assets --descriptor-c
+  opencontroller-windows-vhf-assets --driver-c
+  opencontroller-windows-vhf-assets --driver-h
   opencontroller-windows-vhf-assets --inf
 
 These assets are driver-authoring inputs. They do not install a driver.`);
@@ -16,6 +23,10 @@ These assets are driver-authoring inputs. They do not install a driver.`);
 
 if (args.has("--inf")) {
   console.log(createWindowsVhfInf());
+} else if (args.has("--driver-c")) {
+  console.log(createWindowsVhfDriverSource());
+} else if (args.has("--driver-h")) {
+  console.log(createWindowsVhfDriverHeader());
 } else {
   console.log(formatWindowsVhfHidDescriptorForC());
 }

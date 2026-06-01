@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 import {
   createMacosDriverKitAssetManifest,
+  createMacosDriverKitDriverHeader,
+  createMacosDriverKitDriverSource,
   createMacosDriverKitEntitlements,
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
@@ -14,6 +16,8 @@ if (args.has("--help") || args.has("-h")) {
 
 Usage:
   opencontroller-macos-driverkit-assets --descriptor-cpp
+  opencontroller-macos-driverkit-assets --driver-cpp
+  opencontroller-macos-driverkit-assets --driver-h
   opencontroller-macos-driverkit-assets --info-plist
   opencontroller-macos-driverkit-assets --dext-entitlements
   opencontroller-macos-driverkit-assets --host-entitlements
@@ -25,6 +29,10 @@ These assets are DriverKit authoring inputs. They do not install a dext.`);
 
 if (args.has("--info-plist")) {
   console.log(createMacosDriverKitInfoPlist());
+} else if (args.has("--driver-cpp")) {
+  console.log(createMacosDriverKitDriverSource());
+} else if (args.has("--driver-h")) {
+  console.log(createMacosDriverKitDriverHeader());
 } else if (args.has("--dext-entitlements")) {
   console.log(createMacosDriverKitEntitlements());
 } else if (args.has("--host-entitlements")) {
