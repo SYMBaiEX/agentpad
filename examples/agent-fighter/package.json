@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "bun run server.ts",
+    "headless": "bun run headless.ts",
     "start": "bun run server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

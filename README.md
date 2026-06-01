@@ -558,6 +558,7 @@ and host drivers can send haptics back to AI agents.
 ```bash
 bun --cwd examples/basic-dry-run dev
 bun run dev:fighter
+bun --cwd examples/agent-fighter headless --duration-ms 15000
 bun --cwd examples/react-overlay dev
 bun --cwd examples/obs-overlay dev
 bun --cwd examples/websocket-bridge dev
@@ -567,7 +568,8 @@ bun --cwd examples/native-bridge-jsonl dev
 Example folders:
 
 - `examples/basic-dry-run`: minimal controller API usage
-- `examples/agent-fighter`: two-agent browser fighting game
+- `examples/agent-fighter`: two-agent browser fighting game with a headless
+  match runner
 - `examples/react-overlay`: React controller visualization
 - `examples/obs-overlay`: local OBS browser-source overlay server
 - `examples/websocket-bridge`: WebSocket adapter target example
@@ -637,13 +639,12 @@ Included:
 - React/OBS overlays
 - CLI workflows
 - docs and examples
-- Agent Fighter demo
+- Agent Fighter demo and headless match runner
 
 Not included yet:
 
 - signed Windows/macOS native virtual HID drivers
 - game-specific perception
-- headless match runner
 - npm publication
 - broad cross-platform installation testing
 - production hardening for long-running agent tournaments
@@ -654,7 +655,8 @@ Not included yet:
 - Verify Linux `FF_RUMBLE` across more game launchers and distributions
 - Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics
-- Add a headless match runner for repeated agent duels
+- Expand the headless match runner into repeat-series scoring and regression
+  baselines
 - Export replay data to JSON, CSV, and training-friendly formats
 - Add richer telemetry dashboards for agents and controller state
 - Expand adapter examples for emulators, desktop apps, and browser games

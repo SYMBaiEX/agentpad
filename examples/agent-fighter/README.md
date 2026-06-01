@@ -21,6 +21,19 @@ Controller telemetry:
 http://127.0.0.1:5173/controllers
 ```
 
+Run a headless benchmark match:
+
+```bash
+bun --cwd examples/agent-fighter headless --duration-ms 15000
+```
+
+The headless runner starts the real server, opens the real browser game in
+headless Chromium, starts the agents through the management API, polls
+telemetry, stops the agents, and prints a JSON summary with rounds, winners,
+decision counts, and the final arena state. Use `--output <path>` to write the
+summary to a file, `--url <url>` to target an already-running server, and
+`--headed` to watch the browser while the runner drives the match.
+
 Agents start stopped by default. Use the controller telemetry page to start,
 stop, or reset the duel. The server also enforces
 `OPENCONTROLLER_OPENAI_ACTIONS_PER_MINUTE` so an active browser cannot accidentally

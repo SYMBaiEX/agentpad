@@ -10,7 +10,7 @@
       "@opencontroller/core/*": ["packages/core/src/*"]
     }
   },
-  "include": ["server.ts"],
+  "include": ["server.ts", "headless.ts"],
   "references": [
     {
       "path": "../../packages/core"
