@@ -468,7 +468,7 @@ opencontroller native doctor --backend current
 opencontroller native doctor --backend all --json
 opencontroller native setup --backend current
 opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
-opencontroller native test --backend linux-uinput --dry-run
+opencontroller native test --backend linux-uinput --dry-run --id player-1
 opencontroller native test --backend current
 opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
 opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
@@ -488,7 +488,7 @@ changes explicit and reviewed.
 Use `opencontroller native test` after a backend is installed to push a small
 button, stick, trigger, and neutral sequence through the selected native host
 bridge. On Linux, add `--dry-run` to validate JSONL/HID decoding before opening
-`/dev/uinput`.
+`/dev/uinput`; the Linux helper filter is pinned to the emitted controller ID.
 
 ## Architecture
 

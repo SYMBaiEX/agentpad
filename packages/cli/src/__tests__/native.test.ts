@@ -105,6 +105,7 @@ describe("native backend test plan", () => {
         backend: "linux-uinput",
         waitForExitMs: 250,
         linux: {
+          controllerId: "player-test",
           helperPath: "/tmp/opencontroller-uinput-bridge",
           deviceName: "OpenController Test Gamepad",
           dryRun: true,

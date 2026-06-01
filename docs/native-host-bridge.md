@@ -94,6 +94,7 @@ Linux bridge authors can start with dry-run mode before touching `/dev/uinput`:
 opencontroller native test \
   --backend linux-uinput \
   --dry-run \
+  --id player-1 \
   --helper-path ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 

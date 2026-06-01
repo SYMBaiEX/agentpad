@@ -294,7 +294,7 @@ export function createNativeTestPlan(
     adapterOptions: {
       backend,
       ...(waitForExitMs !== undefined ? { waitForExitMs } : {}),
-      linux: createLinuxNativeTestOptions(flags, dryRun),
+      linux: createLinuxNativeTestOptions(flags, dryRun, id),
       windows: createWindowsNativeTestOptions(flags),
       macos: createMacosNativeTestOptions(flags),
     },
@@ -623,8 +623,11 @@ function createMacosNativeSetupOptions(
 function createLinuxNativeTestOptions(
   flags: NativeCommandFlags,
   dryRun: boolean,
+  controllerId: string,
 ): NonNullable<NativeHostBridgeAdapterOptions["linux"]> {
-  const options: NonNullable<NativeHostBridgeAdapterOptions["linux"]> = {};
+  const options: NonNullable<NativeHostBridgeAdapterOptions["linux"]> = {
+    controllerId,
+  };
   const helperPath = stringFlag(flags, "helper-path");
   const devicePath = stringFlag(flags, "device-path");
   const deviceName = stringFlag(flags, "device-name");
@@ -725,7 +728,7 @@ Usage:
   opencontroller native doctor --backend macos-driverkit --check
   opencontroller native setup --backend current
   opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
-  opencontroller native test --backend linux-uinput --dry-run
+  opencontroller native test --backend linux-uinput --dry-run --id player-1
   opencontroller native test --backend current
   opencontroller native test --backend windows-vhf --host-bridge-path ./OpenControllerVhfHostBridge.exe
 

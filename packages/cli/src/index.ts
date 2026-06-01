@@ -97,7 +97,7 @@ Usage:
   opencontroller bridge --id player-1
   opencontroller native doctor --backend current
   opencontroller native setup --backend current
-  opencontroller native test --backend linux-uinput --dry-run
+  opencontroller native test --backend linux-uinput --dry-run --id player-1
   opencontroller adapters
 `);
 }
