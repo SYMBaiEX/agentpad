@@ -15,6 +15,8 @@
   and `/dev/uinput` helper source
 - Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`
   payloads and falls back to legacy XInput payloads
+- Linux `uinput` helper now supports dry-run JSONL decoding, and CI compiles
+  and smoke-tests the real C helper parser
 - Linux uinput doctor added for module, device, permission, and udev-rule
   diagnostics
 - `@opencontroller/native-windows-virtual-gamepad` package added with XUSB

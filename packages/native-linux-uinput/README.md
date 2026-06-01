@@ -46,6 +46,14 @@ neutralizes on disconnect, and destroys the virtual device when the stream ends.
 It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
 legacy XInput-compatible `reportBase64` payload for older bridge streams.
 
+Use dry-run mode to verify the stream without opening `/dev/uinput`:
+
+```bash
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --dry-run
+```
+
+You can also set `OPENCONTROLLER_UINPUT_DRY_RUN=1` for CI scripts.
+
 SDK code can also spawn the helper directly:
 
 ```ts

@@ -19,3 +19,11 @@ jobs:
       - run: bun test
       - run: bun run build
       - run: cc -fsyntax-only -Wall -Wextra packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
+      - run: cc -O2 -Wall -Wextra -o /tmp/opencontroller-uinput-bridge packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
+      - run: |
+          bun packages/cli/dist/index.js bridge --id ci |
+            /tmp/opencontroller-uinput-bridge --dry-run |
+            tee /tmp/opencontroller-uinput-dry-run.txt
+          grep -q "state buttons=0x1000" /tmp/opencontroller-uinput-dry-run.txt
+          grep -q "state buttons=0x0000 lt=0 rt=128 lx=0 ly=0 rx=0 ry=0" /tmp/opencontroller-uinput-dry-run.txt
+          grep -q "disconnect buttons=0x0000" /tmp/opencontroller-uinput-dry-run.txt

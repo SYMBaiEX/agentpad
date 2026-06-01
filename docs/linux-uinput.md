@@ -48,6 +48,17 @@ Then stream controller reports into the helper:
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 
+To verify the bridge stream without creating a virtual device, run the helper in
+dry-run mode:
+
+```bash
+opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge --dry-run
+```
+
+Dry-run mode decodes the same JSONL stream and prints one line per parsed
+report. It is useful in CI, on machines without `/dev/uinput` access, and before
+reviewing local permission changes.
+
 Or let the SDK own the helper process:
 
 ```ts
@@ -76,6 +87,8 @@ The helper:
 - maps OpenController gamepad reports to Linux gamepad event codes
 - emits `SYN_REPORT` after each state update
 - neutralizes and destroys the virtual device when the stream ends
+- supports `--dry-run` or `OPENCONTROLLER_UINPUT_DRY_RUN=1` to decode bridge
+  streams without opening `/dev/uinput`
 
 ## Permissions
 
@@ -124,5 +137,6 @@ axes use negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 - no installer or udev-rule generator yet
 - no automatic permission changes
 - helper source is included and buildable, but not prebuilt
-- CI validates TypeScript mapping and package builds; real `/dev/uinput`
-  verification requires a Linux host with permissions
+- CI validates TypeScript mapping, package builds, C syntax, and helper dry-run
+  decoding; real `/dev/uinput` device verification requires a Linux host with
+  permissions

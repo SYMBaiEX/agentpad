@@ -278,12 +278,70 @@ static int is_disconnect(const char *line) {
   return strstr(line, "\"type\":\"opencontroller.bridge.disconnect\"") != NULL;
 }
 
-int main(void) {
+static int parse_bridge_line(const char *line, struct oc_report *report) {
+  uint8_t hid_bytes[OC_HID_REPORT_BYTES];
+  uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
+
+  if (extract_hid_report_base64(line, hid_bytes) == 0) {
+    return decode_hid_report(hid_bytes, report);
+  }
+  if (extract_xinput_report_base64(line, xinput_bytes) < 0) {
+    return -1;
+  }
+
+  decode_xinput_report(xinput_bytes, report);
+  return 0;
+}
+
+static int is_enabled_flag(const char *value) {
+  return value != NULL && value[0] != '\0' && strcmp(value, "0") != 0 &&
+         strcmp(value, "false") != 0 && strcmp(value, "FALSE") != 0;
+}
+
+static void print_decoded_report(const char *kind,
+                                 const struct oc_report *report) {
+  printf("%s buttons=0x%04x lt=%u rt=%u lx=%d ly=%d rx=%d ry=%d\n", kind,
+         (unsigned int)report->buttons, (unsigned int)report->left_trigger,
+         (unsigned int)report->right_trigger, report->left_x, report->left_y,
+         report->right_x, report->right_y);
+  fflush(stdout);
+}
+
+static int run_dry_run(void) {
+  char line[OC_LINE_MAX];
+
+  while (fgets(line, sizeof(line), stdin) != NULL) {
+    struct oc_report report;
+
+    if (is_disconnect(line)) {
+      memset(&report, 0, sizeof(report));
+      print_decoded_report("disconnect", &report);
+      break;
+    }
+
+    if (parse_bridge_line(line, &report) < 0) {
+      continue;
+    }
+
+    print_decoded_report("state", &report);
+  }
+
+  return 0;
+}
+
+int main(int argc, char **argv) {
   const char *device_path = getenv("OPENCONTROLLER_UINPUT_DEVICE");
   const char *device_name = getenv("OPENCONTROLLER_UINPUT_NAME");
+  const int dry_run =
+      is_enabled_flag(getenv("OPENCONTROLLER_UINPUT_DRY_RUN")) ||
+      (argc > 1 && strcmp(argv[1], "--dry-run") == 0);
   char line[OC_LINE_MAX];
   int fd;
   int created = 0;
+
+  if (dry_run) {
+    return run_dry_run();
+  }
 
   if (device_path == NULL || device_path[0] == '\0') {
     device_path = OC_DEFAULT_DEVICE;
@@ -311,8 +369,6 @@ int main(void) {
   created = 1;
 
   while (running && fgets(line, sizeof(line), stdin) != NULL) {
-    uint8_t hid_bytes[OC_HID_REPORT_BYTES];
-    uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
     struct oc_report report;
 
     if (is_disconnect(line)) {
@@ -320,15 +376,8 @@ int main(void) {
       break;
     }
 
-    if (extract_hid_report_base64(line, hid_bytes) == 0) {
-      if (decode_hid_report(hid_bytes, &report) < 0) {
-        continue;
-      }
-    } else {
-      if (extract_xinput_report_base64(line, xinput_bytes) < 0) {
-        continue;
-      }
-      decode_xinput_report(xinput_bytes, &report);
+    if (parse_bridge_line(line, &report) < 0) {
+      continue;
     }
 
     if (apply_report(fd, &report) < 0) {
