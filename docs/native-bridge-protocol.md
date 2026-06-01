@@ -19,6 +19,8 @@ The first platform consumer is documented in
 [Linux uinput Bridge](linux-uinput.md).
 Windows compatibility helpers are documented in
 [Windows Virtual Gamepad](windows-virtual-gamepad.md).
+Descriptor-backed HID reports are documented in
+[HID Gamepad Reports](hid-gamepad-reports.md).
 
 ## Emit JSONL
 

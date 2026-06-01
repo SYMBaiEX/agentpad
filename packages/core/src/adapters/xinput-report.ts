@@ -2,7 +2,7 @@ import {
   type XInputGamepadReport,
   createXInputReport,
   encodeXInputReport,
-} from "../hid";
+} from "../hid/xinput";
 import type { ControllerState, NormalizedControllerCommand } from "../types";
 import { type ControllerAdapter, baseCapabilities } from "./adapter";
 

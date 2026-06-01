@@ -15,6 +15,8 @@
   diagnostics
 - `@opencontroller/native-windows-virtual-gamepad` package added with XUSB
   helpers and legacy ViGEmBus diagnostics
+- HID gamepad report descriptor and encoder added for descriptor-backed native
+  virtual device backends
 
 ## v0.1.0
 

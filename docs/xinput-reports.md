@@ -3,12 +3,14 @@
 OpenController can encode controller state into a compact XInput-compatible
 gamepad report.
 
-This is not a native driver by itself. It is the bridge contract that a native
-process can consume when writing to ViGEm, `uinput`, DriverKit, or another
-platform-specific virtual controller backend.
+This is not a native driver by itself. It is the compact state contract that a
+native process can consume when writing to XInput-shaped or event-shaped
+platform backends.
 
 For an ordered JSONL wire protocol that carries these bytes to a separate
 process, see [Native Bridge Protocol](native-bridge-protocol.md).
+For descriptor-backed virtual HID APIs, see
+[HID Gamepad Reports](hid-gamepad-reports.md).
 
 ```ts
 import {

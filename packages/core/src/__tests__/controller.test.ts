@@ -10,7 +10,12 @@ import {
   createActionMap,
   createController,
   createControllerHub,
+  decodeHidGamepadReport,
   decodeXInputReport,
+  encodeHidGamepadReport,
+  hidGamepadReportByteLength,
+  hidGamepadReportDescriptor,
+  hidGamepadReportFromNativeBridgeMessage,
   nativeBridgeMessageToReportBytes,
   parseNativeBridgeMessage,
   xInputButtonBits,
@@ -119,6 +124,30 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("encodes controller state as HID gamepad reports", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await controller.press("A", 0);
+    await controller.trigger("RT", 0.5, 0);
+    await controller.moveStick("LEFT", { x: 1, y: -1 }, 0);
+
+    const bytes = encodeHidGamepadReport(controller.getState());
+    const report = decodeHidGamepadReport(bytes);
+
+    expect(bytes.byteLength).toBe(hidGamepadReportByteLength);
+    expect(hidGamepadReportDescriptor.byteLength).toBeGreaterThan(0);
+    expect(report.buttons & xInputButtonBits.A).toBe(xInputButtonBits.A);
+    expect(report.rightTrigger).toBe(128);
+    expect(report.leftStickX).toBe(32767);
+    expect(report.leftStickY).toBe(32767);
+
+    await controller.disconnect();
+  });
+
   test("streams native bridge JSONL messages", async () => {
     const lines: string[] = [];
     const adapter = new NativeBridgeAdapter({
@@ -149,6 +178,10 @@ describe("controller runtime", () => {
 
     expect(aPressed.state).toBeUndefined();
     expect(nativeBridgeMessageToReportBytes(aPressed).byteLength).toBe(12);
+    expect(
+      encodeHidGamepadReport(hidGamepadReportFromNativeBridgeMessage(aPressed))
+        .byteLength,
+    ).toBe(hidGamepadReportByteLength);
 
     await controller.disconnect();
 

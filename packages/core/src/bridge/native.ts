@@ -3,7 +3,7 @@ import {
   createXInputReport,
   decodeXInputReport,
   encodeXInputReport,
-} from "../hid";
+} from "../hid/xinput";
 import type { ControllerProfileName, ControllerState } from "../types";
 
 export const nativeBridgeProtocolVersion = 1;

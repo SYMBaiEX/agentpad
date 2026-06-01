@@ -55,6 +55,7 @@ developer experience on top.
 - Replay logs for commands, state snapshots, annotations, and errors
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
+- Canonical HID gamepad report descriptor and input report encoder
 - Versioned JSONL native bridge protocol for driver and daemon integrations
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
@@ -76,9 +77,10 @@ The SDK surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, and native bridge prototyping.
 It is not yet a full cross-platform native virtual controller driver stack. The
 current emulation boundary is the adapter layer, XInput-compatible binary report
-encoding, a versioned JSONL protocol for native bridge processes, the first
-Linux `uinput` bridge package, and Windows XUSB compatibility helpers. The next
-milestone is adding maintained Windows virtual HID and macOS DriverKit-compatible
+encoding, a descriptor-backed HID gamepad report format, a versioned JSONL
+protocol for native bridge processes, the first Linux `uinput` bridge package,
+and Windows XUSB compatibility helpers. The next milestone is wiring that HID
+contract into maintained Windows virtual HID and macOS DriverKit-compatible
 flows.
 
 If you are evaluating it for another project, use it now for controller-state
@@ -178,6 +180,7 @@ The core package exports:
 - native bridge JSONL protocol helpers
 - safety policies and replay logging
 - XInput report helpers from `@opencontroller/core/hid`
+- HID gamepad report descriptor and report helpers from `@opencontroller/core/hid`
 - bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
 
@@ -261,6 +264,22 @@ await controller.press("A", 80);
 XInput reports are the handoff point for native bridge processes. They do not
 install a driver by themselves, but they provide the packed state a driver or
 local bridge needs.
+
+### HID Gamepad Reports
+
+```ts
+import {
+  encodeHidGamepadReport,
+  hidGamepadReportDescriptor
+} from "@opencontroller/core/hid";
+
+const descriptor = hidGamepadReportDescriptor;
+const bytes = encodeHidGamepadReport(controller.getState());
+```
+
+HID reports are the handoff point for descriptor-backed virtual device APIs.
+The report shape includes 16 buttons, four signed stick axes, and two trigger
+axes. See [HID Gamepad Reports](docs/hid-gamepad-reports.md).
 
 ### Native Bridge JSONL
 
@@ -451,6 +470,7 @@ Included:
 - replay logs
 - dry-run and WebSocket adapters
 - XInput binary report bridge
+- HID gamepad report descriptor and encoder
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
 - Windows virtual gamepad compatibility package
