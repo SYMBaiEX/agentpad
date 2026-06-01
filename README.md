@@ -219,6 +219,7 @@ The Windows native package adds:
 
 - VHF-ready HID descriptor and input report helpers
 - INF, WDK C source, host bridge C source, C-array asset generators, and a host bridge adapter factory for a maintained Windows VHF driver path
+- setup helper for staging reviewed VHF driver/host source files and install/test commands without privileged changes
 - XUSB report helpers
 - legacy ViGEmBus service diagnostics
 - `opencontroller-windows-gamepad-doctor`
@@ -463,6 +464,7 @@ opencontroller native doctor --backend current
 opencontroller native doctor --backend all --json
 opencontroller native test --backend linux-uinput --dry-run
 opencontroller native test --backend current
+opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
 opencontroller init
 ```
 

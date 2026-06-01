@@ -109,6 +109,17 @@ jobs:
       - run: cc -fsyntax-only -Wall -Wextra packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
       - run: cc -O2 -Wall -Wextra -o /tmp/opencontroller-uinput-bridge packages/native-linux-uinput/src/helper/opencontroller-uinput-bridge.c
       - run: |
+          bun packages/native-windows-virtual-gamepad/dist/bin/setup.js \
+            --output /tmp/opencontroller-windows-vhf \
+            --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe" \
+            --json |
+            tee /tmp/opencontroller-windows-vhf-setup.json
+          grep -q "OpenControllerVhfGamepad.inf" /tmp/opencontroller-windows-vhf-setup.json
+          test -f /tmp/opencontroller-windows-vhf/driver/OpenControllerVhfGamepad.inf
+          test -f /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
+          grep -q "No privileged system changes were made" /tmp/opencontroller-windows-vhf/README.md
+          grep -q "DeviceIoControl" /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
+      - run: |
           bun packages/native-linux-uinput/dist/bin/setup.js \
             --output /tmp/opencontroller-uinput-bridge-setup \
             --json |

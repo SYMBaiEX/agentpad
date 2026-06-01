@@ -39,6 +39,32 @@ The doctor checks:
 It does not install drivers. That is deliberate: Windows virtual input drivers
 are sensitive system components and should stay explicit and inspectable.
 
+## Prepare A Reviewed VHF Kit
+
+Use the setup command to stage the generated driver source, INF, host bridge
+source, README, and reviewed commands in one folder:
+
+```bash
+opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
+opencontroller-windows-vhf-setup --json
+```
+
+The setup command creates files only. It does not install drivers, sign
+packages, or make privileged system changes. Build and sign the generated
+KMDF/VHF driver package with the Windows Driver Kit, then install the reviewed
+INF from an elevated Windows terminal:
+
+```powershell
+pnputil /add-driver ".\opencontroller-windows-vhf\driver\OpenControllerVhfGamepad.inf" /install
+```
+
+After the signed driver and user-mode host bridge are installed, smoke-test the
+native path:
+
+```powershell
+opencontroller native test --backend windows-vhf --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
+```
+
 ## VHF Assets
 
 VHF is Microsoft's maintained virtual HID path. It requires a kernel-mode HID
@@ -120,7 +146,8 @@ emits for native bridge processes.
 ## Current Limitations
 
 - VHF signing/install flow is not implemented yet
-- no automatic driver installation
-- generated host bridge source still needs a Windows build project and real
+- no automatic driver installation; setup emits reviewed source files and
+  commands only
+- generated host bridge source still needs a Windows build project and signed
   device install verification
 - legacy ViGEmBus diagnostics are compatibility-only

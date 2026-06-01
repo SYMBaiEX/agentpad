@@ -1,5 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { win32 } from "node:path";
+import { join, resolve, win32 } from "node:path";
 import {
   NativeProcessBridgeAdapter,
   type NativeProcessBridgeAdapterOptions,
@@ -68,6 +69,34 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   devicePath?: string;
 };
 
+export type PrepareWindowsVhfSetupOptions = {
+  platform?: NodeJS.Platform;
+  outputDirectory?: string;
+  driver?: WindowsVhfDriverSourceOptions;
+  inf?: WindowsVhfInfOptions;
+  hostBridge?: WindowsVhfHostBridgeSourceOptions;
+  hostBridgePath?: string;
+  devicePath?: string;
+};
+
+export type WindowsVhfSetupPlan = {
+  platform: NodeJS.Platform;
+  outputDirectory: string;
+  driverDirectory: string;
+  hostBridgeDirectory: string;
+  hostBridgePath: string;
+  devicePath: string;
+  files: string[];
+  infPath: string;
+  driverHeaderPath: string;
+  driverSourcePath: string;
+  hostBridgeHeaderPath: string;
+  hostBridgeSourcePath: string;
+  readmePath: string;
+  installCommand: string;
+  nativeTestCommand: string;
+};
+
 export const defaultWindowsVhfInfOptions = {
   deviceName: "OpenController Virtual HID Gamepad",
   manufacturerName: "OpenController",
@@ -109,6 +138,122 @@ export function defaultWindowsVhfHostBridgePath(
     "bin",
     "OpenControllerVhfHostBridge.exe",
   );
+}
+
+export function defaultWindowsVhfSetupDirectory(
+  baseDirectory = process.cwd(),
+): string {
+  return resolve(baseDirectory, "opencontroller-windows-vhf");
+}
+
+export async function prepareWindowsVhfSetup(
+  options: PrepareWindowsVhfSetupOptions = {},
+): Promise<WindowsVhfSetupPlan> {
+  const platform = options.platform ?? process.platform;
+  const outputDirectory = resolve(
+    options.outputDirectory ?? defaultWindowsVhfSetupDirectory(),
+  );
+  const driverDirectory = join(outputDirectory, "driver");
+  const hostBridgeDirectory = join(outputDirectory, "host-bridge");
+  const devicePath =
+    options.devicePath ??
+    options.hostBridge?.userDevicePath ??
+    defaultWindowsVhfHostBridgeSourceOptions.userDevicePath;
+  const hostBridgePath =
+    options.hostBridgePath ?? defaultWindowsVhfHostBridgePath();
+  const driverOptions = options.driver ?? {};
+  const infOptions = options.inf ?? {};
+  const hostBridgeOptions: WindowsVhfHostBridgeSourceOptions = {
+    ...(options.hostBridge ?? {}),
+    userDevicePath: devicePath,
+  };
+
+  const driverFiles = createWindowsVhfDriverSourceFiles(driverOptions);
+  const hostBridgeFiles =
+    createWindowsVhfHostBridgeSourceFiles(hostBridgeOptions);
+  const infFileName = `${toCIdentifier(
+    infOptions.serviceName ?? defaultWindowsVhfInfOptions.serviceName,
+  )}.inf`;
+  const infPath = join(driverDirectory, infFileName);
+  const readmePath = join(outputDirectory, "README.md");
+  const files: string[] = [];
+
+  await mkdir(driverDirectory, { recursive: true });
+  await mkdir(hostBridgeDirectory, { recursive: true });
+
+  for (const [fileName, contents] of Object.entries(driverFiles)) {
+    const filePath = join(driverDirectory, fileName);
+    await writeFile(filePath, contents);
+    files.push(filePath);
+  }
+
+  await writeFile(infPath, createWindowsVhfInf(infOptions));
+  files.push(infPath);
+
+  for (const [fileName, contents] of Object.entries(hostBridgeFiles)) {
+    const filePath = join(hostBridgeDirectory, fileName);
+    await writeFile(filePath, contents);
+    files.push(filePath);
+  }
+
+  const plan: WindowsVhfSetupPlan = {
+    platform,
+    outputDirectory,
+    driverDirectory,
+    hostBridgeDirectory,
+    hostBridgePath,
+    devicePath,
+    files: [...files, readmePath],
+    infPath,
+    driverHeaderPath: join(
+      driverDirectory,
+      driverOptions.headerFileName ??
+        defaultWindowsVhfDriverSourceOptions.headerFileName,
+    ),
+    driverSourcePath: join(
+      driverDirectory,
+      `${driverOptions.driverName ?? defaultWindowsVhfDriverSourceOptions.driverName}.c`,
+    ),
+    hostBridgeHeaderPath: join(
+      hostBridgeDirectory,
+      hostBridgeOptions.headerFileName ??
+        defaultWindowsVhfHostBridgeSourceOptions.headerFileName,
+    ),
+    hostBridgeSourcePath: join(
+      hostBridgeDirectory,
+      `${hostBridgeOptions.bridgeName ?? defaultWindowsVhfHostBridgeSourceOptions.bridgeName}.c`,
+    ),
+    readmePath,
+    installCommand: `pnputil /add-driver ${quotePowerShell(infPath)} /install`,
+    nativeTestCommand: `opencontroller native test --backend windows-vhf --host-bridge-path ${quotePowerShell(
+      hostBridgePath,
+    )} --device-path ${quotePowerShell(devicePath)}`,
+  };
+
+  await writeFile(readmePath, formatWindowsVhfSetupReadme(plan));
+  return plan;
+}
+
+export function formatWindowsVhfSetupPlan(plan: WindowsVhfSetupPlan): string {
+  return [
+    "OpenController Windows VHF Setup",
+    "",
+    `Generated kit: ${plan.outputDirectory}`,
+    "",
+    "No privileged system changes were made.",
+    "",
+    "Generated files:",
+    ...plan.files.map((file) => `  ${file}`),
+    "",
+    "Review, build, sign, and install the driver package on Windows with WDK:",
+    `  ${plan.installCommand}`,
+    "",
+    "After the signed driver and host bridge are installed, smoke-test the path:",
+    `  ${plan.nativeTestCommand}`,
+    "",
+    "Virtual HID drivers run with sensitive system privileges. Review and sign",
+    "the generated source before installing it on a real machine.",
+  ].join("\n");
 }
 
 export function createWindowsVhfHostBridgeAdapter(
@@ -853,6 +998,56 @@ function escapeCString(value: string): string {
 
 function escapeWideCString(value: string): string {
   return escapeCString(value);
+}
+
+function formatWindowsVhfSetupReadme(plan: WindowsVhfSetupPlan): string {
+  return [
+    "# OpenController Windows VHF Setup Kit",
+    "",
+    "This folder contains generated OpenController source material for a Windows",
+    "Virtual HID Framework gamepad backend.",
+    "",
+    "No privileged system changes were made when this kit was generated.",
+    "",
+    "## Contents",
+    "",
+    `- Driver source: ${plan.driverSourcePath}`,
+    `- Driver header: ${plan.driverHeaderPath}`,
+    `- Driver INF: ${plan.infPath}`,
+    `- Host bridge source: ${plan.hostBridgeSourcePath}`,
+    `- Host bridge header: ${plan.hostBridgeHeaderPath}`,
+    "",
+    "## Review And Build",
+    "",
+    "1. Review the generated KMDF/VHF driver source and INF.",
+    "2. Create or attach these files to a WDK driver project.",
+    "3. Build and sign the driver package with your trusted certificate.",
+    "4. Build the user-mode host bridge executable.",
+    `5. Place the host bridge at ${plan.hostBridgePath}.`,
+    "",
+    "## Reviewed Commands",
+    "",
+    "After signing the driver package, install it from an elevated Windows",
+    "terminal:",
+    "",
+    "```powershell",
+    plan.installCommand,
+    "```",
+    "",
+    "After the driver and host bridge are installed, smoke-test the native path:",
+    "",
+    "```powershell",
+    plan.nativeTestCommand,
+    "```",
+    "",
+    "Virtual HID drivers run with sensitive system privileges. Do not install",
+    "unsigned or unreviewed driver packages.",
+    "",
+  ].join("\n");
+}
+
+function quotePowerShell(value: string): string {
+  return `"${value.replaceAll("`", "``").replaceAll('"', '`"')}"`;
 }
 
 function createWindowsVhfHostBridgeEnv(

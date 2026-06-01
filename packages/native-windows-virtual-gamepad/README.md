@@ -20,6 +20,8 @@ This package provides:
   driver path
 - `createWindowsVhfHostBridgeAdapter` for SDK-owned user-mode host bridge
   processes after the VHF driver and host bridge have been built
+- `opencontroller-windows-vhf-setup` for staging reviewed VHF driver/host source
+  files and install/test commands without making privileged changes
 - XUSB report helpers compatible with OpenController's XInput report format
 - `opencontroller-windows-gamepad-doctor` for legacy ViGEmBus service checks
 - documentation and tests that leave room for future maintained Windows virtual
@@ -36,6 +38,30 @@ opencontroller-windows-gamepad-doctor --check
 The doctor runs `sc.exe query ViGEmBus` on Windows and reports whether the
 legacy service appears installed and running. It does not install drivers or
 download binaries.
+
+## Prepare A VHF Setup Kit
+
+```bash
+opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
+opencontroller-windows-vhf-setup --json
+```
+
+The setup command writes a driver source folder, host bridge source folder,
+INF template, README, and reviewed PowerShell commands. It does not install,
+sign, or trust a driver package.
+
+After reviewing, building, and signing the KMDF/VHF driver package with the
+Windows Driver Kit, install the INF from an elevated terminal:
+
+```powershell
+pnputil /add-driver ".\opencontroller-windows-vhf\driver\OpenControllerVhfGamepad.inf" /install
+```
+
+Then test the installed driver and host bridge:
+
+```powershell
+opencontroller native test --backend windows-vhf --host-bridge-path "C:\OpenController\bin\OpenControllerVhfHostBridge.exe"
+```
 
 ## VHF Assets
 

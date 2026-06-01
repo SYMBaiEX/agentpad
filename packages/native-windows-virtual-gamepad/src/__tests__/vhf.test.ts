@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   type ControllerState,
   type NativeProcessBridgeSpawner,
@@ -24,6 +27,8 @@ import {
   encodeWindowsVhfInputReport,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfInputReportForC,
+  formatWindowsVhfSetupPlan,
+  prepareWindowsVhfSetup,
   windowsVhfHidReportDescriptor,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfInputReportFromNativeBridgeMessage,
@@ -158,6 +163,45 @@ describe("windows VHF helpers", () => {
       "OpenControllerVhfHostBridge.h",
       "OpenControllerVhfHostBridge.c",
     ]);
+  });
+
+  test("prepares a reviewed Windows VHF setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-vhf-"),
+    );
+
+    try {
+      const plan = await prepareWindowsVhfSetup({
+        outputDirectory,
+        platform: "linux",
+        hostBridgePath:
+          "C:\\OpenController\\bin\\OpenControllerVhfHostBridge.exe",
+        devicePath: "\\\\.\\OpenControllerTestGamepad",
+      });
+      const readme = await readFile(plan.readmePath, "utf8");
+      const hostBridgeHeader = await readFile(
+        plan.hostBridgeHeaderPath,
+        "utf8",
+      );
+      const formatted = formatWindowsVhfSetupPlan(plan);
+
+      expect(plan.platform).toBe("linux");
+      expect(plan.outputDirectory).toBe(outputDirectory);
+      expect(plan.files).toContain(plan.infPath);
+      expect(plan.files).toContain(plan.hostBridgeSourcePath);
+      expect(plan.installCommand).toContain("pnputil /add-driver");
+      expect(plan.nativeTestCommand).toContain(
+        "opencontroller native test --backend windows-vhf",
+      );
+      expect(plan.nativeTestCommand).toContain("OpenControllerTestGamepad");
+      expect(readme).toContain("No privileged system changes were made");
+      expect(readme).toContain("Do not install");
+      expect(hostBridgeHeader).toContain("OpenControllerTestGamepad");
+      expect(formatted).toContain("OpenController Windows VHF Setup");
+      expect(formatted).toContain("No privileged system changes were made.");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
   });
 
   test("wraps the VHF host bridge as a native process adapter", async () => {

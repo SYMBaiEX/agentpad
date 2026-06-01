@@ -54,6 +54,8 @@
   for selecting Linux `uinput`, Windows VHF, or macOS DriverKit from one import
 - `opencontroller native test` added to smoke-test a selected native host
   bridge from the CLI, including Linux `--dry-run` support
+- `opencontroller-windows-vhf-setup` added to stage reviewed Windows VHF
+  driver/host source files and install/test commands without privileged changes
 
 ## v0.1.0
 
