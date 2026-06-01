@@ -20,6 +20,21 @@ Controller telemetry:
 http://127.0.0.1:5173/controllers
 ```
 
+Run a headless match series:
+
+```bash
+bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
+```
+
+The headless runner opens the real browser game in Chromium, starts agents
+through the management API, polls telemetry, stops agents after each match, and
+writes a JSON series summary. It includes aggregate win rates, decision counts,
+HP damage, per-match snapshots, and a `quality` block for benchmark gates. By
+default it fails if either player produces zero controller decisions; use
+`--min-decisions`, `--min-decisions-per-player`, `--min-total-damage`, and
+`--min-rounds` for stricter local or CI checks.
+
 Agents start stopped by default. Start, stop, and reset controls live on the
 controller telemetry page. The OpenAI decision loop is also guarded by
 `OPENCONTROLLER_OPENAI_ACTIONS_PER_MINUTE` to prevent runaway action volume.

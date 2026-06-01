@@ -560,6 +560,7 @@ bun --cwd examples/basic-dry-run dev
 bun run dev:fighter
 bun --cwd examples/agent-fighter headless --duration-ms 15000
 bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
 bun --cwd examples/react-overlay dev
 bun --cwd examples/obs-overlay dev
 bun --cwd examples/websocket-bridge dev
@@ -569,8 +570,8 @@ bun --cwd examples/native-bridge-jsonl dev
 Example folders:
 
 - `examples/basic-dry-run`: minimal controller API usage
-- `examples/agent-fighter`: two-agent browser fighting game with a headless
-  match-series runner
+- `examples/agent-fighter`: two-agent browser fighting game with a gated
+  headless match-series runner
 - `examples/react-overlay`: React controller visualization
 - `examples/obs-overlay`: local OBS browser-source overlay server
 - `examples/websocket-bridge`: WebSocket adapter target example
@@ -640,7 +641,7 @@ Included:
 - React/OBS overlays
 - CLI workflows
 - docs and examples
-- Agent Fighter demo and headless match-series runner
+- Agent Fighter demo and gated headless match-series runner
 
 Not included yet:
 
@@ -656,7 +657,7 @@ Not included yet:
 - Verify Linux `FF_RUMBLE` across more game launchers and distributions
 - Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics
-- Add regression baselines for headless Agent Fighter match series
+- Add stored regression baselines for headless Agent Fighter match series
 - Export replay data to JSON, CSV, and training-friendly formats
 - Add richer telemetry dashboards for agents and controller state
 - Expand adapter examples for emulators, desktop apps, and browser games

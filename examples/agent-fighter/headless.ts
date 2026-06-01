@@ -8,6 +8,10 @@ type RunnerOptions = {
   durationMs: number;
   matches: number;
   matchGapMs: number;
+  minDecisions: number;
+  minDecisionsPerPlayer: number;
+  minRounds: number;
+  minTotalDamage: number;
   pollMs: number;
   startupTimeoutMs: number;
   port: number;
@@ -49,6 +53,10 @@ type MatchSummary = {
   startedServer: boolean;
   roundsCompleted: number;
   winners: Record<PlayerId, number>;
+  damage: {
+    total: number;
+    byPlayer: Record<PlayerId, number>;
+  };
   decisions: {
     total: number;
     byPlayer: Record<PlayerId, number>;
@@ -56,6 +64,19 @@ type MatchSummary = {
   };
   finalArena?: ArenaSnapshot;
   management?: Record<string, unknown>;
+};
+
+type QualityCheck = {
+  name: string;
+  passed: boolean;
+  actual: number;
+  expected: number;
+  message: string;
+};
+
+type QualitySummary = {
+  passed: boolean;
+  checks: QualityCheck[];
 };
 
 type SeriesSummary = {
@@ -69,9 +90,11 @@ type SeriesSummary = {
     roundsCompleted: number;
     winners: Record<PlayerId, number>;
     winRate: Record<PlayerId, number>;
+    damage: MatchSummary["damage"];
     decisions: MatchSummary["decisions"];
     averageDecisionsPerMatch: number;
   };
+  quality: QualitySummary;
   matches: MatchSummary[];
   finalArena?: ArenaSnapshot;
   management?: Record<string, unknown>;
@@ -113,6 +136,11 @@ try {
   } else {
     console.log(json);
   }
+
+  if (!summary.quality.passed) {
+    process.stderr.write("Headless match quality gates failed.\n");
+    process.exitCode = 1;
+  }
 } finally {
   if (agentsStarted) {
     await postJson(`${baseUrl}/management/stop`).catch(() => undefined);
@@ -143,9 +171,11 @@ async function runSeries(
     const stoppedTelemetry = await getJson<TelemetryPayload>(
       `${baseUrl}/telemetry`,
     );
+    const finalArena = stoppedTelemetry.arena ?? match.finalArena;
     matches.push({
       ...match,
-      ...(stoppedTelemetry.arena ? { finalArena: stoppedTelemetry.arena } : {}),
+      damage: damageFromArena(finalArena),
+      ...(finalArena ? { finalArena } : {}),
       ...(stoppedTelemetry.management
         ? { management: stoppedTelemetry.management }
         : {}),
@@ -157,6 +187,7 @@ async function runSeries(
   }
 
   const aggregate = aggregateMatches(matches);
+  const quality = evaluateQuality(aggregate, options);
   const latest = matches.at(-1);
   return {
     baseUrl,
@@ -166,6 +197,7 @@ async function runSeries(
     startedServer: !options.url,
     totalDurationMs: Date.now() - startedAt,
     aggregate,
+    quality,
     matches,
     ...(latest?.finalArena ? { finalArena: latest.finalArena } : {}),
     ...(latest?.management ? { management: latest.management } : {}),
@@ -214,6 +246,7 @@ async function runMatch(
     startedServer: !options.url,
     roundsCompleted,
     winners,
+    damage: damageFromArena(latest.arena),
     decisions: {
       total: events.length,
       byPlayer: countByPlayer(events),
@@ -226,6 +259,10 @@ async function runMatch(
 
 function aggregateMatches(matches: MatchSummary[]): SeriesSummary["aggregate"] {
   const winners: Record<PlayerId, number> = { "player-1": 0, "player-2": 0 };
+  const damageByPlayer: Record<PlayerId, number> = {
+    "player-1": 0,
+    "player-2": 0,
+  };
   const decisionsByPlayer: Record<PlayerId, number> = {
     "player-1": 0,
     "player-2": 0,
@@ -238,6 +275,8 @@ function aggregateMatches(matches: MatchSummary[]): SeriesSummary["aggregate"] {
     roundsCompleted += match.roundsCompleted;
     winners["player-1"] += match.winners["player-1"];
     winners["player-2"] += match.winners["player-2"];
+    damageByPlayer["player-1"] += match.damage.byPlayer["player-1"];
+    damageByPlayer["player-2"] += match.damage.byPlayer["player-2"];
     decisionsByPlayer["player-1"] += match.decisions.byPlayer["player-1"];
     decisionsByPlayer["player-2"] += match.decisions.byPlayer["player-2"];
     totalDecisions += match.decisions.total;
@@ -256,6 +295,10 @@ function aggregateMatches(matches: MatchSummary[]): SeriesSummary["aggregate"] {
       "player-2":
         roundsCompleted === 0 ? 0 : winners["player-2"] / roundsCompleted,
     },
+    damage: {
+      total: damageByPlayer["player-1"] + damageByPlayer["player-2"],
+      byPlayer: damageByPlayer,
+    },
     decisions: {
       total: totalDecisions,
       byPlayer: decisionsByPlayer,
@@ -263,6 +306,82 @@ function aggregateMatches(matches: MatchSummary[]): SeriesSummary["aggregate"] {
     },
     averageDecisionsPerMatch:
       matches.length === 0 ? 0 : totalDecisions / matches.length,
+  };
+}
+
+function evaluateQuality(
+  aggregate: SeriesSummary["aggregate"],
+  options: RunnerOptions,
+): QualitySummary {
+  const checks: QualityCheck[] = [
+    qualityCheck(
+      "decisions.total",
+      aggregate.decisions.total,
+      options.minDecisions,
+      `Expected at least ${options.minDecisions} controller decisions across the series.`,
+    ),
+    qualityCheck(
+      "decisions.player-1",
+      aggregate.decisions.byPlayer["player-1"],
+      options.minDecisionsPerPlayer,
+      `Expected player-1 to produce at least ${options.minDecisionsPerPlayer} decisions.`,
+    ),
+    qualityCheck(
+      "decisions.player-2",
+      aggregate.decisions.byPlayer["player-2"],
+      options.minDecisionsPerPlayer,
+      `Expected player-2 to produce at least ${options.minDecisionsPerPlayer} decisions.`,
+    ),
+    qualityCheck(
+      "damage.total",
+      aggregate.damage.total,
+      options.minTotalDamage,
+      `Expected at least ${options.minTotalDamage} total HP damage across the series.`,
+    ),
+    qualityCheck(
+      "rounds.completed",
+      aggregate.roundsCompleted,
+      options.minRounds,
+      `Expected at least ${options.minRounds} completed rounds across the series.`,
+    ),
+  ];
+
+  return {
+    passed: checks.every((check) => check.passed),
+    checks,
+  };
+}
+
+function qualityCheck(
+  name: string,
+  actual: number,
+  expected: number,
+  message: string,
+): QualityCheck {
+  return {
+    name,
+    actual,
+    expected,
+    passed: actual >= expected,
+    message,
+  };
+}
+
+function damageFromArena(
+  arena: ArenaSnapshot | undefined,
+): MatchSummary["damage"] {
+  const byPlayer: Record<PlayerId, number> = {
+    "player-1": 0,
+    "player-2": 0,
+  };
+
+  for (const player of arena?.players ?? []) {
+    byPlayer[player.id] = Math.max(0, 100 - Math.max(0, player.hp ?? 100));
+  }
+
+  return {
+    total: byPlayer["player-1"] + byPlayer["player-2"],
+    byPlayer,
   };
 }
 
@@ -406,6 +525,10 @@ function parseArgs(args: string[]): RunnerOptions {
     durationMs: 15_000,
     matches: 1,
     matchGapMs: 250,
+    minDecisions: 1,
+    minDecisionsPerPlayer: 1,
+    minRounds: 0,
+    minTotalDamage: 0,
     pollMs: 250,
     startupTimeoutMs: 6_000,
     port: 5173,
@@ -424,6 +547,21 @@ function parseArgs(args: string[]): RunnerOptions {
         break;
       case "--match-gap-ms":
         options.matchGapMs = readNonNegativeNumber(args[++index], arg);
+        break;
+      case "--min-decisions":
+        options.minDecisions = readNonNegativeNumber(args[++index], arg);
+        break;
+      case "--min-decisions-per-player":
+        options.minDecisionsPerPlayer = readNonNegativeNumber(
+          args[++index],
+          arg,
+        );
+        break;
+      case "--min-rounds":
+        options.minRounds = readNonNegativeNumber(args[++index], arg);
+        break;
+      case "--min-total-damage":
+        options.minTotalDamage = readNonNegativeNumber(args[++index], arg);
         break;
       case "--poll-ms":
         options.pollMs = readPositiveNumber(args[++index], arg);
@@ -494,6 +632,11 @@ Options:
   --duration-ms <ms>          Match runtime before summarizing (default: 15000)
   --matches <count>           Number of matches in the series (default: 1)
   --match-gap-ms <ms>         Delay between matches (default: 250)
+  --min-decisions <count>     Fail if total decisions are below count (default: 1)
+  --min-decisions-per-player <count>
+                              Fail if either player has fewer decisions (default: 1)
+  --min-rounds <count>        Fail if completed rounds are below count (default: 0)
+  --min-total-damage <hp>     Fail if total HP damage is below value (default: 0)
   --poll-ms <ms>              Telemetry polling interval (default: 250)
   --startup-timeout-ms <ms>   Time to wait for spawned server (default: 6000)
   --port <port>               Port for spawned server (default: 5173)

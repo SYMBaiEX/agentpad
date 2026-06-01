@@ -15,7 +15,8 @@
 - `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
 - Agent Fighter example now includes a headless Chromium match-series runner
   for repeatable agent duels, telemetry polling, aggregate win/decision
-  scoring, summary JSON, and local smoke checks
+  scoring, HP damage metrics, configurable quality gates, summary JSON, and
+  local smoke checks
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
 - Linux `uinput` helper now prefers descriptor-backed `hidReportBase64`

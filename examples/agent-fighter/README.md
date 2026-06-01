@@ -26,6 +26,7 @@ Run a headless benchmark match or series:
 ```bash
 bun --cwd examples/agent-fighter headless --duration-ms 15000
 bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
 ```
 
 The headless runner starts the real server, opens the real browser game in
@@ -35,6 +36,12 @@ with aggregate win rates, per-match winners, decision counts, and the final
 arena state. Use `--matches <count>` for repeated duels, `--output <path>` to
 write the summary to a file, `--url <url>` to target an already-running server,
 and `--headed` to watch the browser while the runner drives the match.
+
+The runner also writes a `quality` block and exits non-zero if a configured gate
+fails. By default it requires at least one decision from each player, which
+catches broken controller connections without depending on combat outcomes. Use
+`--min-decisions`, `--min-decisions-per-player`, `--min-total-damage`, and
+`--min-rounds` for stronger local or CI regression checks.
 
 Agents start stopped by default. Use the controller telemetry page to start,
 stop, or reset the duel. The server also enforces
