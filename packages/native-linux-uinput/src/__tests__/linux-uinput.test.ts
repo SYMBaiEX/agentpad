@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 import {
   type NativeProcessBridgeSpawner,
   createController,
@@ -7,6 +8,7 @@ import {
   createLinuxUinputBridgeAdapter,
   defaultLinuxUinputHelperPath,
   formatLinuxUinputSetupPlan,
+  linuxUinputHelperSourcePath,
   prepareLinuxUinputSetup,
 } from "../linux-uinput";
 
@@ -70,6 +72,7 @@ describe("linux uinput adapter helpers", () => {
     await controller.disconnect();
 
     expect(calls).toHaveLength(1);
+    expect(controller.capabilities().supportsRumble).toBe(true);
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");
     expect(calls[0]?.args).toEqual([
       "--dry-run",
@@ -86,6 +89,19 @@ describe("linux uinput adapter helpers", () => {
       true,
     );
     expect(writes.at(-1)).toContain("opencontroller.bridge.disconnect");
+  });
+
+  test("helper source advertises Linux force-feedback rumble", async () => {
+    const source = await readFile(linuxUinputHelperSourcePath, "utf8");
+
+    expect(source).toContain("UI_SET_EVBIT, EV_FF");
+    expect(source).toContain("UI_SET_FFBIT, FF_RUMBLE");
+    expect(source).toContain("ff_effects_max = OC_MAX_FF_EFFECTS");
+    expect(source).toContain("UI_BEGIN_FF_UPLOAD");
+    expect(source).toContain("UI_END_FF_UPLOAD");
+    expect(source).toContain("EV_UINPUT");
+    expect(source).toContain("opencontroller.bridge.feedback");
+    expect(source).toContain("O_RDWR | O_NONBLOCK");
   });
 
   test("prepares a safe Linux helper setup plan", async () => {

@@ -21,6 +21,9 @@
   and smoke-tests the real C helper parser
 - Linux `uinput` helper now supports `--controller-id` and
   `OPENCONTROLLER_CONTROLLER_ID` filtering for multi-controller bridge streams
+- Linux `uinput` helper now advertises `FF_RUMBLE`, handles uinput
+  upload/erase/playback callbacks, and emits native bridge feedback JSONL for
+  weak/strong rumble events
 - Linux package now exports `createLinuxUinputBridgeAdapter` for SDK-owned
   helper processes with default helper path, device naming, and dry-run options
 - Linux package now exports `prepareLinuxUinputSetup` and

@@ -7,12 +7,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #define OC_XINPUT_REPORT_BYTES 12
 #define OC_HID_REPORT_BYTES 13
 #define OC_HID_REPORT_ID 1
+#define OC_RUMBLE_REPORT_BYTES 5
+#define OC_RUMBLE_REPORT_ID 2
+#define OC_RUMBLE_REPORT_BASE64_BYTES 8
+#define OC_MAX_FF_EFFECTS 16
 #define OC_LINE_MAX 8192
+#define OC_CONTROLLER_ID_MAX 256
 #define OC_DEFAULT_DEVICE "/dev/uinput"
 #define OC_DEFAULT_NAME "OpenController Virtual Gamepad"
 
@@ -33,6 +40,12 @@ struct oc_button_map {
   int code;
 };
 
+struct oc_rumble_effect {
+  int active;
+  uint16_t weak_magnitude;
+  uint16_t strong_magnitude;
+};
+
 static const struct oc_button_map button_map[] = {
     {0x1000, BTN_SOUTH},      {0x2000, BTN_EAST},
     {0x4000, BTN_WEST},       {0x8000, BTN_NORTH},
@@ -45,6 +58,35 @@ static const struct oc_button_map button_map[] = {
 };
 
 static int invert_axis(int16_t value);
+static int process_bridge_line(int fd, const char *line,
+                               const char *controller_id,
+                               char *feedback_controller_id,
+                               size_t feedback_controller_id_size,
+                               int *should_stop);
+static int handle_uinput_events(int fd, const char *controller_id,
+                                struct oc_rumble_effect effects[],
+                                size_t effect_count);
+static int handle_uinput_upload(int fd, int request_id,
+                                struct oc_rumble_effect effects[],
+                                size_t effect_count);
+static int handle_uinput_erase(int fd, int request_id,
+                               struct oc_rumble_effect effects[],
+                               size_t effect_count);
+static int handle_uinput_playback(const struct input_event *event,
+                                  const char *controller_id,
+                                  const struct oc_rumble_effect effects[],
+                                  size_t effect_count);
+static void print_rumble_feedback(const char *controller_id,
+                                  uint8_t weak_motor,
+                                  uint8_t strong_motor);
+static void encode_base64_bytes(const uint8_t *input, size_t input_length,
+                                char *output, size_t output_length);
+static unsigned long long timestamp_ms(void);
+static void print_json_string(const char *value);
+static int extract_controller_id(const char *line, char *output,
+                                 size_t output_size);
+static void set_feedback_controller_id(char *target, size_t target_size,
+                                       const char *controller_id);
 
 static void handle_signal(int sig) {
   (void)sig;
@@ -83,6 +125,12 @@ static int setup_device(int fd, const char *name) {
   if (ioctl(fd, UI_SET_EVBIT, EV_ABS) < 0) {
     return -1;
   }
+  if (ioctl(fd, UI_SET_EVBIT, EV_FF) < 0) {
+    return -1;
+  }
+  if (ioctl(fd, UI_SET_FFBIT, FF_RUMBLE) < 0) {
+    return -1;
+  }
 
   for (index = 0; index < sizeof(button_map) / sizeof(button_map[0]);
        index++) {
@@ -114,6 +162,7 @@ static int setup_device(int fd, const char *name) {
   setup.id.vendor = 0x4f43;
   setup.id.product = 0x0001;
   setup.id.version = 1;
+  setup.ff_effects_max = OC_MAX_FF_EFFECTS;
   snprintf(setup.name, UINPUT_MAX_NAME_SIZE, "%s", name);
 
   if (ioctl(fd, UI_DEV_SETUP, &setup) < 0) {
@@ -361,6 +410,300 @@ static int run_dry_run(const char *controller_id) {
   return 0;
 }
 
+static int process_bridge_line(int fd, const char *line,
+                               const char *controller_id,
+                               char *feedback_controller_id,
+                               size_t feedback_controller_id_size,
+                               int *should_stop) {
+  struct oc_report report;
+
+  *should_stop = 0;
+  if (!line_matches_controller_id(line, controller_id)) {
+    return 0;
+  }
+
+  if (extract_controller_id(line, feedback_controller_id,
+                            feedback_controller_id_size) < 0) {
+    set_feedback_controller_id(feedback_controller_id,
+                               feedback_controller_id_size, controller_id);
+  }
+
+  if (is_disconnect(line)) {
+    *should_stop = 1;
+    return neutralize(fd);
+  }
+
+  if (parse_bridge_line(line, &report) < 0) {
+    return 0;
+  }
+
+  return apply_report(fd, &report);
+}
+
+static int handle_uinput_events(int fd, const char *controller_id,
+                                struct oc_rumble_effect effects[],
+                                size_t effect_count) {
+  for (;;) {
+    struct input_event event;
+    ssize_t bytes_read = read(fd, &event, sizeof(event));
+
+    if (bytes_read == (ssize_t)sizeof(event)) {
+      if (event.type == EV_UINPUT && event.code == UI_FF_UPLOAD) {
+        if (handle_uinput_upload(fd, event.value, effects, effect_count) < 0) {
+          return -1;
+        }
+      } else if (event.type == EV_UINPUT && event.code == UI_FF_ERASE) {
+        if (handle_uinput_erase(fd, event.value, effects, effect_count) < 0) {
+          return -1;
+        }
+      } else if (event.type == EV_FF) {
+        if (handle_uinput_playback(&event, controller_id, effects,
+                                   effect_count) < 0) {
+          return -1;
+        }
+      }
+      continue;
+    }
+
+    if (bytes_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+      return 0;
+    }
+    if (bytes_read < 0 && errno == EINTR) {
+      continue;
+    }
+    if (bytes_read == 0) {
+      return 0;
+    }
+    return -1;
+  }
+}
+
+static int handle_uinput_upload(int fd, int request_id,
+                                struct oc_rumble_effect effects[],
+                                size_t effect_count) {
+  struct uinput_ff_upload upload;
+  int effect_id;
+
+  memset(&upload, 0, sizeof(upload));
+  upload.request_id = (uint32_t)request_id;
+  upload.retval = 0;
+
+  if (ioctl(fd, UI_BEGIN_FF_UPLOAD, &upload) < 0) {
+    return -1;
+  }
+
+  effect_id = upload.effect.id;
+  if (upload.effect.type != FF_RUMBLE || effect_id < 0 ||
+      (size_t)effect_id >= effect_count) {
+    upload.retval = -EINVAL;
+  } else {
+    effects[effect_id].active = 1;
+    effects[effect_id].weak_magnitude =
+        upload.effect.u.rumble.weak_magnitude;
+    effects[effect_id].strong_magnitude =
+        upload.effect.u.rumble.strong_magnitude;
+  }
+
+  if (ioctl(fd, UI_END_FF_UPLOAD, &upload) < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+static int handle_uinput_erase(int fd, int request_id,
+                               struct oc_rumble_effect effects[],
+                               size_t effect_count) {
+  struct uinput_ff_erase erase;
+
+  memset(&erase, 0, sizeof(erase));
+  erase.request_id = (uint32_t)request_id;
+  erase.retval = 0;
+
+  if (ioctl(fd, UI_BEGIN_FF_ERASE, &erase) < 0) {
+    return -1;
+  }
+
+  if (erase.effect_id < effect_count) {
+    memset(&effects[erase.effect_id], 0, sizeof(effects[erase.effect_id]));
+  }
+
+  if (ioctl(fd, UI_END_FF_ERASE, &erase) < 0) {
+    return -1;
+  }
+
+  return 0;
+}
+
+static int handle_uinput_playback(const struct input_event *event,
+                                  const char *controller_id,
+                                  const struct oc_rumble_effect effects[],
+                                  size_t effect_count) {
+  const struct oc_rumble_effect *effect;
+  uint8_t weak_motor = 0;
+  uint8_t strong_motor = 0;
+
+  if ((size_t)event->code >= effect_count) {
+    return 0;
+  }
+
+  effect = &effects[event->code];
+  if (effect->active && event->value != 0) {
+    weak_motor = (uint8_t)(effect->weak_magnitude / 257U);
+    strong_motor = (uint8_t)(effect->strong_magnitude / 257U);
+  }
+
+  print_rumble_feedback(controller_id, weak_motor, strong_motor);
+  return 0;
+}
+
+static void print_rumble_feedback(const char *controller_id,
+                                  uint8_t weak_motor,
+                                  uint8_t strong_motor) {
+  uint8_t report[OC_RUMBLE_REPORT_BYTES] = {
+      OC_RUMBLE_REPORT_ID, weak_motor, strong_motor, 0x00, 0x00};
+  char report_base64[OC_RUMBLE_REPORT_BASE64_BYTES + 1];
+
+  encode_base64_bytes(report, sizeof(report), report_base64,
+                      sizeof(report_base64));
+
+  printf(
+      "{\"type\":\"opencontroller.bridge.feedback\",\"version\":1,"
+      "\"controllerId\":\"");
+  print_json_string(controller_id);
+  printf(
+      "\",\"timestamp\":%llu,\"feedbackType\":\"rumble\","
+      "\"reportFormat\":\"hid-gamepad-rumble\",\"reportId\":%u,"
+      "\"reportBase64\":\"%s\",\"weakMotor\":%.6f,\"strongMotor\":%.6f,"
+      "\"leftTriggerMotor\":0.000000,\"rightTriggerMotor\":0.000000}\n",
+      timestamp_ms(), (unsigned int)OC_RUMBLE_REPORT_ID, report_base64,
+      (double)weak_motor / 255.0, (double)strong_motor / 255.0);
+  fflush(stdout);
+}
+
+static void encode_base64_bytes(const uint8_t *input, size_t input_length,
+                                char *output, size_t output_length) {
+  static const char alphabet[] =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  size_t input_index = 0;
+  size_t output_index = 0;
+
+  while (input_index < input_length && output_index + 4 < output_length) {
+    size_t chunk_start = input_index;
+    uint32_t octet_a = input[input_index++];
+    uint32_t octet_b = input_index < input_length ? input[input_index++] : 0;
+    uint32_t octet_c = input_index < input_length ? input[input_index++] : 0;
+    uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
+    size_t chunk_length = input_length - chunk_start;
+
+    if (chunk_length > 3) {
+      chunk_length = 3;
+    }
+
+    output[output_index++] = alphabet[(triple >> 18) & 0x3f];
+    output[output_index++] = alphabet[(triple >> 12) & 0x3f];
+    output[output_index++] =
+        chunk_length > 1 ? alphabet[(triple >> 6) & 0x3f] : '=';
+    output[output_index++] =
+        chunk_length > 2 ? alphabet[triple & 0x3f] : '=';
+  }
+
+  if (output_length > 0) {
+    output[output_index < output_length ? output_index : output_length - 1] =
+        '\0';
+  }
+}
+
+static unsigned long long timestamp_ms(void) {
+  struct timeval value;
+  gettimeofday(&value, NULL);
+  return ((unsigned long long)value.tv_sec * 1000ULL) +
+         ((unsigned long long)value.tv_usec / 1000ULL);
+}
+
+static void print_json_string(const char *value) {
+  const unsigned char *cursor = (const unsigned char *)value;
+
+  if (cursor == NULL) {
+    return;
+  }
+
+  while (*cursor != '\0') {
+    unsigned char c = *cursor++;
+    switch (c) {
+    case '"':
+      fputc('\\', stdout);
+      fputc('"', stdout);
+      break;
+    case '\\':
+      fputs("\\\\", stdout);
+      break;
+    case '\b':
+      fputs("\\b", stdout);
+      break;
+    case '\f':
+      fputs("\\f", stdout);
+      break;
+    case '\n':
+      fputs("\\n", stdout);
+      break;
+    case '\r':
+      fputs("\\r", stdout);
+      break;
+    case '\t':
+      fputs("\\t", stdout);
+      break;
+    default:
+      if (c < 0x20) {
+        printf("\\u%04x", (unsigned int)c);
+      } else {
+        fputc(c, stdout);
+      }
+      break;
+    }
+  }
+}
+
+static int extract_controller_id(const char *line, char *output,
+                                 size_t output_size) {
+  const char *key = "\"controllerId\":\"";
+  const char *start = strstr(line, key);
+  const char *end;
+  size_t id_length;
+
+  if (start == NULL || output_size == 0) {
+    return -1;
+  }
+
+  start += strlen(key);
+  end = strchr(start, '"');
+  if (end == NULL) {
+    return -1;
+  }
+
+  id_length = (size_t)(end - start);
+  if (id_length >= output_size) {
+    id_length = output_size - 1;
+  }
+
+  memcpy(output, start, id_length);
+  output[id_length] = '\0';
+  return 0;
+}
+
+static void set_feedback_controller_id(char *target, size_t target_size,
+                                       const char *controller_id) {
+  if (target_size == 0) {
+    return;
+  }
+
+  if (controller_id == NULL || controller_id[0] == '\0') {
+    controller_id = "player-1";
+  }
+
+  snprintf(target, target_size, "%s", controller_id);
+}
+
 int main(int argc, char **argv) {
   const char *device_path = getenv("OPENCONTROLLER_UINPUT_DEVICE");
   const char *device_name = getenv("OPENCONTROLLER_UINPUT_NAME");
@@ -369,8 +712,12 @@ int main(int argc, char **argv) {
   int dry_run = is_enabled_flag(getenv("OPENCONTROLLER_UINPUT_DRY_RUN"));
   int arg_index;
   char line[OC_LINE_MAX];
+  size_t line_length = 0;
+  int stdin_open = 1;
   int fd;
   int created = 0;
+  struct oc_rumble_effect effects[OC_MAX_FF_EFFECTS];
+  char feedback_controller_id[OC_CONTROLLER_ID_MAX];
 
   for (arg_index = 1; arg_index < argc; arg_index++) {
     if (strcmp(argv[arg_index], "--dry-run") == 0) {
@@ -419,7 +766,11 @@ int main(int argc, char **argv) {
   signal(SIGINT, handle_signal);
   signal(SIGTERM, handle_signal);
 
-  fd = open(device_path, O_WRONLY | O_NONBLOCK);
+  memset(effects, 0, sizeof(effects));
+  set_feedback_controller_id(feedback_controller_id,
+                             sizeof(feedback_controller_id), controller_id);
+
+  fd = open(device_path, O_RDWR | O_NONBLOCK);
   if (fd < 0) {
     fprintf(stderr, "opencontroller-uinput: failed to open %s: %s\n",
             device_path, strerror(errno));
@@ -434,26 +785,85 @@ int main(int argc, char **argv) {
   }
   created = 1;
 
-  while (running && fgets(line, sizeof(line), stdin) != NULL) {
-    struct oc_report report;
+  while (running && stdin_open) {
+    fd_set read_fds;
+    int selected;
+    int should_stop = 0;
 
-    if (!line_matches_controller_id(line, controller_id)) {
-      continue;
-    }
+    FD_ZERO(&read_fds);
+    FD_SET(STDIN_FILENO, &read_fds);
+    FD_SET(fd, &read_fds);
 
-    if (is_disconnect(line)) {
-      neutralize(fd);
-      break;
-    }
-
-    if (parse_bridge_line(line, &report) < 0) {
-      continue;
-    }
-
-    if (apply_report(fd, &report) < 0) {
-      fprintf(stderr, "opencontroller-uinput: failed to emit report: %s\n",
+    selected = select(fd + 1, &read_fds, NULL, NULL, NULL);
+    if (selected < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      fprintf(stderr, "opencontroller-uinput: select failed: %s\n",
               strerror(errno));
       break;
+    }
+
+    if (FD_ISSET(fd, &read_fds) &&
+        handle_uinput_events(fd, feedback_controller_id, effects,
+                             OC_MAX_FF_EFFECTS) < 0) {
+      fprintf(stderr, "opencontroller-uinput: failed to handle rumble event: %s\n",
+              strerror(errno));
+      break;
+    }
+
+    if (FD_ISSET(STDIN_FILENO, &read_fds)) {
+      char buffer[1024];
+      ssize_t bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer));
+      ssize_t offset;
+
+      if (bytes_read == 0) {
+        stdin_open = 0;
+      } else if (bytes_read < 0) {
+        if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
+          continue;
+        }
+        fprintf(stderr, "opencontroller-uinput: failed to read stdin: %s\n",
+                strerror(errno));
+        break;
+      }
+
+      for (offset = 0; offset < bytes_read; offset++) {
+        char c = buffer[offset];
+        if (c == '\n') {
+          line[line_length] = '\0';
+          if (process_bridge_line(fd, line, controller_id,
+                                  feedback_controller_id,
+                                  sizeof(feedback_controller_id),
+                                  &should_stop) < 0) {
+            fprintf(stderr,
+                    "opencontroller-uinput: failed to emit report: %s\n",
+                    strerror(errno));
+            running = 0;
+            break;
+          }
+          line_length = 0;
+          if (should_stop) {
+            stdin_open = 0;
+            break;
+          }
+          continue;
+        }
+
+        if (line_length + 1 < sizeof(line)) {
+          line[line_length++] = c;
+        }
+      }
+    }
+  }
+
+  if (line_length > 0 && running) {
+    int should_stop = 0;
+    line[line_length] = '\0';
+    if (process_bridge_line(fd, line, controller_id, feedback_controller_id,
+                            sizeof(feedback_controller_id), &should_stop) < 0) {
+      fprintf(stderr, "opencontroller-uinput: failed to emit report: %s\n",
+              strerror(errno));
     }
   }
 

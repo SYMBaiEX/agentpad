@@ -214,9 +214,7 @@ export function createLinuxUinputBridgeAdapter(
       : {}),
     ...(options.killSignal ? { killSignal: options.killSignal } : {}),
     ...(options.spawn ? { spawn: options.spawn } : {}),
-    ...(options.supportsRumble !== undefined
-      ? { supportsRumble: options.supportsRumble }
-      : {}),
+    supportsRumble: options.supportsRumble ?? true,
     ...(options.onFeedback ? { onFeedback: options.onFeedback } : {}),
     ...(options.onStdout ? { onStdout: options.onStdout } : {}),
     ...(options.onStderr ? { onStderr: options.onStderr } : {}),

@@ -110,6 +110,9 @@ The helper:
   `reportBase64` XInput payloads
 - maps OpenController gamepad reports to Linux gamepad event codes
 - emits `SYN_REPORT` after each state update
+- advertises Linux `FF_RUMBLE`, handles uinput upload/erase/playback callbacks,
+  and emits `opencontroller.bridge.feedback` JSONL for weak/strong rumble
+  events
 - neutralizes and destroys the virtual device when the stream ends
 - supports `--dry-run` or `OPENCONTROLLER_UINPUT_DRY_RUN=1` to decode bridge
   streams without opening `/dev/uinput`
@@ -158,10 +161,24 @@ same report contract used by the Windows VHF and macOS DriverKit directions.
 OpenController's HID and XInput reports use positive Y for up. Linux gamepad
 axes use negative Y for up, so the bridge inverts `ABS_Y` and `ABS_RY`.
 
+## Rumble Feedback
+
+The helper enables `EV_FF` plus `FF_RUMBLE` and sets `ff_effects_max` on the
+virtual device. When a game uploads a rumble effect, uinput sends the helper an
+`EV_UINPUT` upload request; the helper completes the request with
+`UI_BEGIN_FF_UPLOAD` and `UI_END_FF_UPLOAD`, stores the weak/strong magnitudes,
+and emits OpenController feedback JSONL when the effect is played or stopped.
+
+Linux `FF_RUMBLE` exposes weak and strong motors. Trigger rumble channels are
+reported as zero because evdev rumble does not carry separate trigger motors.
+The SDK parses helper stdout and forwards the event through
+`controller.onFeedback(...)`.
+
 ## Current Limitations
 
 - Linux only
-- no rumble or force feedback yet
+- no trigger-motor rumble separation on Linux; evdev `FF_RUMBLE` exposes only
+  weak and strong motors
 - no automatic permission changes
 - helper source is included and buildable, but not prebuilt
 - one helper creates one virtual device; run one helper per emulated controller

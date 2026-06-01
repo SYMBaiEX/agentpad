@@ -213,6 +213,7 @@ The Linux native package adds:
 - host diagnostics for `/dev/uinput`, module, and permission readiness
 - C helper source for `/dev/uinput`
 - build helper for producing `opencontroller-uinput-bridge`
+- Linux `FF_RUMBLE` feedback handling with native bridge feedback JSONL
 - setup helper for compiling the bridge and printing reviewed udev-rule commands
 
 The Windows native package adds:
@@ -467,7 +468,10 @@ HID payload and keeps XInput fallback for older streams. Dry-run mode decodes
 the same stream without opening `/dev/uinput`. Use `--controller-id` or
 `OPENCONTROLLER_CONTROLLER_ID` when a helper reads a shared stream so one
 virtual device only reacts to its assigned controller. Real device mode
-requires Linux and write access to `/dev/uinput`.
+requires Linux and write access to `/dev/uinput`. Games that use evdev
+`FF_RUMBLE` can send weak/strong rumble back through helper stdout as
+`opencontroller.bridge.feedback`, which the SDK exposes through
+`controller.onFeedback(...)`.
 
 The Windows VHF and macOS DriverKit host bridge adapters use the same
 `controllerId` option and `OPENCONTROLLER_CONTROLLER_ID` environment contract,
@@ -647,7 +651,7 @@ Not included yet:
 ## Roadmap
 
 - Publish npm packages under a confirmed scope
-- Harden Linux `uinput` packaging, diagnostics, and install guidance
+- Verify Linux `FF_RUMBLE` across more game launchers and distributions
 - Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics
 - Add a headless match runner for repeated agent duels

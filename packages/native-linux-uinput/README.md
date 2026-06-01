@@ -9,6 +9,8 @@ This package provides:
 - build and setup helpers for the native C bridge
 - a C helper that reads OpenController native bridge JSONL from stdin and emits
   Linux gamepad events through `/dev/uinput`
+- Linux `FF_RUMBLE` force-feedback support that emits OpenController feedback
+  JSONL back to `controller.onFeedback(...)`
 
 It is the first platform backend toward full OS-level virtual controller
 emulation. It only works on Linux systems with the `uinput` module and write
@@ -66,6 +68,9 @@ neutralizes on disconnect, and destroys the virtual device when the stream ends.
 It prefers descriptor-backed `hidReportBase64` payloads and falls back to the
 legacy XInput-compatible `reportBase64` payload for older bridge streams.
 Descriptor-backed payloads map Home/Guide/PS to Linux `BTN_MODE`.
+The helper also advertises Linux `FF_RUMBLE`; when a game uploads and plays a
+rumble effect through evdev, the helper converts the weak/strong magnitudes into
+OpenController's shared HID rumble feedback JSONL on stdout.
 
 Use dry-run mode to verify the stream without opening `/dev/uinput`:
 
@@ -95,6 +100,12 @@ const controller = await createController({
     deviceName: "OpenController Virtual Gamepad"
   }),
   replay: false
+});
+
+controller.onFeedback((event) => {
+  if (event.type === "rumble") {
+    console.log(event.weakMotor, event.strongMotor);
+  }
 });
 ```
 
