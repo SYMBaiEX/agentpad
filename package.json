@@ -17,6 +17,7 @@
     "packages/overlay",
     "packages/cli",
     "packages/native-linux-uinput",
+    "packages/native-windows-virtual-gamepad",
     "examples/*"
   ],
   "scripts": {
@@ -24,7 +25,7 @@
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo examples/*/dist examples/*/tsconfig.tsbuildinfo .turbo output",
     "dev:fighter": "bun --cwd examples/agent-fighter dev",
     "dev:overlay": "bun --cwd examples/obs-overlay dev",
-    "test": "bun test packages/core/src/__tests__/controller.test.ts packages/native-linux-uinput/src/__tests__",
+    "test": "bun test packages/core/src/__tests__/controller.test.ts packages/native-linux-uinput/src/__tests__ packages/native-windows-virtual-gamepad/src/__tests__",
     "typecheck": "tsc -b",
     "lint": "biome check .",
     "format": "biome check --write ."

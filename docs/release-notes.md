@@ -13,6 +13,8 @@
   and `/dev/uinput` helper source
 - Linux uinput doctor added for module, device, permission, and udev-rule
   diagnostics
+- `@opencontroller/native-windows-virtual-gamepad` package added with XUSB
+  helpers and legacy ViGEmBus diagnostics
 
 ## v0.1.0
 

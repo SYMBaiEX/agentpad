@@ -74,17 +74,17 @@ manifests are in place.
 
 The SDK surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, and native bridge prototyping.
-It is not yet a full cross-platform native virtual controller driver stack. The current
-emulation boundary is the adapter layer, XInput-compatible binary report
-encoding, a versioned JSONL protocol for native bridge processes, and the first
-Linux `uinput` bridge package. The next milestone is hardening Linux install
-diagnostics and adding Windows virtual gamepad/HID plus macOS DriverKit-compatible
+It is not yet a full cross-platform native virtual controller driver stack. The
+current emulation boundary is the adapter layer, XInput-compatible binary report
+encoding, a versioned JSONL protocol for native bridge processes, the first
+Linux `uinput` bridge package, and Windows XUSB compatibility helpers. The next
+milestone is adding maintained Windows virtual HID and macOS DriverKit-compatible
 flows.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
-bridge; Windows and macOS still need native bridge packages before the operating
-system can see a real virtual gamepad device.
+bridge. Windows users can inspect legacy ViGEmBus compatibility and XUSB report
+mapping while a maintained Windows backend is evaluated.
 
 ## Try Agent Fighter
 
@@ -125,6 +125,7 @@ channels, so the demo still works offline.
 | `@opencontroller/overlay` | React overlays, canvas rendering helpers, OBS browser-source server |
 | `@opencontroller/cli` | Doctor, test, overlay, replay, and init commands |
 | `@opencontroller/native-linux-uinput` | Linux `/dev/uinput` bridge helper and event mapping |
+| `@opencontroller/native-windows-virtual-gamepad` | Windows XUSB helpers and legacy ViGEmBus diagnostics |
 
 ## Install
 
@@ -155,6 +156,12 @@ For Linux native bridge work:
 npm install @opencontroller/core @opencontroller/native-linux-uinput
 ```
 
+For Windows virtual gamepad compatibility work:
+
+```bash
+npm install @opencontroller/core @opencontroller/native-windows-virtual-gamepad
+```
+
 Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
@@ -180,6 +187,12 @@ The Linux native package adds:
 - host diagnostics for `/dev/uinput`, module, and permission readiness
 - C helper source for `/dev/uinput`
 - build helper for producing `opencontroller-uinput-bridge`
+
+The Windows native package adds:
+
+- XUSB report helpers
+- legacy ViGEmBus service diagnostics
+- `opencontroller-windows-gamepad-doctor`
 
 ### Core API
 
@@ -413,6 +426,7 @@ npm pack --workspace packages/core --dry-run
 npm pack --workspace packages/overlay --dry-run
 npm pack --workspace packages/cli --dry-run
 npm pack --workspace packages/native-linux-uinput --dry-run
+npm pack --workspace packages/native-windows-virtual-gamepad --dry-run
 ```
 
 Then confirm:
@@ -439,6 +453,7 @@ Included:
 - XInput binary report bridge
 - native bridge JSONL protocol
 - Linux `uinput` bridge package and helper source
+- Windows virtual gamepad compatibility package
 - multi-controller hub
 - React/OBS overlays
 - CLI workflows
@@ -458,7 +473,7 @@ Not included yet:
 
 - Publish npm packages under a confirmed scope
 - Harden Linux `uinput` packaging, diagnostics, and install guidance
-- Add Windows ViGEm/virtual HID and macOS DriverKit bridge packages
+- Add maintained Windows virtual HID and macOS DriverKit bridge packages
 - Add native bridge daemon templates with install and permission diagnostics
 - Add a headless match runner for repeated agent duels
 - Export replay data to JSON, CSV, and training-friendly formats

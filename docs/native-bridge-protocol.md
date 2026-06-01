@@ -17,6 +17,8 @@ itself.
 
 The first platform consumer is documented in
 [Linux uinput Bridge](linux-uinput.md).
+Windows compatibility helpers are documented in
+[Windows Virtual Gamepad](windows-virtual-gamepad.md).
 
 ## Emit JSONL
 

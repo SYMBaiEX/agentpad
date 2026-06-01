@@ -98,6 +98,20 @@
         "typescript": "^5.8.3",
       },
     },
+    "packages/native-windows-virtual-gamepad": {
+      "name": "@opencontroller/native-windows-virtual-gamepad",
+      "version": "0.1.0",
+      "bin": {
+        "opencontroller-windows-gamepad-doctor": "./dist/bin/doctor.js",
+      },
+      "dependencies": {
+        "@opencontroller/core": "^0.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.2.15",
+        "typescript": "^5.8.3",
+      },
+    },
     "packages/overlay": {
       "name": "@opencontroller/overlay",
       "version": "0.1.0",
@@ -133,6 +147,8 @@
     "@opencontroller/example-websocket-bridge": ["@opencontroller/example-websocket-bridge@workspace:examples/websocket-bridge"],
 
     "@opencontroller/native-linux-uinput": ["@opencontroller/native-linux-uinput@workspace:packages/native-linux-uinput"],
+
+    "@opencontroller/native-windows-virtual-gamepad": ["@opencontroller/native-windows-virtual-gamepad@workspace:packages/native-windows-virtual-gamepad"],
 
     "@opencontroller/overlay": ["@opencontroller/overlay@workspace:packages/overlay"],
 
