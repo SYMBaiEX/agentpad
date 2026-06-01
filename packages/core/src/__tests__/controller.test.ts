@@ -13,6 +13,7 @@ import {
   createController,
   createControllerHub,
   createNativeBridgeRumbleFeedbackMessage,
+  createNativeBridgeStateMessage,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeXInputReport,
@@ -377,6 +378,136 @@ describe("controller runtime", () => {
       reportId: hidGamepadRumbleReportId,
       reportBase64: message.reportBase64,
     });
+  });
+
+  test("streams native bridge extensions for touchpad and motion", async () => {
+    const lines: string[] = [];
+    const adapter = new NativeBridgeAdapter({
+      includeState: false,
+      write(line) {
+        lines.push(line);
+      },
+    });
+    const controller = await createController({
+      profile: "playstation",
+      adapter,
+      replay: false,
+    });
+
+    await controller.touchpad(
+      {
+        pressed: true,
+        contacts: [{ id: 2, x: 0.25, y: 0.75, pressure: 0.5 }],
+      },
+      0,
+    );
+    await controller.motion(
+      {
+        acceleration: { x: 0, y: 0, z: 1 },
+        gyroscope: { x: 0.1, y: 0.2, z: 0.3 },
+      },
+      0,
+    );
+
+    const messages = lines.map(parseNativeBridgeMessage);
+    const touchpadMessage = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        message.extensions?.touchpad,
+    );
+    const motionMessage = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        message.extensions?.motion,
+    );
+
+    expect(touchpadMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !touchpadMessage ||
+      touchpadMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a native bridge touchpad extension message");
+    }
+    expect(touchpadMessage.state).toBeUndefined();
+    expect(touchpadMessage.extensions?.touchpad).toEqual({
+      pressed: true,
+      contacts: [
+        {
+          id: 2,
+          x: 0.25,
+          y: 0.75,
+          active: true,
+          pressure: 0.5,
+        },
+      ],
+    });
+    expect(nativeBridgeMessageToReportBytes(touchpadMessage).byteLength).toBe(
+      12,
+    );
+    expect(
+      nativeBridgeMessageToHidGamepadReportBytes(touchpadMessage).byteLength,
+    ).toBe(hidGamepadReportByteLength);
+
+    expect(motionMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !motionMessage ||
+      motionMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a native bridge motion extension message");
+    }
+    expect(motionMessage.extensions?.motion).toEqual({
+      acceleration: { x: 0, y: 0, z: 1 },
+      gyroscope: { x: 0.1, y: 0.2, z: 0.3 },
+      orientation: { x: 0, y: 0, z: 0 },
+    });
+
+    const legacyMessage = createNativeBridgeStateMessage(
+      controller.getState(),
+      {
+        includeExtensions: false,
+        includeState: false,
+      },
+    );
+    expect(legacyMessage.extensions).toBeUndefined();
+
+    const legacyLines: string[] = [];
+    const legacyAdapter = new NativeBridgeAdapter({
+      includeState: false,
+      includeExtensions: false,
+      write(line) {
+        legacyLines.push(line);
+      },
+    });
+    const legacyController = await createController({
+      profile: "playstation",
+      adapter: legacyAdapter,
+      replay: false,
+    });
+
+    await legacyController.touchpad(
+      {
+        pressed: true,
+        contacts: [{ id: 3, x: 0.5, y: 0.5, pressure: 1 }],
+      },
+      0,
+    );
+
+    const legacyStateMessage = legacyLines
+      .map(parseNativeBridgeMessage)
+      .filter((message) => message.type === "opencontroller.bridge.state")
+      .at(-1);
+    expect(legacyStateMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !legacyStateMessage ||
+      legacyStateMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a legacy native bridge state message");
+    }
+    expect(legacyStateMessage.state).toBeUndefined();
+    expect(legacyStateMessage.extensions).toBeUndefined();
+
+    await legacyController.disconnect();
+    await controller.disconnect();
   });
 
   test("encodes system buttons in HID gamepad reports without changing XInput reports", async () => {

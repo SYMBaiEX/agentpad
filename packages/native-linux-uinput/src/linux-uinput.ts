@@ -49,6 +49,7 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "cwd"
   | "env"
   | "includeState"
+  | "includeExtensions"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -213,6 +214,7 @@ export function createLinuxUinputBridgeAdapter(
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createLinuxUinputBridgeEnv(options),
     includeState: options.includeState ?? false,
+    includeExtensions: options.includeExtensions ?? true,
     ...(options.waitForExitMs !== undefined
       ? { waitForExitMs: options.waitForExitMs }
       : {}),

@@ -9,6 +9,8 @@ import type {
   ControllerFeedbackEvent,
   ControllerProfileName,
   ControllerState,
+  ControllerTouchpadContact,
+  ControllerVector3,
 } from "../types";
 
 export const nativeBridgeProtocolVersion = 1;
@@ -31,6 +33,22 @@ export type NativeBridgeHidGamepadReport = {
   rightStickY: number;
 };
 
+export type NativeBridgeTouchpadExtension = {
+  pressed: boolean;
+  contacts: ControllerTouchpadContact[];
+};
+
+export type NativeBridgeMotionExtension = {
+  acceleration: ControllerVector3;
+  gyroscope: ControllerVector3;
+  orientation: ControllerVector3;
+};
+
+export type NativeBridgeStateExtensions = {
+  touchpad?: NativeBridgeTouchpadExtension;
+  motion?: NativeBridgeMotionExtension;
+};
+
 export type NativeBridgeStateMessage = {
   type: "opencontroller.bridge.state";
   version: typeof nativeBridgeProtocolVersion;
@@ -43,6 +61,7 @@ export type NativeBridgeStateMessage = {
   hidReportFormat?: NativeBridgeHidReportFormat;
   hidReport?: NativeBridgeHidGamepadReport;
   hidReportBase64?: string;
+  extensions?: NativeBridgeStateExtensions;
   state?: ControllerState;
 };
 
@@ -78,6 +97,7 @@ export type NativeBridgeMessage =
 
 export type CreateNativeBridgeStateMessageOptions = {
   includeState?: boolean;
+  includeExtensions?: boolean;
   timestamp?: number;
 };
 
@@ -100,6 +120,10 @@ export function createNativeBridgeStateMessage(
   const bytes = encodeXInputReport(report);
   const hidReport = xInputReportToHidGamepadReport(report, state);
   const hidBytes = encodeNativeBridgeHidGamepadReport(hidReport);
+  const extensions =
+    options.includeExtensions === false
+      ? undefined
+      : createNativeBridgeStateExtensions(state);
 
   return {
     type: "opencontroller.bridge.state",
@@ -113,8 +137,36 @@ export function createNativeBridgeStateMessage(
     hidReportFormat: "hid-gamepad",
     hidReport,
     hidReportBase64: bytesToBase64(hidBytes),
+    ...(extensions ? { extensions } : {}),
     ...(includeState ? { state } : {}),
   };
+}
+
+export function createNativeBridgeStateExtensions(
+  state: ControllerState,
+): NativeBridgeStateExtensions | undefined {
+  const extensions: NativeBridgeStateExtensions = {};
+
+  if (state.touchpad.pressed || state.touchpad.contacts.length > 0) {
+    extensions.touchpad = {
+      pressed: state.touchpad.pressed,
+      contacts: state.touchpad.contacts.map((contact) => ({ ...contact })),
+    };
+  }
+
+  if (
+    !isNeutralVector3(state.motion.acceleration) ||
+    !isNeutralVector3(state.motion.gyroscope) ||
+    !isNeutralVector3(state.motion.orientation)
+  ) {
+    extensions.motion = {
+      acceleration: { ...state.motion.acceleration },
+      gyroscope: { ...state.motion.gyroscope },
+      orientation: { ...state.motion.orientation },
+    };
+  }
+
+  return Object.keys(extensions).length > 0 ? extensions : undefined;
 }
 
 export function createNativeBridgeRumbleFeedbackMessage(
@@ -287,7 +339,8 @@ export function isNativeBridgeMessage(
     value.reportFormat === "xinput" &&
     typeof value.reportBase64 === "string" &&
     isXInputReport(value.report) &&
-    hasValidOptionalHidReport(value)
+    hasValidOptionalHidReport(value) &&
+    hasValidOptionalStateExtensions(value)
   );
 }
 
@@ -339,6 +392,78 @@ function hasValidOptionalHidReport(value: Record<string, unknown>): boolean {
     value.hidReportFormat === "hid-gamepad" &&
     typeof value.hidReportBase64 === "string" &&
     isHidGamepadReport(value.hidReport)
+  );
+}
+
+function hasValidOptionalStateExtensions(
+  value: Record<string, unknown>,
+): boolean {
+  if (!("extensions" in value)) {
+    return true;
+  }
+  return isNativeBridgeStateExtensions(value.extensions);
+}
+
+function isNativeBridgeStateExtensions(
+  value: unknown,
+): value is NativeBridgeStateExtensions {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    (value.touchpad === undefined ||
+      isNativeBridgeTouchpadExtension(value.touchpad)) &&
+    (value.motion === undefined || isNativeBridgeMotionExtension(value.motion))
+  );
+}
+
+function isNativeBridgeTouchpadExtension(
+  value: unknown,
+): value is NativeBridgeTouchpadExtension {
+  return (
+    isRecord(value) &&
+    typeof value.pressed === "boolean" &&
+    Array.isArray(value.contacts) &&
+    value.contacts.every(isNativeBridgeTouchpadContact)
+  );
+}
+
+function isNativeBridgeTouchpadContact(
+  value: unknown,
+): value is ControllerTouchpadContact {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    Number.isFinite(value.id) &&
+    value.id >= 0 &&
+    isNormalizedNumber(value.x) &&
+    isNormalizedNumber(value.y) &&
+    typeof value.active === "boolean" &&
+    isNormalizedNumber(value.pressure)
+  );
+}
+
+function isNativeBridgeMotionExtension(
+  value: unknown,
+): value is NativeBridgeMotionExtension {
+  return (
+    isRecord(value) &&
+    isVector3(value.acceleration) &&
+    isVector3(value.gyroscope) &&
+    isVector3(value.orientation)
+  );
+}
+
+function isVector3(value: unknown): value is ControllerVector3 {
+  return (
+    isRecord(value) &&
+    typeof value.x === "number" &&
+    Number.isFinite(value.x) &&
+    typeof value.y === "number" &&
+    Number.isFinite(value.y) &&
+    typeof value.z === "number" &&
+    Number.isFinite(value.z)
   );
 }
 
@@ -520,6 +645,10 @@ function clampNormalized(value: number): number {
 
 function normalizedToByte(value: number): number {
   return Math.round(clampNormalized(value) * 255);
+}
+
+function isNeutralVector3(value: ControllerVector3): boolean {
+  return value.x === 0 && value.y === 0 && value.z === 0;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {

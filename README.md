@@ -57,7 +57,8 @@ developer experience on top.
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
 - Canonical HID gamepad report descriptor and input report encoder
-- Versioned JSONL native bridge protocol with XInput and HID report payloads
+- Versioned JSONL native bridge protocol with XInput/HID payloads and optional
+  touchpad/motion extensions
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, native backend doctor, native bridge smoke tests, dry-run tests, overlay, replay, and starter action maps
@@ -188,7 +189,7 @@ Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
 
-## SDK Surface
+## Developer Surface
 
 The core package exports:
 

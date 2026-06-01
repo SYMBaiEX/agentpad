@@ -1,6 +1,7 @@
 import { spawn as spawnChildProcess } from "node:child_process";
 import { Readable } from "node:stream";
 import {
+  type CreateNativeBridgeStateMessageOptions,
   type NativeBridgeMessage,
   createNativeBridgeDisconnectMessage,
   createNativeBridgeStateMessage,
@@ -50,6 +51,7 @@ export type NativeProcessBridgeAdapterOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   includeState?: boolean;
+  includeExtensions?: boolean;
   waitForExitMs?: number;
   killSignal?: number | NodeJS.Signals;
   spawn?: NativeProcessBridgeSpawner;
@@ -115,11 +117,9 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
   async syncState(state: ControllerState): Promise<void> {
     this.assertConnected();
     this.controllerId = state.id;
-    const options =
-      this.options.includeState === undefined
-        ? {}
-        : { includeState: this.options.includeState };
-    await this.emit(createNativeBridgeStateMessage(state, options));
+    await this.emit(
+      createNativeBridgeStateMessage(state, this.stateMessageOptions()),
+    );
   }
 
   async neutral(): Promise<void> {
@@ -251,6 +251,17 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         reader.releaseLock();
       }
     })();
+  }
+
+  private stateMessageOptions(): CreateNativeBridgeStateMessageOptions {
+    return {
+      ...(this.options.includeState !== undefined
+        ? { includeState: this.options.includeState }
+        : {}),
+      ...(this.options.includeExtensions !== undefined
+        ? { includeExtensions: this.options.includeExtensions }
+        : {}),
+    };
   }
 
   private consumeStdoutFeedback(chunk: string): void {

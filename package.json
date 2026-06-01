@@ -2,7 +2,7 @@
   "name": "opencontroller",
   "version": "0.1.0",
   "private": true,
-  "description": "Bun-first TypeScript SDK for AI-agent virtual controller control, overlays, safety, and replay logs.",
+  "description": "OpenController packages for AI-agent virtual controller control, overlays, safety, and replay logs.",
   "type": "module",
   "homepage": "https://github.com/SYMBaiEX/OpenController#readme",
   "bugs": {

@@ -121,6 +121,40 @@ each message. `reportBase64` remains the compatibility XInput payload.
 Descriptor-backed native drivers should prefer `hidReportBase64`, which is the
 13-byte OpenController HID gamepad report matching the shared descriptor.
 
+When richer profile-specific state is active, state messages may also include an
+`extensions` object. This side channel is for bridge authors who want touchpad
+or motion data without enabling the full `state` payload:
+
+```json
+{
+  "extensions": {
+    "touchpad": {
+      "pressed": true,
+      "contacts": [
+        {
+          "id": 0,
+          "x": 0.5,
+          "y": 0.35,
+          "active": true,
+          "pressure": 0.8
+        }
+      ]
+    },
+    "motion": {
+      "acceleration": { "x": 0, "y": 0, "z": 1 },
+      "gyroscope": { "x": 0.1, "y": 0, "z": 0 },
+      "orientation": { "x": 0, "y": 0, "z": 0 }
+    }
+  }
+}
+```
+
+Set `includeExtensions: false` when constructing a `NativeBridgeAdapter` or
+`NativeProcessBridgeAdapter` if a legacy helper expects only the compact
+XInput/HID payload fields. Current Linux, Windows, and macOS helper templates
+ignore unknown JSON fields, so `extensions` is backward compatible with the
+existing bridge stream.
+
 ## Disconnect Message
 
 ```json

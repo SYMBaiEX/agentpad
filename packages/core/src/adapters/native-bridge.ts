@@ -1,4 +1,5 @@
 import {
+  type CreateNativeBridgeStateMessageOptions,
   type NativeBridgeMessage,
   createNativeBridgeDisconnectMessage,
   createNativeBridgeStateMessage,
@@ -15,6 +16,7 @@ export type NativeBridgeWrite = (
 export type NativeBridgeAdapterOptions = {
   write?: NativeBridgeWrite;
   includeState?: boolean;
+  includeExtensions?: boolean;
 };
 
 export class NativeBridgeAdapter implements ControllerAdapter {
@@ -37,11 +39,9 @@ export class NativeBridgeAdapter implements ControllerAdapter {
   async syncState(state: ControllerState): Promise<void> {
     this.assertConnected();
     this.controllerId = state.id;
-    const options =
-      this.options.includeState === undefined
-        ? {}
-        : { includeState: this.options.includeState };
-    await this.emit(createNativeBridgeStateMessage(state, options));
+    await this.emit(
+      createNativeBridgeStateMessage(state, this.stateMessageOptions()),
+    );
   }
 
   async neutral(): Promise<void> {
@@ -81,5 +81,16 @@ export class NativeBridgeAdapter implements ControllerAdapter {
     if (!this.connected) {
       throw new Error("NativeBridgeAdapter is not connected");
     }
+  }
+
+  private stateMessageOptions(): CreateNativeBridgeStateMessageOptions {
+    return {
+      ...(this.options.includeState !== undefined
+        ? { includeState: this.options.includeState }
+        : {}),
+      ...(this.options.includeExtensions !== undefined
+        ? { includeExtensions: this.options.includeExtensions }
+        : {}),
+    };
   }
 }

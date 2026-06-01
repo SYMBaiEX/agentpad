@@ -71,6 +71,7 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   | "cwd"
   | "env"
   | "includeState"
+  | "includeExtensions"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -285,6 +286,7 @@ export function createWindowsVhfHostBridgeAdapter(
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createWindowsVhfHostBridgeEnv(options),
     includeState: options.includeState ?? false,
+    includeExtensions: options.includeExtensions ?? true,
     ...(options.waitForExitMs !== undefined
       ? { waitForExitMs: options.waitForExitMs }
       : {}),

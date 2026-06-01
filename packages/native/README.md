@@ -2,7 +2,7 @@
 
 Unified native host bridge adapter selection for OpenController.
 
-This package is the one-import path for SDK users who want OpenController to
+This package is the one-import path for developers who want OpenController to
 choose the native bridge backend for the current host:
 
 - Linux: `@opencontroller/native-linux-uinput`

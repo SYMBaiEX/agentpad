@@ -41,6 +41,7 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "cwd"
   | "env"
   | "includeState"
+  | "includeExtensions"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -212,6 +213,9 @@ function commonNativeProcessBridgeOptions(
   }
   if (options.includeState !== undefined) {
     common.includeState = options.includeState;
+  }
+  if (options.includeExtensions !== undefined) {
+    common.includeExtensions = options.includeExtensions;
   }
   if (options.waitForExitMs !== undefined) {
     common.waitForExitMs = options.waitForExitMs;

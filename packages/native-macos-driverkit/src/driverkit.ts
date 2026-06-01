@@ -56,6 +56,7 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
   | "cwd"
   | "env"
   | "includeState"
+  | "includeExtensions"
   | "waitForExitMs"
   | "killSignal"
   | "spawn"
@@ -283,6 +284,7 @@ export function createMacosDriverKitHostBridgeAdapter(
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createMacosDriverKitHostBridgeEnv(options),
     includeState: options.includeState ?? false,
+    includeExtensions: options.includeExtensions ?? true,
     ...(options.waitForExitMs !== undefined
       ? { waitForExitMs: options.waitForExitMs }
       : {}),
