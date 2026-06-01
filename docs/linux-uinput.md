@@ -48,6 +48,25 @@ Then stream controller reports into the helper:
 opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinput-bridge
 ```
 
+Or let the SDK own the helper process:
+
+```ts
+import {
+  NativeProcessBridgeAdapter,
+  createController
+} from "@opencontroller/core";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: new NativeProcessBridgeAdapter({
+    command: `${process.env.HOME}/.opencontroller/bin/opencontroller-uinput-bridge`,
+    includeState: false
+  }),
+  replay: false
+});
+```
+
 The helper:
 
 - opens `/dev/uinput`

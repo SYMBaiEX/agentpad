@@ -48,6 +48,25 @@ The CLI can emit a deterministic sample stream:
 opencontroller bridge --id player-1
 ```
 
+For SDK-owned helper processes, use `NativeProcessBridgeAdapter`:
+
+```ts
+import {
+  NativeProcessBridgeAdapter,
+  createController
+} from "@opencontroller/core";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: new NativeProcessBridgeAdapter({
+    command: "/home/me/.opencontroller/bin/opencontroller-uinput-bridge",
+    includeState: false
+  }),
+  replay: false
+});
+```
+
 ## State Message
 
 ```json

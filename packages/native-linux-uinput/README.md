@@ -44,6 +44,25 @@ opencontroller bridge --id player-1 | ~/.opencontroller/bin/opencontroller-uinpu
 The helper creates an OpenController virtual gamepad, applies each state report,
 neutralizes on disconnect, and destroys the virtual device when the stream ends.
 
+SDK code can also spawn the helper directly:
+
+```ts
+import {
+  NativeProcessBridgeAdapter,
+  createController
+} from "@opencontroller/core";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: new NativeProcessBridgeAdapter({
+    command: `${process.env.HOME}/.opencontroller/bin/opencontroller-uinput-bridge`,
+    includeState: false
+  }),
+  replay: false
+});
+```
+
 ## Permissions
 
 Most Linux systems require either root, membership in an input-related group, or

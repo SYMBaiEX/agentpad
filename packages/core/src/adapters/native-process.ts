@@ -1,0 +1,236 @@
+import {
+  type NativeBridgeMessage,
+  createNativeBridgeDisconnectMessage,
+  createNativeBridgeStateMessage,
+  serializeNativeBridgeMessage,
+} from "../bridge";
+import { AdapterError } from "../errors";
+import type { ControllerState, NormalizedControllerCommand } from "../types";
+import { type ControllerAdapter, baseCapabilities } from "./adapter";
+
+export type NativeProcessBridgeWritable = {
+  write(chunk: string): number | Promise<number>;
+  flush?(): number | Promise<number>;
+  end?(error?: Error): number | Promise<number>;
+};
+
+export type NativeProcessBridgeProcess = {
+  stdin: NativeProcessBridgeWritable;
+  stdout?: ReadableStream<Uint8Array> | null;
+  stderr?: ReadableStream<Uint8Array> | null;
+  exited: Promise<number>;
+  kill(signal?: number | NodeJS.Signals): void;
+};
+
+export type NativeProcessBridgeSpawnOptions = {
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+};
+
+export type NativeProcessBridgeSpawner = (
+  command: string,
+  args: string[],
+  options: NativeProcessBridgeSpawnOptions,
+) => NativeProcessBridgeProcess;
+
+export type NativeProcessBridgeAdapterOptions = {
+  command: string;
+  args?: string[];
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+  includeState?: boolean;
+  waitForExitMs?: number;
+  killSignal?: number | NodeJS.Signals;
+  spawn?: NativeProcessBridgeSpawner;
+  onStdout?: (chunk: string) => void;
+  onStderr?: (chunk: string) => void;
+  onExit?: (exitCode: number) => void;
+};
+
+export class NativeProcessBridgeAdapter implements ControllerAdapter {
+  readonly name = "native-process";
+  readonly platform = "all" as const;
+  readonly messages: NativeBridgeMessage[] = [];
+  private process: NativeProcessBridgeProcess | undefined;
+  private exitCode: number | undefined;
+  private connected = false;
+  private controllerId: string | undefined;
+
+  constructor(private readonly options: NativeProcessBridgeAdapterOptions) {}
+
+  async connect(): Promise<void> {
+    if (this.connected) {
+      return;
+    }
+
+    const args = this.options.args ?? [];
+    const spawn = this.options.spawn ?? defaultSpawnNativeProcess;
+    this.process = spawn(this.options.command, args, {
+      ...(this.options.cwd ? { cwd: this.options.cwd } : {}),
+      ...(this.options.env ? { env: this.options.env } : {}),
+    });
+    this.connected = true;
+    this.exitCode = undefined;
+
+    this.consumeOutput(this.process.stdout, this.options.onStdout);
+    this.consumeOutput(this.process.stderr, this.options.onStderr);
+    void this.process.exited.then((exitCode) => {
+      this.exitCode = exitCode;
+      this.options.onExit?.(exitCode);
+    });
+  }
+
+  async send(_command: NormalizedControllerCommand): Promise<void> {
+    this.assertConnected();
+  }
+
+  async syncState(state: ControllerState): Promise<void> {
+    this.assertConnected();
+    this.controllerId = state.id;
+    const options =
+      this.options.includeState === undefined
+        ? {}
+        : { includeState: this.options.includeState };
+    await this.emit(createNativeBridgeStateMessage(state, options));
+  }
+
+  async neutral(): Promise<void> {
+    this.assertConnected();
+  }
+
+  async disconnect(): Promise<void> {
+    if (!this.connected) {
+      return;
+    }
+
+    try {
+      if (this.controllerId) {
+        await this.emit(createNativeBridgeDisconnectMessage(this.controllerId));
+      }
+      await this.process?.stdin.end?.();
+      await this.waitForExit();
+    } finally {
+      this.connected = false;
+      this.process = undefined;
+    }
+  }
+
+  capabilities() {
+    return {
+      ...baseCapabilities,
+      supportsStateSync: true,
+      supportsXInputReports: true,
+      supportsNativeBridge: true,
+      supportsVirtualDevice: true,
+      requiresNativeInstall: true,
+    };
+  }
+
+  private async emit(message: NativeBridgeMessage): Promise<void> {
+    this.assertConnected();
+    const process = this.process;
+    if (!process) {
+      throw new AdapterError(
+        "NATIVE_PROCESS_NOT_CONNECTED",
+        "Native process adapter is not connected",
+      );
+    }
+
+    const line = serializeNativeBridgeMessage(message);
+    this.messages.push(message);
+    await process.stdin.write(line);
+    await process.stdin.flush?.();
+  }
+
+  private async waitForExit(): Promise<void> {
+    const process = this.process;
+    if (!process) {
+      return;
+    }
+
+    const waitForExitMs = this.options.waitForExitMs ?? 1000;
+    if (waitForExitMs < 0) {
+      return;
+    }
+
+    const exitCode = await Promise.race([
+      process.exited,
+      sleep(waitForExitMs).then(() => undefined),
+    ]);
+
+    if (exitCode === undefined) {
+      process.kill(this.options.killSignal ?? "SIGTERM");
+      return;
+    }
+    if (exitCode !== 0) {
+      throw new AdapterError(
+        "NATIVE_PROCESS_EXITED",
+        `Native bridge process exited with code ${exitCode}`,
+      );
+    }
+  }
+
+  private consumeOutput(
+    stream: ReadableStream<Uint8Array> | null | undefined,
+    callback: ((chunk: string) => void) | undefined,
+  ): void {
+    if (!stream) {
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    void (async () => {
+      const reader = stream.getReader();
+      try {
+        while (true) {
+          const next = await reader.read();
+          if (next.done) {
+            break;
+          }
+          callback?.(decoder.decode(next.value, { stream: true }));
+        }
+        const tail = decoder.decode();
+        if (tail) {
+          callback?.(tail);
+        }
+      } catch {
+        // Output capture is diagnostic only; command writes surface separately.
+      } finally {
+        reader.releaseLock();
+      }
+    })();
+  }
+
+  private assertConnected(): void {
+    if (!this.connected) {
+      throw new AdapterError(
+        "NATIVE_PROCESS_NOT_CONNECTED",
+        "Native process adapter is not connected",
+      );
+    }
+    if (this.exitCode !== undefined) {
+      throw new AdapterError(
+        "NATIVE_PROCESS_EXITED",
+        `Native bridge process exited with code ${this.exitCode}`,
+      );
+    }
+  }
+}
+
+function defaultSpawnNativeProcess(
+  command: string,
+  args: string[],
+  options: NativeProcessBridgeSpawnOptions,
+): NativeProcessBridgeProcess {
+  return Bun.spawn([command, ...args], {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+    ...(options.cwd ? { cwd: options.cwd } : {}),
+    ...(options.env ? { env: options.env } : {}),
+  });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}

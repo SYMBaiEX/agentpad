@@ -34,5 +34,6 @@ export async function resolveAdapter(
 export * from "./adapter";
 export * from "./dry-run";
 export * from "./native-bridge";
+export * from "./native-process";
 export * from "./websocket";
 export * from "./xinput-report";

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   DryRunAdapter,
   NativeBridgeAdapter,
+  NativeProcessBridgeAdapter,
   XInputReportAdapter,
   createActionMap,
   createController,
@@ -153,6 +154,67 @@ describe("controller runtime", () => {
 
     const disconnect = parseNativeBridgeMessage(lines.at(-1) ?? "");
     expect(disconnect.type).toBe("opencontroller.bridge.disconnect");
+  });
+
+  test("streams native bridge JSONL to a helper process", async () => {
+    const lines: string[] = [];
+    let ended = false;
+    let killed = false;
+    let resolveExit: (code: number) => void = () => {};
+    const exited = new Promise<number>((resolve) => {
+      resolveExit = resolve;
+    });
+    const adapter = new NativeProcessBridgeAdapter({
+      command: "opencontroller-uinput-bridge",
+      args: ["--example"],
+      includeState: false,
+      waitForExitMs: 50,
+      spawn(command, args) {
+        expect(command).toBe("opencontroller-uinput-bridge");
+        expect(args).toEqual(["--example"]);
+        return {
+          stdin: {
+            write(line) {
+              lines.push(line);
+              return line.length;
+            },
+            flush() {
+              return 0;
+            },
+            end() {
+              ended = true;
+              resolveExit(0);
+              return 0;
+            },
+          },
+          exited,
+          kill() {
+            killed = true;
+            resolveExit(0);
+          },
+        };
+      },
+    });
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("A", 5);
+    await controller.disconnect();
+
+    const messages = lines.map(parseNativeBridgeMessage);
+    const aPressed = messages.find(
+      (message) =>
+        message.type === "opencontroller.bridge.state" &&
+        (message.report.buttons & xInputButtonBits.A) !== 0,
+    );
+
+    expect(aPressed?.type).toBe("opencontroller.bridge.state");
+    expect(messages.at(-1)?.type).toBe("opencontroller.bridge.disconnect");
+    expect(ended).toBe(true);
+    expect(killed).toBe(false);
   });
 
   test("writes replay command events", async () => {

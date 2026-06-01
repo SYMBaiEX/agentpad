@@ -53,7 +53,7 @@ developer experience on top.
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
-- Adapter model with dry-run, WebSocket, XInput report, and native bridge output backends
+- Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
 - XInput-compatible binary report encoding for native virtual-device bridges
 - Versioned JSONL native bridge protocol for driver and daemon integrations
 - Controller hub for managing multiple virtual controllers
@@ -167,6 +167,7 @@ The core package exports:
 - `createControllerHub` for multi-controller sessions
 - built-in profiles for common controller families
 - dry-run, WebSocket, and XInput report adapters
+- native process bridge adapter for helper processes
 - native bridge JSONL protocol helpers
 - safety policies and replay logging
 - XInput report helpers from `@opencontroller/core/hid`
@@ -276,6 +277,31 @@ diagnostic report fields, and base64-encoded XInput report bytes. Native bridge
 processes can consume the same stream over stdio, pipes, sockets, or any ordered
 byte transport.
 
+### Native Process Helpers
+
+```ts
+import {
+  NativeProcessBridgeAdapter,
+  createController
+} from "@opencontroller/core";
+
+const controller = await createController({
+  id: "player-1",
+  profile: "xbox",
+  adapter: new NativeProcessBridgeAdapter({
+    command: "/home/me/.opencontroller/bin/opencontroller-uinput-bridge",
+    includeState: false
+  }),
+  replay: false
+});
+
+await controller.press("A", 80);
+await controller.disconnect();
+```
+
+This adapter spawns a helper process, streams native bridge JSONL to stdin,
+sends a disconnect message, closes stdin, and surfaces non-zero helper exits.
+
 ### Linux uinput
 
 ```bash
@@ -334,6 +360,7 @@ Current adapters:
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
 - `native-bridge`: emits versioned JSONL messages for native bridge processes
+- `NativeProcessBridgeAdapter`: streams JSONL directly to a helper process stdin
 
 Runtime adapters can also opt into full state synchronization. This is the
 important boundary for virtual controller emulation: native drivers generally

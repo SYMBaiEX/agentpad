@@ -8,6 +8,7 @@
 - `xinput-report` adapter added for testing and native bridge integration
 - native bridge JSONL protocol added for platform driver processes
 - `native-bridge` adapter and CLI sample stream added
+- `NativeProcessBridgeAdapter` added for SDK-owned native helper processes
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
   and `/dev/uinput` helper source
 - Linux uinput doctor added for module, device, permission, and udev-rule
