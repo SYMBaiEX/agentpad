@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   type ControllerState,
   type NativeProcessBridgeSpawner,
@@ -24,9 +27,11 @@ import {
   encodeMacosDriverKitInputReport,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitInputReportForCpp,
+  formatMacosDriverKitSetupPlan,
   macosDriverKitHidReportDescriptor,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitInputReportFromNativeBridgeMessage,
+  prepareMacosDriverKitSetup,
 } from "../driverkit";
 
 describe("macOS DriverKit helpers", () => {
@@ -149,6 +154,58 @@ describe("macOS DriverKit helpers", () => {
       "OpenControllerVirtualGamepadDriver.h",
       "OpenControllerVirtualGamepadDriver.cpp",
     ]);
+  });
+
+  test("prepares a reviewed macOS DriverKit setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-driverkit-"),
+    );
+
+    try {
+      const plan = await prepareMacosDriverKitSetup({
+        outputDirectory,
+        platform: "linux",
+        hostBridgePath:
+          "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
+        bundle: {
+          appBundleIdentifier: "com.example.opencontroller.host",
+          driverBundleIdentifier: "com.example.opencontroller.driver",
+          driverClassName: "ExampleOpenControllerDriver",
+          teamIdentifier: "TEAM42",
+        },
+      });
+      const readme = await readFile(plan.readmePath, "utf8");
+      const infoPlist = await readFile(plan.infoPlistPath, "utf8");
+      const hostEntitlements = await readFile(
+        plan.hostEntitlementsPath,
+        "utf8",
+      );
+      const manifest = await readFile(plan.manifestPath, "utf8");
+      const formatted = formatMacosDriverKitSetupPlan(plan);
+
+      expect(plan.platform).toBe("linux");
+      expect(plan.outputDirectory).toBe(outputDirectory);
+      expect(plan.files).toContain(plan.infoPlistPath);
+      expect(plan.files).toContain(plan.driverSourcePath);
+      expect(plan.doctorCommand).toBe(
+        "opencontroller-macos-driverkit-doctor --check",
+      );
+      expect(plan.nativeTestCommand).toContain(
+        "opencontroller native test --backend macos-driverkit",
+      );
+      expect(plan.nativeTestCommand).toContain(
+        "com.example.opencontroller.driver",
+      );
+      expect(readme).toContain("No privileged system changes were made");
+      expect(readme).toContain("System Extension activation");
+      expect(infoPlist).toContain("com.example.opencontroller.driver");
+      expect(hostEntitlements).toContain("TEAM42");
+      expect(manifest).toContain("com.example.opencontroller.host");
+      expect(formatted).toContain("OpenController macOS DriverKit Setup");
+      expect(formatted).toContain("No privileged system changes were made.");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
   });
 
   test("wraps a DriverKit host bridge as a native process adapter", async () => {

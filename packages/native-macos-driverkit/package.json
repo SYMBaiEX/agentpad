@@ -37,7 +37,8 @@
   },
   "bin": {
     "opencontroller-macos-driverkit-assets": "./dist/bin/assets.js",
-    "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js"
+    "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js",
+    "opencontroller-macos-driverkit-setup": "./dist/bin/setup.js"
   },
   "files": ["dist", "README.md"],
   "scripts": {

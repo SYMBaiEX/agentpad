@@ -13,6 +13,8 @@ This package provides:
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation
 - `createMacosDriverKitHostBridgeAdapter` for SDK-owned host bridge processes
+- `opencontroller-macos-driverkit-setup` for staging reviewed DriverKit/host
+  source files and activation/test commands without privileged changes
 - `opencontroller-macos-driverkit-doctor` for local tool checks
 
 Upstream context:
@@ -20,6 +22,28 @@ Upstream context:
 - [DriverKit](https://developer.apple.com/documentation/driverkit)
 - [IOUserHIDDevice](https://developer.apple.com/documentation/hiddriverkit/iouserhiddevice)
 - [Installing System Extensions and Drivers](https://developer.apple.com/documentation/systemextensions/installing-system-extensions-and-drivers)
+
+## Prepare A DriverKit Setup Kit
+
+```bash
+opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
+opencontroller-macos-driverkit-setup --json
+```
+
+The setup command writes a DriverKit extension source folder, host app
+entitlements, manifest, README, and reviewed commands. It does not sign,
+notarize, activate, or trust a DriverKit System Extension.
+
+After reviewing the generated files, attach them to a DriverKit-capable Xcode
+project, build a host app that embeds the dext, sign and notarize both with
+approved DriverKit entitlements, and let the user approve activation. Then test
+the installed host bridge:
+
+```bash
+opencontroller native test \
+  --backend macos-driverkit \
+  --host-bridge-path "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
+```
 
 ## Assets
 

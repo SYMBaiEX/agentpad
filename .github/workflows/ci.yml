@@ -120,6 +120,19 @@ jobs:
           grep -q "No privileged system changes were made" /tmp/opencontroller-windows-vhf/README.md
           grep -q "DeviceIoControl" /tmp/opencontroller-windows-vhf/host-bridge/OpenControllerVhfHostBridge.c
       - run: |
+          bun packages/native-macos-driverkit/dist/bin/setup.js \
+            --output /tmp/opencontroller-macos-driverkit \
+            --driver-bundle-id com.example.opencontroller.driver \
+            --driver-class-name ExampleOpenControllerDriver \
+            --json |
+            tee /tmp/opencontroller-macos-driverkit-setup.json
+          grep -q "com.example.opencontroller.driver" /tmp/opencontroller-macos-driverkit-setup.json
+          test -f /tmp/opencontroller-macos-driverkit/driverkit-extension/Info.plist
+          test -f /tmp/opencontroller-macos-driverkit/driverkit-extension/OpenControllerVirtualGamepadDriver.cpp
+          test -f /tmp/opencontroller-macos-driverkit/host-app/OpenControllerHost.entitlements
+          grep -q "No privileged system changes were made" /tmp/opencontroller-macos-driverkit/README.md
+          grep -q "System Extension activation" /tmp/opencontroller-macos-driverkit/README.md
+      - run: |
           bun packages/native-linux-uinput/dist/bin/setup.js \
             --output /tmp/opencontroller-uinput-bridge-setup \
             --json |

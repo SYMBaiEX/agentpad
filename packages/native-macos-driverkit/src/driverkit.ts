@@ -1,5 +1,6 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { posix } from "node:path";
+import { join, posix, resolve } from "node:path";
 import {
   NativeProcessBridgeAdapter,
   type NativeProcessBridgeAdapterOptions,
@@ -56,6 +57,37 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
     hostBridgePath?: string;
   };
 
+export type PrepareMacosDriverKitSetupOptions = {
+  platform?: NodeJS.Platform;
+  outputDirectory?: string;
+  bundle?: MacosDriverKitBundleOptions;
+  driver?: MacosDriverKitDriverSourceOptions;
+  hostBridgePath?: string;
+};
+
+export type MacosDriverKitSetupPlan = {
+  platform: NodeJS.Platform;
+  outputDirectory: string;
+  driverDirectory: string;
+  hostAppDirectory: string;
+  hostBridgePath: string;
+  appBundleIdentifier: string;
+  driverBundleIdentifier: string;
+  driverClassName: string;
+  files: string[];
+  infoPlistPath: string;
+  driverEntitlementsPath: string;
+  hostEntitlementsPath: string;
+  driverHeaderPath: string;
+  driverSourcePath: string;
+  manifestPath: string;
+  readmePath: string;
+  doctorCommand: string;
+  codesignReminder: string;
+  activationCheckCommand: string;
+  nativeTestCommand: string;
+};
+
 export const defaultMacosDriverKitBundleOptions = {
   appBundleIdentifier: "com.opencontroller.app",
   driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
@@ -87,6 +119,139 @@ export function defaultMacosDriverKitHostBridgePath(
     "bin",
     "OpenControllerDriverKitHostBridge",
   );
+}
+
+export function defaultMacosDriverKitSetupDirectory(
+  baseDirectory = process.cwd(),
+): string {
+  return resolve(baseDirectory, "opencontroller-macos-driverkit");
+}
+
+export async function prepareMacosDriverKitSetup(
+  options: PrepareMacosDriverKitSetupOptions = {},
+): Promise<MacosDriverKitSetupPlan> {
+  const platform = options.platform ?? process.platform;
+  const outputDirectory = resolve(
+    options.outputDirectory ?? defaultMacosDriverKitSetupDirectory(),
+  );
+  const driverDirectory = join(outputDirectory, "driverkit-extension");
+  const hostAppDirectory = join(outputDirectory, "host-app");
+  const bundle = {
+    ...defaultMacosDriverKitBundleOptions,
+    ...(options.bundle ?? {}),
+    ...(options.driver ?? {}),
+  };
+  const driverOptions: MacosDriverKitDriverSourceOptions = {
+    ...bundle,
+    ...(options.driver ?? {}),
+  };
+  const driverFiles = createMacosDriverKitDriverSourceFiles(driverOptions);
+  const hostBridgePath =
+    options.hostBridgePath ?? defaultMacosDriverKitHostBridgePath();
+  const infoPlistPath = join(driverDirectory, "Info.plist");
+  const driverEntitlementsPath = join(
+    driverDirectory,
+    `${bundle.executableName}.entitlements`,
+  );
+  const hostEntitlementsPath = join(
+    hostAppDirectory,
+    "OpenControllerHost.entitlements",
+  );
+  const manifestPath = join(outputDirectory, "manifest.json");
+  const readmePath = join(outputDirectory, "README.md");
+  const files: string[] = [];
+
+  await mkdir(driverDirectory, { recursive: true });
+  await mkdir(hostAppDirectory, { recursive: true });
+
+  for (const [fileName, contents] of Object.entries(driverFiles)) {
+    const filePath = join(driverDirectory, fileName);
+    await writeFile(filePath, contents);
+    files.push(filePath);
+  }
+
+  await writeFile(infoPlistPath, createMacosDriverKitInfoPlist(bundle));
+  files.push(infoPlistPath);
+  await writeFile(
+    driverEntitlementsPath,
+    createMacosDriverKitEntitlements(bundle),
+  );
+  files.push(driverEntitlementsPath);
+  await writeFile(hostEntitlementsPath, createMacosHostAppEntitlements(bundle));
+  files.push(hostEntitlementsPath);
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(createMacosDriverKitAssetManifest(bundle), null, 2)}\n`,
+  );
+  files.push(manifestPath);
+
+  const plan: MacosDriverKitSetupPlan = {
+    platform,
+    outputDirectory,
+    driverDirectory,
+    hostAppDirectory,
+    hostBridgePath,
+    appBundleIdentifier: bundle.appBundleIdentifier,
+    driverBundleIdentifier: bundle.driverBundleIdentifier,
+    driverClassName: bundle.driverClassName,
+    files: [...files, readmePath],
+    infoPlistPath,
+    driverEntitlementsPath,
+    hostEntitlementsPath,
+    driverHeaderPath: join(
+      driverDirectory,
+      driverOptions.headerFileName ??
+        defaultMacosDriverKitDriverSourceOptions.headerFileName,
+    ),
+    driverSourcePath: join(
+      driverDirectory,
+      driverOptions.sourceFileName ??
+        defaultMacosDriverKitDriverSourceOptions.sourceFileName,
+    ),
+    manifestPath,
+    readmePath,
+    doctorCommand: "opencontroller-macos-driverkit-doctor --check",
+    codesignReminder:
+      "codesign and notarize the host app and embedded dext with approved DriverKit entitlements",
+    activationCheckCommand: "systemextensionsctl list",
+    nativeTestCommand: `opencontroller native test --backend macos-driverkit --host-bridge-path ${quoteShell(
+      hostBridgePath,
+    )} --driver-bundle-id ${quoteShell(
+      bundle.driverBundleIdentifier,
+    )} --driver-class-name ${quoteShell(bundle.driverClassName)}`,
+  };
+
+  await writeFile(readmePath, formatMacosDriverKitSetupReadme(plan));
+  return plan;
+}
+
+export function formatMacosDriverKitSetupPlan(
+  plan: MacosDriverKitSetupPlan,
+): string {
+  return [
+    "OpenController macOS DriverKit Setup",
+    "",
+    `Generated kit: ${plan.outputDirectory}`,
+    "",
+    "No privileged system changes were made.",
+    "",
+    "Generated files:",
+    ...plan.files.map((file) => `  ${file}`),
+    "",
+    "Verify local authoring tools:",
+    `  ${plan.doctorCommand}`,
+    "",
+    "Review, build, sign, notarize, and activate the host app and dext:",
+    `  ${plan.codesignReminder}`,
+    `  ${plan.activationCheckCommand}`,
+    "",
+    "After the signed host app activates the DriverKit extension, smoke-test the path:",
+    `  ${plan.nativeTestCommand}`,
+    "",
+    "Apple DriverKit requires approved entitlements, code signing, notarization,",
+    "and user-approved System Extension activation. This setup kit does not",
+    "bypass those requirements.",
+  ].join("\n");
 }
 
 export function createMacosDriverKitHostBridgeAdapter(
@@ -543,6 +708,65 @@ function escapeXml(value: string): string {
 
 function escapeCString(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function formatMacosDriverKitSetupReadme(
+  plan: MacosDriverKitSetupPlan,
+): string {
+  return [
+    "# OpenController macOS DriverKit Setup Kit",
+    "",
+    "This folder contains generated OpenController source material for a macOS",
+    "DriverKit virtual HID gamepad backend.",
+    "",
+    "No privileged system changes were made when this kit was generated.",
+    "",
+    "## Contents",
+    "",
+    `- Driver source: ${plan.driverSourcePath}`,
+    `- Driver header: ${plan.driverHeaderPath}`,
+    `- Driver Info.plist: ${plan.infoPlistPath}`,
+    `- Driver entitlements: ${plan.driverEntitlementsPath}`,
+    `- Host app entitlements: ${plan.hostEntitlementsPath}`,
+    `- Asset manifest: ${plan.manifestPath}`,
+    "",
+    "## Review And Build",
+    "",
+    "1. Review the generated DriverKit C++ source, Info.plist, entitlements, and manifest.",
+    "2. Create or attach these files to a DriverKit-capable Xcode project.",
+    "3. Build a host app that embeds and activates the DriverKit extension.",
+    "4. Sign and notarize the host app and dext with approved DriverKit entitlements.",
+    "5. Let the user approve System Extension activation.",
+    `6. Place the host bridge at ${plan.hostBridgePath}.`,
+    "",
+    "## Reviewed Commands",
+    "",
+    "Verify local authoring tools:",
+    "",
+    "```bash",
+    plan.doctorCommand,
+    "```",
+    "",
+    "Check System Extension activation state:",
+    "",
+    "```bash",
+    plan.activationCheckCommand,
+    "```",
+    "",
+    "After the signed host app activates the DriverKit extension, smoke-test the native path:",
+    "",
+    "```bash",
+    plan.nativeTestCommand,
+    "```",
+    "",
+    "DriverKit still needs explicit user trust. Do not hide virtual input driver",
+    "activation from the user.",
+    "",
+  ].join("\n");
+}
+
+function quoteShell(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function toCppIdentifier(value: string): string {

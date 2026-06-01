@@ -40,6 +40,30 @@ The doctor checks:
 
 It cannot verify Apple Developer Program entitlement approval.
 
+## Prepare A Reviewed DriverKit Kit
+
+Use the setup command to stage the generated DriverKit source, Info.plist,
+entitlements, manifest, README, and reviewed commands in one folder:
+
+```bash
+opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
+opencontroller-macos-driverkit-setup --json
+```
+
+The setup command creates files only. It does not sign, notarize, activate, or
+install a DriverKit System Extension. Build a host app that embeds the generated
+dext assets, sign and notarize both with approved DriverKit entitlements, and
+let the user approve System Extension activation.
+
+After the signed host app activates the DriverKit extension, smoke-test the
+native path:
+
+```bash
+opencontroller native test \
+  --backend macos-driverkit \
+  --host-bridge-path "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge"
+```
+
 ## DriverKit Assets
 
 ```bash
@@ -114,5 +138,6 @@ to the intended DriverKit service.
 
 - no host app SystemExtensions activation flow yet
 - no signed host bridge binary included yet
-- no signing, notarization, or entitlement automation
-- no automatic driver installation
+- no signing, notarization, or entitlement automation; setup emits reviewed
+  source files and commands only
+- no automatic driver installation or System Extension activation

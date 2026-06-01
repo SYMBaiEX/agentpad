@@ -56,6 +56,9 @@
   bridge from the CLI, including Linux `--dry-run` support
 - `opencontroller-windows-vhf-setup` added to stage reviewed Windows VHF
   driver/host source files and install/test commands without privileged changes
+- `opencontroller-macos-driverkit-setup` added to stage reviewed DriverKit
+  source, entitlements, manifest, and activation/test commands without
+  privileged changes
 
 ## v0.1.0
 

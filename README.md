@@ -230,6 +230,7 @@ The macOS native package adds:
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation
 - host bridge adapter factory for a signed DriverKit host process
+- setup helper for staging reviewed DriverKit/host source files and activation/test commands without privileged changes
 - `opencontroller-macos-driverkit-doctor`
 
 ### Core API
@@ -465,6 +466,7 @@ opencontroller native doctor --backend all --json
 opencontroller native test --backend linux-uinput --dry-run
 opencontroller native test --backend current
 opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
+opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
 opencontroller init
 ```
 
