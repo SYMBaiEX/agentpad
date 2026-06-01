@@ -100,18 +100,23 @@ The descriptor and input report bytes come from the shared
 the required `LowerFilters` entry for `vhf`.
 
 The generated driver source is a WDK/KMDF starting point that wires the shared
-descriptor into `VHF_CONFIG_INIT`, creates and starts a VHF device, accepts a
-13-byte OpenController HID input report through a buffered IOCTL, and submits it
-with `VhfReadReportSubmit`. It still needs a signed driver package and a
-reviewed user-mode host path before installation.
+descriptor with rumble output into `VHF_CONFIG_INIT`, creates and starts a VHF
+device, accepts a 13-byte OpenController HID input report through a buffered
+IOCTL, and submits it with `VhfReadReportSubmit`. It also registers
+`EvtVhfAsyncOperationWriteReport` so host HID output reports can be captured as
+5-byte rumble packets and exposed to the user-mode host bridge through a read
+IOCTL. It still needs a signed driver package and a reviewed user-mode host path
+before installation.
 
 The generated host bridge C source reads OpenController native bridge JSONL from
 stdin, prefers direct `hidReportBase64` payloads, falls back to converting
 legacy `reportBase64` XInput packets, opens the VHF driver with `CreateFileA`,
-and writes 13-byte HID reports through `DeviceIoControl`. Set
-`OPENCONTROLLER_CONTROLLER_ID` or pass `--controller-id` when the host bridge is
-reading a shared stream so each virtual device only reacts to its assigned
-controller.
+and writes 13-byte HID reports through `DeviceIoControl`. A background feedback
+thread polls the driver's rumble IOCTL and emits `opencontroller.bridge.feedback`
+JSONL on stdout so `NativeProcessBridgeAdapter` can surface host haptics through
+`controller.onFeedback(...)`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
+`--controller-id` when the host bridge is reading a shared stream so each virtual
+device only reacts to its assigned controller.
 
 After the driver and host bridge are built and reviewed, SDK code can spawn the
 host bridge directly:
@@ -127,10 +132,17 @@ const controller = await createController({
   profile: "xbox",
   adapter: createWindowsVhfHostBridgeAdapter({
     controllerId: "player-1",
+    supportsRumble: true,
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   }),
   replay: false
+});
+
+controller.onFeedback((event) => {
+  if (event.type === "rumble") {
+    console.log(event.weakMotor, event.strongMotor);
+  }
 });
 ```
 
@@ -154,4 +166,6 @@ emits for native bridge processes.
   commands only
 - generated host bridge source still needs a Windows build project and signed
   device install verification
+- rumble feedback requires the generated VHF driver and host bridge to be built
+  together so their submit/pop IOCTL function codes match
 - legacy ViGEmBus diagnostics are compatibility-only

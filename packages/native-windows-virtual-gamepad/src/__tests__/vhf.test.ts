@@ -124,6 +124,8 @@ describe("windows VHF helpers", () => {
       "static const UCHAR OpenControllerHidReportDescriptor[]",
     );
     expect(descriptor).toContain("0x05, 0x01");
+    expect(descriptor).toContain("0x85, 0x02");
+    expect(descriptor).toContain("0x91, 0x02");
     expect(inputReport).toContain(
       "static const UCHAR OpenControllerSampleInputReport[]",
     );
@@ -149,7 +151,13 @@ describe("windows VHF helpers", () => {
 
     expect(header).toContain("#include <vhf.h>");
     expect(header).toContain("IOCTL_OPENCONTROLLERVHFGAMEPAD_SUBMIT_REPORT");
+    expect(header).toContain(
+      "IOCTL_OPENCONTROLLERVHFGAMEPAD_POP_RUMBLE_REPORT",
+    );
     expect(header).toContain("VHFHANDLE VhfHandle");
+    expect(header).toContain("RumbleReport[5]");
+    expect(header).toContain("WDFSPINLOCK RumbleLock");
+    expect(header).toContain("EVT_VHF_ASYNC_OPERATION");
     expect(source).toContain("VHF_CONFIG_INIT");
     expect(source).toContain("VhfCreate(&vhfConfig");
     expect(source).toContain("VhfStart(context->VhfHandle)");
@@ -159,6 +167,13 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("OpenControllerVhfGamepad");
     expect(source).toContain("VhfReadReportSubmit(context->VhfHandle");
     expect(source).toContain("OpenControllerInputReportLength = 13");
+    expect(source).toContain("OpenControllerRumbleReportLength = 5");
+    expect(source).toContain("OpenControllerRumbleReportId = 2");
+    expect(source).toContain("EvtVhfAsyncOperationWriteReport");
+    expect(source).toContain("OpenControllerEvtVhfWriteReport");
+    expect(source).toContain("VhfAsyncOperationComplete");
+    expect(source).toContain("WdfSpinLockCreate");
+    expect(source).toContain("STATUS_NO_MORE_ENTRIES");
     expect(Object.keys(files)).toEqual([
       "OpenControllerVhfGamepad.h",
       "OpenControllerVhfGamepad.c",
@@ -172,13 +187,27 @@ describe("windows VHF helpers", () => {
 
     expect(header).toContain("#include <windows.h>");
     expect(header).toContain("OPENCONTROLLER_HID_REPORT_BYTES 13");
+    expect(header).toContain("OPENCONTROLLER_RUMBLE_REPORT_BYTES 5");
+    expect(header).toContain("OPENCONTROLLER_RUMBLE_REPORT_ID 2");
     expect(header).toContain("IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_SUBMIT_REPORT");
+    expect(header).toContain(
+      "IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_POP_RUMBLE_REPORT",
+    );
     expect(header).toContain("OPENCONTROLLERVHFHOSTBRIDGE_DEFAULT_DEVICE_PATH");
     expect(header).toContain("OpenControllerVhfGamepad");
     expect(source).toContain("CreateFileA");
+    expect(source).toContain("GENERIC_READ | GENERIC_WRITE");
+    expect(source).toContain("CreateThread");
+    expect(source).toContain("opencontroller_feedback_thread");
     expect(source).toContain("DeviceIoControl");
     expect(source).toContain("hidReportBase64");
     expect(source).toContain("reportBase64");
+    expect(source).toContain("opencontroller_pop_rumble_report");
+    expect(source).toContain("opencontroller_print_rumble_feedback");
+    expect(source).toContain("opencontroller.bridge.feedback");
+    expect(source).toContain("hid-gamepad-rumble");
+    expect(source).toContain("opencontroller_timestamp_ms");
+    expect(source).toContain("GetSystemTimeAsFileTime");
     expect(source).toContain("OPENCONTROLLER_CONTROLLER_ID");
     expect(source).toContain("opencontroller_line_matches_controller_id");
     expect(source).toContain("--controller-id");
@@ -224,6 +253,7 @@ describe("windows VHF helpers", () => {
       expect(plan.nativeTestCommand).toContain("--id player-1");
       expect(plan.nativeTestCommand).toContain("OpenControllerTestGamepad");
       expect(readme).toContain("No privileged system changes were made");
+      expect(readme).toContain("captures HID rumble output reports");
       expect(readme).toContain("Do not install");
       expect(hostBridgeHeader).toContain("OpenControllerTestGamepad");
       expect(formatted).toContain("OpenController Windows VHF Setup");

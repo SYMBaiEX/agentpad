@@ -98,16 +98,19 @@ The generated INF template includes the VHF lower filter declaration required
 for a HID source driver. Treat it as source material for a real signed driver
 package, not as an installer.
 
-The generated C source wires the OpenController HID descriptor into VHF and
-submits 13-byte input reports through `VhfReadReportSubmit`. Treat it as the
-WDK project starting point, then add signing, installation, and a user-mode host
-bridge that writes the buffered IOCTL.
+The generated C source wires the OpenController HID descriptor with rumble
+output into VHF, submits 13-byte input reports through `VhfReadReportSubmit`,
+and captures HID output reports through `EvtVhfAsyncOperationWriteReport`. Treat
+it as the WDK project starting point, then add signing, installation, and the
+generated user-mode host bridge.
 
 The generated host bridge C source is the user-mode side of that handoff. It
 reads OpenController native bridge JSONL from stdin, prefers direct
 `hidReportBase64` payloads, falls back to converting legacy `reportBase64`
 XInput bytes, opens the driver device path, and sends reports with
-`DeviceIoControl`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
+`DeviceIoControl`. It also polls the driver's rumble IOCTL from a feedback
+thread and prints `opencontroller.bridge.feedback` JSONL on stdout for
+`controller.onFeedback(...)`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
 `--controller-id` to bind a host bridge process to one controller from a shared
 multi-agent stream.
 
@@ -124,10 +127,17 @@ const controller = await createController({
   profile: "xbox",
   adapter: createWindowsVhfHostBridgeAdapter({
     controllerId: "player-1",
+    supportsRumble: true,
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   }),
   replay: false
+});
+
+controller.onFeedback((event) => {
+  if (event.type === "rumble") {
+    console.log(event.weakMotor, event.strongMotor);
+  }
 });
 ```
 

@@ -50,6 +50,9 @@
   VHF-backed virtual HID gamepad
 - Windows VHF asset generator now emits host bridge C source/header templates
   that stream OpenController JSONL reports to the driver with `DeviceIoControl`
+- Windows VHF generated driver and host bridge templates now include a rumble
+  output-report callback, pop IOCTL, feedback polling thread, and
+  `opencontroller.bridge.feedback` stdout events
 - Windows VHF host bridge templates now support `OPENCONTROLLER_CONTROLLER_ID`
   and `--controller-id` filtering for shared multi-agent streams
 - Windows VHF helpers now export `createWindowsVhfHostBridgeAdapter` for
