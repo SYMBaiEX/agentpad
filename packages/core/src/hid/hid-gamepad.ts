@@ -1,5 +1,4 @@
 import type { NativeBridgeStateMessage } from "../bridge/native";
-import { nativeBridgeMessageToHidGamepadReportBytes } from "../bridge/native";
 import type { ControllerState } from "../types";
 import { createHidGamepadButtonMask } from "./hid-buttons";
 import { type XInputGamepadReport, createXInputReport } from "./xinput";
@@ -169,9 +168,13 @@ export function createHidGamepadRumbleReport(
 export function hidGamepadReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
 ): HidGamepadReport {
-  return decodeHidGamepadReport(
-    nativeBridgeMessageToHidGamepadReportBytes(message),
-  );
+  if (message.hidReportFormat === "hid-gamepad" && message.hidReportBase64) {
+    return decodeHidGamepadReport(base64ToBytes(message.hidReportBase64));
+  }
+  if (message.hidReportFormat === "hid-gamepad" && message.hidReport) {
+    return createHidGamepadReport(message.hidReport);
+  }
+  return createHidGamepadReport(message.report);
 }
 
 export function encodeHidGamepadReport(
@@ -273,6 +276,15 @@ function toU8(value: number): number {
     return 0;
   }
   return Math.round(Math.min(1, Math.max(0, value)) * 255);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }
 
 function clampByte(value: number): number {

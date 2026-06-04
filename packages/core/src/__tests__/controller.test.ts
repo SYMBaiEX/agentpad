@@ -5,6 +5,8 @@ import { join } from "node:path";
 import {
   type ControllerFeedbackEvent,
   DryRunAdapter,
+  HidGamepadReportAdapter,
+  HidPlayStationExtendedReportAdapter,
   NativeBridgeAdapter,
   NativeProcessBridgeAdapter,
   WebSocketAdapter,
@@ -575,6 +577,20 @@ describe("controller runtime", () => {
     expect(xinput.supportsGyro).toBe(false);
     expect(xinput.outputFormats).toContain("xinput-report");
 
+    const hidGamepad = new HidGamepadReportAdapter().capabilities();
+    const hidPlayStation =
+      new HidPlayStationExtendedReportAdapter().capabilities();
+    expect(hidGamepad.reportFormats).toEqual(["hid-gamepad"]);
+    expect(hidGamepad.outputFormats).toContain("hid-gamepad-report");
+    expect(hidGamepad.supportsStateSync).toBe(true);
+    expect(hidPlayStation.reportFormats).toEqual(["hid-playstation-extended"]);
+    expect(hidPlayStation.outputFormats).toContain(
+      "hid-playstation-extended-report",
+    );
+    expect(hidPlayStation.supportedProfiles).toEqual(["playstation"]);
+    expect(hidPlayStation.supportsTouchpad).toBe(true);
+    expect(hidPlayStation.supportsGyro).toBe(true);
+
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
     expect(nativeBridge.reportFormats).toEqual([
       "xinput",
@@ -745,6 +761,62 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("resolves HID report adapters by adapter name", async () => {
+    const hidGamepad = await createController({
+      profile: "xbox",
+      adapter: "hid-gamepad-report",
+      replay: false,
+    });
+    const playstation = await createController({
+      profile: "playstation",
+      adapter: "hid-playstation-extended-report",
+      replay: false,
+    });
+
+    expect(hidGamepad.capabilities().reportFormats).toEqual(["hid-gamepad"]);
+    expect(playstation.capabilities().reportFormats).toEqual([
+      "hid-playstation-extended",
+    ]);
+
+    await hidGamepad.disconnect();
+    await playstation.disconnect();
+  });
+
+  test("streams controller state as HID gamepad reports", async () => {
+    const callbackBytes: Uint8Array[] = [];
+    const adapter = new HidGamepadReportAdapter({
+      onReport({ bytes }) {
+        callbackBytes.push(bytes);
+      },
+    });
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.setState({
+      buttons: { A: true },
+      triggers: { RT: 0.5 },
+      sticks: { LEFT: { x: 1, y: -1 } },
+    });
+
+    const latest = adapter.reports.at(-1);
+    if (!latest) {
+      throw new Error("Expected a HID gamepad report");
+    }
+    const report = decodeHidGamepadReport(latest.bytes);
+
+    expect(callbackBytes).toHaveLength(adapter.reports.length);
+    expect(latest.bytes.byteLength).toBe(hidGamepadReportByteLength);
+    expect(report.buttons & xInputButtonBits.A).toBe(xInputButtonBits.A);
+    expect(report.rightTrigger).toBe(128);
+    expect(report.leftStickX).toBe(32767);
+    expect(report.leftStickY).toBe(32767);
+
+    await controller.disconnect();
+  });
+
   test("encodes HID gamepad rumble output reports", () => {
     const bytes = encodeHidGamepadRumbleReport({
       weakMotor: 0.25,
@@ -825,6 +897,56 @@ describe("controller runtime", () => {
     expect(report.gyroscopeY).toBe(16384);
     expect(report.orientationX).toBe(16384);
     expect(report.orientationY).toBe(-16384);
+
+    await controller.disconnect();
+  });
+
+  test("streams PlayStation extended HID reports", async () => {
+    const callbackReports: number[] = [];
+    const adapter = new HidPlayStationExtendedReportAdapter({
+      onReport({ report }) {
+        callbackReports.push(report.reportId);
+      },
+    });
+    const controller = await createController({
+      profile: "playstation",
+      adapter,
+      replay: false,
+    });
+
+    await controller.setState({
+      buttons: { X: true },
+      touchpad: {
+        pressed: true,
+        contacts: [{ id: 2, x: 0.5, y: 0.25, pressure: 0.75 }],
+      },
+      motion: {
+        acceleration: { x: 0.1, y: 0.2, z: 0.3 },
+        gyroscope: { x: -0.1, y: -0.2, z: -0.3 },
+      },
+    });
+
+    const latest = adapter.reports.at(-1);
+    if (!latest) {
+      throw new Error("Expected a PlayStation extended HID report");
+    }
+    const report = decodeHidPlayStationExtendedReport(latest.bytes);
+
+    expect(callbackReports).toHaveLength(adapter.reports.length);
+    expect(latest.bytes.byteLength).toBe(
+      hidPlayStationExtendedReportByteLength,
+    );
+    expect(report.reportId).toBe(hidPlayStationExtendedReportId);
+    expect(report.touchpadPressed).toBe(true);
+    expect(report.touchpadContacts[0]).toMatchObject({
+      id: 2,
+      active: true,
+      x: 32768,
+      y: 16384,
+      pressure: 191,
+    });
+    expect(report.accelerationZ).toBe(9830);
+    expect(report.gyroscopeZ).toBe(-9830);
 
     await controller.disconnect();
   });

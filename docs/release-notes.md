@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added direct `HidGamepadReportAdapter` and
+  `HidPlayStationExtendedReportAdapter` callback adapters for in-process HID
+  report byte streams.
 - Added `controller.setState(...)` and raw `setState` commands for atomic
   partial controller-state patches across buttons, triggers, sticks, D-pad,
   touchpad, and motion.
@@ -18,7 +21,7 @@
   encoded as combined cardinal D-pad state and report bits.
 - D-pad helper commands now honor disabled-button, disabled-combo, and
   max-button-hold safety policies through their underlying `DPAD_*` buttons.
-- Prepared workspace package manifests for the next `0.1.3` npm patch release.
+- Prepared workspace package manifests for the next `0.1.4` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.

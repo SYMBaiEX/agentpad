@@ -2,6 +2,10 @@ import { AdapterError } from "../errors";
 import type { CreateControllerOptions } from "../types";
 import type { ControllerAdapter } from "./adapter";
 import { DryRunAdapter } from "./dry-run";
+import {
+  HidGamepadReportAdapter,
+  HidPlayStationExtendedReportAdapter,
+} from "./hid-report";
 import { NativeBridgeAdapter } from "./native-bridge";
 import { WebSocketAdapter } from "./websocket";
 import { XInputReportAdapter } from "./xinput-report";
@@ -26,6 +30,10 @@ export async function resolveAdapter(
       return new WebSocketAdapter({ url: options.url });
     case "xinput-report":
       return new XInputReportAdapter();
+    case "hid-gamepad-report":
+      return new HidGamepadReportAdapter();
+    case "hid-playstation-extended-report":
+      return new HidPlayStationExtendedReportAdapter();
     case "native-bridge":
       return new NativeBridgeAdapter();
   }
@@ -33,6 +41,7 @@ export async function resolveAdapter(
 
 export * from "./adapter";
 export * from "./dry-run";
+export * from "./hid-report";
 export * from "./native-bridge";
 export * from "./native-process";
 export * from "./websocket";

@@ -7,6 +7,8 @@ Current adapters:
 - `dry-run`
 - `websocket`
 - `xinput-report`
+- `hid-gamepad-report`
+- `hid-playstation-extended-report`
 - `native-bridge`
 - `NativeProcessBridgeAdapter`
 
@@ -43,8 +45,9 @@ if (capabilities.feedbackTypes.includes("rumble")) {
 ```
 
 Use `native-bridge` when a separate process needs JSONL messages with packed
-XInput report bytes. Use `xinput-report` when code in the same process wants
-direct access to reports without a wire format.
+XInput/HID report bytes. Use `xinput-report`, `hid-gamepad-report`, or
+`hid-playstation-extended-report` when code in the same process wants direct
+access to reports without a wire format.
 
 Use `NativeProcessBridgeAdapter` when OpenController should spawn and own a
 helper process such as `opencontroller-uinput-bridge`. It writes the same JSONL

@@ -239,6 +239,7 @@ export type ControllerAdapterOutputFormat =
   | "websocket-json"
   | "xinput-report"
   | "hid-gamepad-report"
+  | "hid-playstation-extended-report"
   | "native-bridge-jsonl";
 
 export type ControllerAdapterReportFormat =
@@ -341,6 +342,8 @@ export type AdapterName =
   | "dry-run"
   | "websocket"
   | "xinput-report"
+  | "hid-gamepad-report"
+  | "hid-playstation-extended-report"
   | "native-bridge";
 
 export type CreateControllerOptions = {

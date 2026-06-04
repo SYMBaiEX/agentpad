@@ -357,6 +357,7 @@ local bridge needs.
 ### HID Gamepad Reports
 
 ```ts
+import { HidGamepadReportAdapter } from "@opencontroller/core";
 import {
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
@@ -368,6 +369,13 @@ const bytes = encodeHidGamepadReport(controller.getState());
 const rumble = encodeHidGamepadRumbleReport({
   weakMotor: 0.25,
   strongMotor: 0.8
+});
+
+const adapter = new HidGamepadReportAdapter({
+  onReport({ bytes }) {
+    // Send bytes directly to an in-process virtual HID bridge.
+    console.log(bytes);
+  }
 });
 ```
 
@@ -595,6 +603,8 @@ Current adapters:
 - `dry-run`: updates state, safety, and replay logs without touching a real device
 - `websocket`: streams normalized controller commands to an app, game, bridge, or emulator
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
+- `hid-gamepad-report`: turns controller state into 13-byte descriptor-backed HID gamepad reports
+- `hid-playstation-extended-report`: turns PlayStation state into 47-byte HID reports with touchpad and motion bytes
 - `native-bridge`: emits versioned JSONL messages with XInput, generic HID, and profile HID report payloads for native bridge processes
 - `NativeProcessBridgeAdapter`: streams JSONL directly to a helper process stdin
 

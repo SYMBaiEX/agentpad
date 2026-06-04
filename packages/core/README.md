@@ -165,6 +165,39 @@ The current native XInput/HID report helpers still encode the common gamepad
 subset, so inspect `controller.capabilities()` before assuming a backend carries
 touch or sensor channels.
 
+## Report Adapters
+
+```ts
+import {
+  HidGamepadReportAdapter,
+  HidPlayStationExtendedReportAdapter,
+  XInputReportAdapter
+} from "@opencontroller/core";
+
+const xinput = new XInputReportAdapter({
+  onReport({ bytes }) {
+    console.log("xinput", bytes);
+  },
+});
+
+const hid = new HidGamepadReportAdapter({
+  onReport({ bytes }) {
+    console.log("hid", bytes);
+  },
+});
+
+const playstation = new HidPlayStationExtendedReportAdapter({
+  onReport({ bytes }) {
+    console.log("playstation", bytes);
+  },
+});
+```
+
+Use `xinput-report` for the compact 12-byte XInput compatibility payload,
+`hid-gamepad-report` for the 13-byte descriptor-backed generic HID gamepad
+payload, and `hid-playstation-extended-report` for the 47-byte PlayStation
+profile payload that carries touchpad contacts and motion vectors.
+
 ## Capability Metadata
 
 ```ts

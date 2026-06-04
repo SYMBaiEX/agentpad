@@ -35,7 +35,23 @@ haptics from the host.
 ## Input Report Bytes
 
 ```ts
+import {
+  HidGamepadReportAdapter,
+  createController
+} from "@opencontroller/core";
 import { encodeHidGamepadReport } from "@opencontroller/core/hid";
+
+const adapter = new HidGamepadReportAdapter({
+  onReport({ controllerId, bytes }) {
+    console.log(controllerId, bytes);
+  }
+});
+
+const controller = await createController({
+  profile: "xbox",
+  adapter,
+  replay: false
+});
 
 const bytes = encodeHidGamepadReport(controller.getState());
 ```
@@ -92,10 +108,26 @@ fallback.
 
 ```ts
 import {
+  HidPlayStationExtendedReportAdapter,
+  createController
+} from "@opencontroller/core";
+import {
   decodeHidPlayStationExtendedReport,
   encodeHidPlayStationExtendedReport,
   hidPlayStationExtendedReportDescriptor
 } from "@opencontroller/core/hid";
+
+const adapter = new HidPlayStationExtendedReportAdapter({
+  onReport({ bytes }) {
+    console.log(bytes);
+  }
+});
+
+const controller = await createController({
+  profile: "playstation",
+  adapter,
+  replay: false
+});
 
 const bytes = encodeHidPlayStationExtendedReport(controller.getState());
 const report = decodeHidPlayStationExtendedReport(bytes);
