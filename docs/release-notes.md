@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added explicit persistent-state commands and helpers: `setButton`,
+  `setStick`, `setTrigger`, and `setDpad`.
+- `setDpad("NEUTRAL")` now clears structured D-pad state without resetting the
+  rest of the controller.
+- Adapter capability metadata now advertises persistent state command support.
 - Added `controller.press(button, { durationMs, pressure, context })` so agents
   can express analog button pressure without dropping to raw command objects.
 - Direct trigger button presses now map to full analog trigger state, and direct
@@ -10,7 +15,7 @@
   encoded as combined cardinal D-pad state and report bits.
 - D-pad helper commands now honor disabled-button, disabled-combo, and
   max-button-hold safety policies through their underlying `DPAD_*` buttons.
-- Prepared workspace package manifests for the next `0.1.1` npm patch release.
+- Prepared workspace package manifests for the next `0.1.2` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.

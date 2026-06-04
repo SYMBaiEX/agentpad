@@ -4,10 +4,12 @@ import type {
   CommandContext,
   ControllerCommand,
   ControllerPressOptions,
+  ControllerSetButtonOptions,
   ControllerTouchpadContactInput,
   ControllerVector3,
   CreateControllerOptions,
   DpadDirection,
+  DpadState,
   FeedbackListener,
   StateListener,
   StickName,
@@ -52,6 +54,40 @@ export class Controller {
     await this.runtime.send({ type: "release", button }, context);
   }
 
+  async setButton(
+    button: string,
+    pressed: boolean,
+    context?: CommandContext,
+  ): Promise<void>;
+  async setButton(
+    button: string,
+    options: ControllerSetButtonOptions,
+  ): Promise<void>;
+  async setButton(
+    button: string,
+    pressedOrOptions: boolean | ControllerSetButtonOptions,
+    context?: CommandContext,
+  ): Promise<void> {
+    const options: ControllerSetButtonOptions =
+      typeof pressedOrOptions === "boolean"
+        ? {
+            pressed: pressedOrOptions,
+            ...(context !== undefined ? { context } : {}),
+          }
+        : pressedOrOptions;
+    await this.runtime.send(
+      {
+        type: "setButton",
+        button,
+        pressed: options.pressed,
+        ...(options.pressure !== undefined
+          ? { pressure: options.pressure }
+          : {}),
+      },
+      options.context,
+    );
+  }
+
   async moveStick(
     stick: StickName,
     value: { x: number; y: number },
@@ -65,6 +101,22 @@ export class Controller {
         x: value.x,
         y: value.y,
         durationMs,
+      },
+      context,
+    );
+  }
+
+  async setStick(
+    stick: StickName,
+    value: { x: number; y: number },
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send(
+      {
+        type: "setStick",
+        stick,
+        x: value.x,
+        y: value.y,
       },
       context,
     );
@@ -87,12 +139,31 @@ export class Controller {
     );
   }
 
+  async setTrigger(
+    trigger: string,
+    value: number,
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send(
+      {
+        type: "setTrigger",
+        trigger,
+        value,
+      },
+      context,
+    );
+  }
+
   async dpad(
     direction: DpadDirection,
     durationMs = 90,
     context?: CommandContext,
   ): Promise<void> {
     await this.runtime.send({ type: "dpad", direction, durationMs }, context);
+  }
+
+  async setDpad(direction: DpadState, context?: CommandContext): Promise<void> {
+    await this.runtime.send({ type: "setDpad", direction }, context);
   }
 
   async combo(

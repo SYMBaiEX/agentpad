@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/native-linux-uinput",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Linux uinput bridge for OpenController native virtual gamepad emulation.",
   "type": "module",
   "license": "MIT",
@@ -61,7 +61,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "^0.1.1"
+    "@opencontroller/core": "^0.1.2"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",

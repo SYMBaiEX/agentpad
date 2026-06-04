@@ -6,6 +6,7 @@ import type {
   ControllerVector3,
   DpadCardinalDirection,
   DpadDirection,
+  DpadState,
   StateListener,
 } from "./types";
 
@@ -44,7 +45,9 @@ export class ControllerStateStore {
   ): ControllerState {
     this.state.buttons[button] = pressed;
     if (pressure !== undefined) {
-      this.state.analogButtons[button] = pressure;
+      if (pressed || button in this.state.analogButtons || pressure !== 0) {
+        this.state.analogButtons[button] = pressure;
+      }
     } else if (this.profile.triggers.includes(button)) {
       this.state.analogButtons[button] = pressed ? 1 : 0;
     }
@@ -75,6 +78,18 @@ export class ControllerStateStore {
       const key = dpadKeyFromCardinal(cardinal);
       this.state.dpad[key] = pressed;
       this.state.buttons[`DPAD_${cardinal}`] = pressed;
+    }
+    return this.commit();
+  }
+
+  setDpadState(direction: DpadState): ControllerState {
+    this.clearDpadState();
+    if (direction !== "NEUTRAL") {
+      for (const cardinal of dpadDirections(direction)) {
+        const key = dpadKeyFromCardinal(cardinal);
+        this.state.dpad[key] = true;
+        this.state.buttons[`DPAD_${cardinal}`] = true;
+      }
     }
     return this.commit();
   }
@@ -134,6 +149,18 @@ export class ControllerStateStore {
     this.state.motion.orientation = neutralVector3();
 
     return this.commit();
+  }
+
+  private clearDpadState(): void {
+    this.state.dpad.up = false;
+    this.state.dpad.down = false;
+    this.state.dpad.left = false;
+    this.state.dpad.right = false;
+    for (const button of ["DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT"]) {
+      if (button in this.state.buttons) {
+        this.state.buttons[button] = false;
+      }
+    }
   }
 
   private commit(): ControllerState {

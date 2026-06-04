@@ -109,6 +109,91 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("sets persistent button state without auto release", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.setButton("A", true);
+
+    const pressedState = controller.getState();
+    const pressedReport = decodeXInputReport(encodeXInputReport(pressedState));
+
+    expect(pressedState.buttons.A).toBe(true);
+    expect("A" in pressedState.analogButtons).toBe(false);
+    expect(pressedReport.buttons & xInputButtonBits.A).toBe(xInputButtonBits.A);
+    expect(adapter.history.at(-1)?.command).toEqual({
+      type: "setButton",
+      button: "A",
+      pressed: true,
+    });
+
+    await controller.setButton("A", false);
+
+    const releasedState = controller.getState();
+    const releasedReport = decodeXInputReport(
+      encodeXInputReport(releasedState),
+    );
+
+    expect(releasedState.buttons.A).toBe(false);
+    expect("A" in releasedState.analogButtons).toBe(false);
+    expect(releasedReport.buttons & xInputButtonBits.A).toBe(0);
+
+    await controller.disconnect();
+  });
+
+  test("sets persistent analog and dpad state", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.setStick("LEFT", { x: 0.5, y: -0.5 });
+    await controller.setTrigger("RT", 0.25);
+    await controller.setDpad("UP_RIGHT");
+
+    const heldState = controller.getState();
+    const heldReport = decodeXInputReport(encodeXInputReport(heldState));
+
+    expect(heldState.sticks.left).toEqual({ x: 0.5, y: -0.5 });
+    expect(heldState.analogButtons.RT).toBe(0.25);
+    expect(heldState.dpad).toEqual({
+      up: true,
+      down: false,
+      left: false,
+      right: true,
+    });
+    expect(heldReport.rightTrigger).toBe(64);
+    expect(heldReport.buttons & xInputButtonBits.DPAD_UP).toBe(
+      xInputButtonBits.DPAD_UP,
+    );
+    expect(heldReport.buttons & xInputButtonBits.DPAD_RIGHT).toBe(
+      xInputButtonBits.DPAD_RIGHT,
+    );
+
+    await controller.setDpad("NEUTRAL");
+
+    expect(controller.getState().dpad).toEqual({
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+    });
+    expect(adapter.history.map((entry) => entry.command.type)).toEqual([
+      "setStick",
+      "setTrigger",
+      "setDpad",
+      "setDpad",
+    ]);
+
+    await controller.disconnect();
+  });
+
   test("maps binary trigger button presses to full analog pulls", async () => {
     const controller = await createController({
       profile: "xbox",
@@ -317,6 +402,28 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("applies safety policies to persistent state commands", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+      safety: {
+        disabledButtons: ["DPAD_UP", "GUIDE"],
+        disabledCombos: [["DPAD_UP", "DPAD_RIGHT"]],
+      },
+    });
+
+    await expect(controller.setButton("GUIDE", true)).rejects.toThrow(
+      "Button GUIDE is disabled by safety config",
+    );
+    await expect(controller.setDpad("UP")).rejects.toThrow(
+      "Button DPAD_UP is disabled by safety config",
+    );
+    await controller.setDpad("NEUTRAL");
+
+    await controller.disconnect();
+  });
+
   test("describes adapter emulation capabilities", () => {
     const dryRun = new DryRunAdapter().capabilities();
     const websocket = new WebSocketAdapter({
@@ -332,6 +439,10 @@ describe("controller runtime", () => {
 
     expect(dryRun.supportedProfiles).toContain("keyboard-mouse");
     expect(dryRun.supportedCommands).toContain("combo");
+    expect(dryRun.supportedCommands).toContain("setButton");
+    expect(dryRun.supportedCommands).toContain("setStick");
+    expect(dryRun.supportedCommands).toContain("setTrigger");
+    expect(dryRun.supportedCommands).toContain("setDpad");
     expect(dryRun.supportedCommands).toContain("touchpad");
     expect(dryRun.supportedCommands).toContain("motion");
     expect(dryRun.supportsTouchpad).toBe(true);

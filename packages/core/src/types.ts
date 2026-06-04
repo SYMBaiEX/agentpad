@@ -15,6 +15,7 @@ export type DpadDiagonalDirection =
   | "DOWN_LEFT"
   | "DOWN_RIGHT";
 export type DpadDirection = DpadCardinalDirection | DpadDiagonalDirection;
+export type DpadState = DpadDirection | "NEUTRAL";
 
 export type ControllerVector3 = {
   x: number;
@@ -50,6 +51,12 @@ export type ControllerCommand =
       button: string;
     }
   | {
+      type: "setButton";
+      button: string;
+      pressed: boolean;
+      pressure?: number;
+    }
+  | {
       type: "stick";
       stick: StickName;
       x: number;
@@ -63,9 +70,24 @@ export type ControllerCommand =
       durationMs?: number;
     }
   | {
+      type: "setStick";
+      stick: StickName;
+      x: number;
+      y: number;
+    }
+  | {
+      type: "setTrigger";
+      trigger: string;
+      value: number;
+    }
+  | {
       type: "dpad";
       direction: DpadDirection;
       durationMs?: number;
+    }
+  | {
+      type: "setDpad";
+      direction: DpadState;
     }
   | {
       type: "combo";
@@ -100,6 +122,12 @@ export type ControllerCommand =
 
 export type ControllerPressOptions = {
   durationMs?: number;
+  pressure?: number;
+  context?: CommandContext;
+};
+
+export type ControllerSetButtonOptions = {
+  pressed: boolean;
   pressure?: number;
   context?: CommandContext;
 };

@@ -7,6 +7,15 @@ OpenController has four core concepts:
 - Adapter: the output backend that receives normalized commands.
 - Overlay: a visual renderer that reads controller state.
 
+OpenController exposes two command styles:
+
+- Timed commands such as `press`, `moveStick`, `trigger`, `dpad`, and `combo`
+  perform an input and then return that control to neutral after the requested
+  duration.
+- Stateful commands such as `setButton`, `setStick`, `setTrigger`, and
+  `setDpad` hold an exact controller state until the same control changes or
+  `neutral` resets the controller.
+
 Commands flow through the runtime in this order:
 
 ```txt

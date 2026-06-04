@@ -7,6 +7,7 @@ import {
   type ControllerCommand,
   type ControllerState,
   type DpadDirection,
+  type DpadState,
   createControllerHub,
   createInitialControllerState,
   dpadButtons,
@@ -493,6 +494,14 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
     case "release":
       setButtonState(state, command.button, false);
       return;
+    case "setButton":
+      setButtonState(
+        state,
+        command.button,
+        command.pressed,
+        command.pressed ? command.pressure : 0,
+      );
+      return;
     case "stick": {
       const stick =
         command.stick === "LEFT" ? state.sticks.left : state.sticks.right;
@@ -501,10 +510,21 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
       scheduleStickNeutral(playerId, command.stick, command.durationMs);
       return;
     }
+    case "setStick": {
+      const stick =
+        command.stick === "LEFT" ? state.sticks.left : state.sticks.right;
+      stick.x = command.x;
+      stick.y = command.y;
+      return;
+    }
     case "trigger":
       state.analogButtons[command.trigger] = command.value;
       state.buttons[command.trigger] = command.value > 0;
       scheduleTriggerNeutral(playerId, command.trigger, command.durationMs);
+      return;
+    case "setTrigger":
+      state.analogButtons[command.trigger] = command.value;
+      state.buttons[command.trigger] = command.value > 0;
       return;
     case "dpad": {
       for (const button of dpadButtons(command.direction)) {
@@ -513,6 +533,9 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
       scheduleDpadRelease(playerId, command.direction, command.durationMs);
       return;
     }
+    case "setDpad":
+      setDpadState(state, command.direction);
+      return;
     case "touchpad":
       state.touchpad.pressed = command.pressed ?? false;
       state.touchpad.contacts =
@@ -637,6 +660,18 @@ function setButtonState(
   const dpadKey = dpadKeyFromButton(button);
   if (dpadKey) {
     state.dpad[dpadKey] = pressed;
+  }
+}
+
+function setDpadState(state: ControllerState, direction: DpadState): void {
+  for (const button of ["DPAD_UP", "DPAD_DOWN", "DPAD_LEFT", "DPAD_RIGHT"]) {
+    setButtonState(state, button, false);
+  }
+  if (direction === "NEUTRAL") {
+    return;
+  }
+  for (const button of dpadButtons(direction)) {
+    setButtonState(state, button, true);
   }
 }
 
@@ -1205,12 +1240,26 @@ async function performAction(
       case "release":
         await controller.release(command.button);
         break;
+      case "setButton":
+        await controller.setButton(command.button, {
+          pressed: command.pressed,
+          ...(command.pressure !== undefined
+            ? { pressure: command.pressure }
+            : {}),
+        });
+        break;
       case "stick":
         await controller.moveStick(
           command.stick,
           { x: command.x, y: command.y },
           command.durationMs,
         );
+        break;
+      case "setStick":
+        await controller.setStick(command.stick, {
+          x: command.x,
+          y: command.y,
+        });
         break;
       case "trigger":
         await controller.trigger(
@@ -1219,8 +1268,14 @@ async function performAction(
           command.durationMs,
         );
         break;
+      case "setTrigger":
+        await controller.setTrigger(command.trigger, command.value);
+        break;
       case "dpad":
         await controller.dpad(command.direction, command.durationMs);
+        break;
+      case "setDpad":
+        await controller.setDpad(command.direction);
         break;
       case "touchpad":
         await controller.touchpad(touchpadInput(command), command.durationMs);

@@ -117,6 +117,7 @@ export class SafetyGuard {
     switch (command.type) {
       case "press":
       case "release":
+      case "setButton":
         this.assertButtonAllowed(command.button);
         return;
       case "combo":
@@ -131,6 +132,7 @@ export class SafetyGuard {
         }
         return;
       case "trigger":
+      case "setTrigger":
         this.assertButtonAllowed(command.trigger);
         return;
       case "dpad": {
@@ -143,7 +145,21 @@ export class SafetyGuard {
         }
         return;
       }
+      case "setDpad": {
+        if (command.direction === "NEUTRAL") {
+          return;
+        }
+        const buttons = dpadButtons(command.direction);
+        for (const button of buttons) {
+          this.assertButtonAllowed(button);
+        }
+        if (buttons.length > 1) {
+          this.assertComboAllowed(buttons);
+        }
+        return;
+      }
       case "stick":
+      case "setStick":
       case "touchpad":
       case "motion":
       case "wait":

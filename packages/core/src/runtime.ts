@@ -135,11 +135,20 @@ export class ControllerRuntime {
       case "release":
         await this.runRelease(command, context);
         return;
+      case "setButton":
+        await this.runSetButton(command, context);
+        return;
       case "stick":
         await this.runStick(command, context);
         return;
       case "trigger":
         await this.runTrigger(command, context);
+        return;
+      case "setStick":
+        await this.runSetStick(command, context);
+        return;
+      case "setTrigger":
+        await this.runSetTrigger(command, context);
         return;
       case "touchpad":
         await this.runTouchpad(command, context);
@@ -149,6 +158,9 @@ export class ControllerRuntime {
         return;
       case "dpad":
         await this.runDpad(command, context);
+        return;
+      case "setDpad":
+        await this.runSetDpad(command, context);
         return;
     }
   }
@@ -200,6 +212,26 @@ export class ControllerRuntime {
     await this.syncState(after);
   }
 
+  private async runSetButton(
+    command: Extract<ControllerCommand, { type: "setButton" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "setButton") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setButton(
+      normalized.command.button,
+      normalized.command.pressed,
+      normalized.command.pressed ? normalized.command.pressure : 0,
+    );
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+  }
+
   private async runStick(
     command: Extract<ControllerCommand, { type: "stick" }>,
     context: CommandContext,
@@ -236,6 +268,26 @@ export class ControllerRuntime {
     }
   }
 
+  private async runSetStick(
+    command: Extract<ControllerCommand, { type: "setStick" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "setStick") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setStick(
+      normalized.command.stick,
+      normalized.command.x,
+      normalized.command.y,
+    );
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+  }
+
   private async runTrigger(
     command: Extract<ControllerCommand, { type: "trigger" }>,
     context: CommandContext,
@@ -270,6 +322,25 @@ export class ControllerRuntime {
     }
   }
 
+  private async runSetTrigger(
+    command: Extract<ControllerCommand, { type: "setTrigger" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "setTrigger") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setTrigger(
+      normalized.command.trigger,
+      normalized.command.value,
+    );
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+  }
+
   private async runDpad(
     command: Extract<ControllerCommand, { type: "dpad" }>,
     context: CommandContext,
@@ -294,6 +365,22 @@ export class ControllerRuntime {
         await this.runRelease({ type: "release", button }, context);
       }
     }
+  }
+
+  private async runSetDpad(
+    command: Extract<ControllerCommand, { type: "setDpad" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "setDpad") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.setDpadState(normalized.command.direction);
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
   }
 
   private async runTouchpad(

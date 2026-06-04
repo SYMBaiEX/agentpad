@@ -4,6 +4,7 @@ import type {
   ControllerProfileName,
   DpadCardinalDirection,
   DpadDirection,
+  DpadState,
   NormalizedControllerCommand,
 } from "../types";
 import { genericHidProfile } from "./generic-hid";
@@ -155,6 +156,29 @@ export function normalizeCommand(
         ...(universal ? { universal: { buttons: [universal] } } : {}),
       };
     }
+    case "setButton": {
+      const button = resolveButton(profile, command.button);
+      const universal = toUniversal(profile, button);
+      const normalizedCommand: ControllerCommand =
+        command.pressure === undefined
+          ? {
+              ...command,
+              button,
+            }
+          : {
+              ...command,
+              button,
+              pressure: clamp(command.pressure, 0, 1),
+            };
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: normalizedCommand,
+        timestamp,
+        ...(universal ? { universal: { buttons: [universal] } } : {}),
+      };
+    }
     case "trigger": {
       const trigger = resolveTrigger(profile, command.trigger);
       const universal = toUniversal(profile, trigger);
@@ -171,7 +195,38 @@ export function normalizeCommand(
         ...(universal ? { universal: { trigger: universal } } : {}),
       };
     }
+    case "setTrigger": {
+      const trigger = resolveTrigger(profile, command.trigger);
+      const universal = toUniversal(profile, trigger);
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          trigger,
+          value: clamp(command.value, 0, 1),
+        },
+        timestamp,
+        ...(universal ? { universal: { trigger: universal } } : {}),
+      };
+    }
     case "stick":
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          x: clamp(command.x, -1, 1),
+          y: clamp(command.y, -1, 1),
+        },
+        timestamp,
+        universal: {
+          stick: command.stick,
+        },
+      };
+    case "setStick":
       return {
         id,
         controllerId,
@@ -260,6 +315,17 @@ export function normalizeCommand(
           : {}),
       };
     }
+    case "setDpad": {
+      const universal = universalDpadState(profile, command.direction);
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command,
+        timestamp,
+        ...(universal ? { universal: { dpad: universal } } : {}),
+      };
+    }
     case "combo": {
       const buttons = command.buttons.map((button) =>
         resolveButton(profile, button),
@@ -320,6 +386,23 @@ function assertFinite(value: number): void {
       `Expected a finite number, received ${String(value)}`,
     );
   }
+}
+
+function universalDpadState(
+  profile: ControllerProfile,
+  direction: DpadState,
+): string | undefined {
+  if (direction === "NEUTRAL") {
+    return "NEUTRAL";
+  }
+
+  const buttons = dpadButtons(direction).map((button) =>
+    resolveButton(profile, button),
+  );
+  const universal = buttons
+    .map((button) => toUniversal(profile, button))
+    .filter((button): button is UniversalControl => Boolean(button));
+  return universal.length > 0 ? universal.join("+") : undefined;
 }
 
 export * from "./universal";

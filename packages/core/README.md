@@ -26,6 +26,10 @@ const controller = await createController({
 await controller.press("A", 80);
 await controller.press("RT", { durationMs: 120, pressure: 0.5 });
 await controller.moveStick("LEFT", { x: 0.75, y: 0 });
+await controller.setButton("LB", true);
+await controller.setTrigger("RT", 0.25);
+await controller.setDpad("UP_RIGHT");
+await controller.setDpad("NEUTRAL");
 await controller.neutral();
 await controller.disconnect();
 ```
@@ -86,6 +90,27 @@ as combined cardinal state and encode as combined D-pad report bits:
 ```ts
 await controller.dpad("UP_RIGHT", 120);
 ```
+
+## Persistent Controller State
+
+Timed helpers are great for taps and nudges. For agent policies that plan across
+several ticks, use the stateful helpers instead:
+
+```ts
+await controller.setButton("LB", true);
+await controller.setStick("LEFT", { x: 0.6, y: -0.25 });
+await controller.setTrigger("RT", 0.4);
+await controller.setDpad("UP_RIGHT");
+
+// Later, release or reset only the controls you intended to change.
+await controller.setDpad("NEUTRAL");
+await controller.setButton("LB", false);
+```
+
+These commands do not auto-release. They update `controller.getState()`, replay
+logs, WebSocket state messages, XInput/HID report adapters, and native bridge
+JSONL state snapshots until another command changes the same control or
+`controller.neutral()` resets everything.
 
 ## Touchpad And Motion
 

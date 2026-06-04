@@ -68,6 +68,10 @@ function applyDuration(
         ),
       };
     case "release":
+    case "setButton":
+    case "setStick":
+    case "setTrigger":
+    case "setDpad":
     case "wait":
     case "neutral":
       return command;
