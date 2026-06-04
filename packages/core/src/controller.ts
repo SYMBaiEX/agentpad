@@ -3,6 +3,7 @@ import { ControllerRuntime } from "./runtime";
 import type {
   CommandContext,
   ControllerCommand,
+  ControllerPressOptions,
   ControllerTouchpadContactInput,
   ControllerVector3,
   CreateControllerOptions,
@@ -17,10 +18,34 @@ export class Controller {
 
   async press(
     button: string,
-    durationMs = 90,
+    durationMs?: number,
+    context?: CommandContext,
+  ): Promise<void>;
+  async press(button: string, options?: ControllerPressOptions): Promise<void>;
+  async press(
+    button: string,
+    durationOrOptions: number | ControllerPressOptions = 90,
     context?: CommandContext,
   ): Promise<void> {
-    await this.runtime.send({ type: "press", button, durationMs }, context);
+    const options: ControllerPressOptions =
+      typeof durationOrOptions === "number"
+        ? {
+            durationMs: durationOrOptions,
+            ...(context !== undefined ? { context } : {}),
+          }
+        : durationOrOptions;
+    const durationMs = options?.durationMs ?? 90;
+    await this.runtime.send(
+      {
+        type: "press",
+        button,
+        durationMs,
+        ...(options?.pressure !== undefined
+          ? { pressure: options.pressure }
+          : {}),
+      },
+      options?.context,
+    );
   }
 
   async release(button: string, context?: CommandContext): Promise<void> {

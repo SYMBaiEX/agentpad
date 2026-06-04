@@ -21,6 +21,7 @@ import {
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
+  encodeXInputReport,
   hidGamepadButtonBits,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
@@ -67,6 +68,43 @@ describe("controller runtime", () => {
       "press",
       "release",
     ]);
+
+    await controller.disconnect();
+  });
+
+  test("supports analog pressure through press options", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("RT", { durationMs: 0, pressure: 0.4 });
+
+    const state = controller.getState();
+    const report = decodeXInputReport(encodeXInputReport(state));
+
+    expect(adapter.history.at(-1)?.command).toMatchObject({
+      type: "press",
+      button: "RT",
+      durationMs: 0,
+      pressure: 0.4,
+    });
+    expect(state.buttons.RT).toBe(true);
+    expect(state.analogButtons.RT).toBe(0.4);
+    expect(report.rightTrigger).toBe(102);
+
+    await controller.press("RT", { durationMs: 0, pressure: 2 });
+
+    const clampedState = controller.getState();
+    const clampedReport = decodeXInputReport(encodeXInputReport(clampedState));
+
+    expect(clampedState.analogButtons.RT).toBe(1);
+    expect(clampedReport.rightTrigger).toBe(255);
+
+    await controller.release("RT");
+    expect(controller.getState().analogButtons.RT).toBe(0);
 
     await controller.disconnect();
   });

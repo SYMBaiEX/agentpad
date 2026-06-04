@@ -19,6 +19,7 @@ const controller = await createController({
 });
 
 await controller.press("A", 100);
+await controller.press("RT", { durationMs: 120, pressure: 0.35 });
 await controller.moveStick("LEFT", { x: 0, y: -1 }, 300);
 await controller.neutral();
 await controller.disconnect();

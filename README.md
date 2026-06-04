@@ -26,6 +26,7 @@ const controller = await createController({
 });
 
 await controller.press("A", 100);
+await controller.press("RT", { durationMs: 120, pressure: 0.35 });
 await controller.moveStick("LEFT", { x: 0, y: -1 }, 500);
 await controller.trigger("RT", 0.5, 200);
 await controller.neutral();
@@ -53,6 +54,7 @@ developer experience on top.
 ## What You Get
 
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
+- Button helper options for analog pressure, including trigger pressure mapped into XInput/HID report bytes
 - PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
@@ -277,7 +279,11 @@ const controller = await createController({
   }
 });
 
-await controller.press("X", 80, { intent: "light_attack" });
+await controller.press("X", {
+  durationMs: 80,
+  context: { intent: "light_attack" }
+});
+await controller.press("RT", { durationMs: 120, pressure: 0.5 });
 await controller.combo(["A", "X"], 60, 20, { intent: "jump_attack" });
 await controller.moveStick("LEFT", { x: 1, y: 0 }, 250);
 await controller.neutral();

@@ -92,6 +92,12 @@ export type ControllerCommand =
       type: "neutral";
     };
 
+export type ControllerPressOptions = {
+  durationMs?: number;
+  pressure?: number;
+  context?: CommandContext;
+};
+
 export type ControllerCommandType = ControllerCommand["type"];
 
 export type NormalizedControllerCommand = {

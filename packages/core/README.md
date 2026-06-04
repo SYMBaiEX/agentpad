@@ -23,8 +23,9 @@ const controller = await createController({
   adapter: "dry-run",
 });
 
-await controller.press("A", 0.2);
-await controller.moveStick("left", { x: 0.75, y: 0 });
+await controller.press("A", 80);
+await controller.press("RT", { durationMs: 120, pressure: 0.5 });
+await controller.moveStick("LEFT", { x: 0.75, y: 0 });
 await controller.neutral();
 await controller.disconnect();
 ```
@@ -48,10 +49,25 @@ const playerTwo = await hub.createController({
   adapter: "dry-run",
 });
 
-await playerOne.press("A", 0.1);
-await playerTwo.press("B", 0.1);
+await playerOne.press("A", 80);
+await playerTwo.press("B", 80);
 await hub.disconnectAll();
 ```
+
+## Analog Button Pressure
+
+```ts
+await controller.press("RT", {
+  durationMs: 120,
+  pressure: 0.35,
+  context: { intent: "feather_throttle" },
+});
+```
+
+`press` still supports the original `press(button, durationMs, context)` form.
+Use the object form when an agent needs analog pressure on a button. Pressure is
+normalized to `0..1`, stored in `state.analogButtons`, included in replay/native
+bridge state, and mapped into XInput/HID trigger bytes for trigger-like buttons.
 
 ## Touchpad And Motion
 
