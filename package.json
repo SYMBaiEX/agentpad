@@ -1,6 +1,6 @@
 {
   "name": "opencontroller",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "OpenController packages for AI-agent virtual controller control, overlays, safety, and replay logs.",
   "type": "module",

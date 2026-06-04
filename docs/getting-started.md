@@ -24,7 +24,12 @@ await controller.moveStick("LEFT", { x: 0, y: -1 }, 300);
 await controller.setButton("LB", true);
 await controller.setTrigger("RT", 0.25);
 await controller.setDpad("UP_RIGHT");
-await controller.setDpad("NEUTRAL");
+await controller.setState({
+  buttons: { LB: true },
+  triggers: { RT: 0.1 },
+  sticks: { LEFT: { x: 0.4, y: 0 } },
+  dpad: "NEUTRAL"
+});
 await controller.setButton("LB", false);
 await controller.neutral();
 await controller.disconnect();
@@ -36,7 +41,9 @@ still updates state, safety, and replay logs.
 Timed helpers such as `press`, `moveStick`, `trigger`, and `dpad` return to
 neutral after their duration. Stateful helpers such as `setButton`, `setStick`,
 `setTrigger`, and `setDpad` hold their values until the same control changes or
-the controller is neutralized.
+the controller is neutralized. `setState` applies a partial multi-control patch
+as one command, which is useful when an agent emits a complete control decision
+for a single frame or planning tick.
 
 When you are ready to target a real OS virtual controller bridge, use the
 unified native package:

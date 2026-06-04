@@ -1,7 +1,9 @@
 import { EventEmitter, type Unsubscribe } from "./events";
 import { type ControllerProfile, dpadDirections } from "./profiles";
 import type {
+  ControllerButtonStateInput,
   ControllerState,
+  ControllerStatePatch,
   ControllerTouchpadContactInput,
   ControllerVector3,
   DpadCardinalDirection,
@@ -43,33 +45,17 @@ export class ControllerStateStore {
     pressed: boolean,
     pressure?: number,
   ): ControllerState {
-    this.state.buttons[button] = pressed;
-    if (pressure !== undefined) {
-      if (pressed || button in this.state.analogButtons || pressure !== 0) {
-        this.state.analogButtons[button] = pressure;
-      }
-    } else if (this.profile.triggers.includes(button)) {
-      this.state.analogButtons[button] = pressed ? 1 : 0;
-    }
-
-    const dpadKey = dpadKeyFromButton(button);
-    if (dpadKey) {
-      this.state.dpad[dpadKey] = pressed;
-    }
+    this.setButtonInPlace(button, pressed, pressure);
     return this.commit();
   }
 
   setTrigger(trigger: string, value: number): ControllerState {
-    this.state.analogButtons[trigger] = value;
-    this.state.buttons[trigger] = value > 0;
+    this.setTriggerInPlace(trigger, value);
     return this.commit();
   }
 
   setStick(stick: "LEFT" | "RIGHT", x: number, y: number): ControllerState {
-    const target =
-      stick === "LEFT" ? this.state.sticks.left : this.state.sticks.right;
-    target.x = x;
-    target.y = y;
+    this.setStickInPlace(stick, x, y);
     return this.commit();
   }
 
@@ -83,14 +69,7 @@ export class ControllerStateStore {
   }
 
   setDpadState(direction: DpadState): ControllerState {
-    this.clearDpadState();
-    if (direction !== "NEUTRAL") {
-      for (const cardinal of dpadDirections(direction)) {
-        const key = dpadKeyFromCardinal(cardinal);
-        this.state.dpad[key] = true;
-        this.state.buttons[`DPAD_${cardinal}`] = true;
-      }
-    }
+    this.setDpadStateInPlace(direction);
     return this.commit();
   }
 
@@ -98,14 +77,7 @@ export class ControllerStateStore {
     contacts: ControllerTouchpadContactInput[] = [],
     pressed = false,
   ): ControllerState {
-    this.state.touchpad.pressed = pressed;
-    this.state.touchpad.contacts = contacts.map((contact, index) => ({
-      id: contact.id ?? index,
-      x: contact.x,
-      y: contact.y,
-      active: contact.active ?? true,
-      pressure: contact.pressure ?? 1,
-    }));
+    this.setTouchpadInPlace(contacts, pressed);
     return this.commit();
   }
 
@@ -114,6 +86,132 @@ export class ControllerStateStore {
     gyroscope?: ControllerVector3;
     orientation?: ControllerVector3;
   }): ControllerState {
+    this.setMotionInPlace(motion);
+    return this.commit();
+  }
+
+  applyPatch(patch: ControllerStatePatch): ControllerState {
+    if (patch.buttons) {
+      for (const [button, value] of Object.entries(patch.buttons)) {
+        const input = normalizeButtonStateInput(value);
+        this.setButtonInPlace(
+          button,
+          input.pressed,
+          input.pressed ? input.pressure : 0,
+        );
+      }
+    }
+
+    if (patch.triggers) {
+      for (const [trigger, value] of Object.entries(patch.triggers)) {
+        this.setTriggerInPlace(trigger, value);
+      }
+    }
+
+    if (patch.sticks) {
+      for (const [stick, value] of Object.entries(patch.sticks)) {
+        if (stick === "LEFT" || stick === "RIGHT") {
+          this.setStickInPlace(stick, value.x, value.y);
+        }
+      }
+    }
+
+    if (patch.dpad !== undefined) {
+      this.setDpadStateInPlace(patch.dpad);
+    }
+
+    if (patch.touchpad) {
+      this.patchTouchpadInPlace(patch.touchpad);
+    }
+
+    if (patch.motion) {
+      this.setMotionInPlace(patch.motion);
+    }
+
+    return this.commit();
+  }
+
+  private setButtonInPlace(
+    button: string,
+    pressed: boolean,
+    pressure?: number,
+  ): void {
+    this.state.buttons[button] = pressed;
+    if (pressure !== undefined) {
+      if (pressed || button in this.state.analogButtons || pressure !== 0) {
+        this.state.analogButtons[button] = pressure;
+      }
+    } else if (this.profile.triggers.includes(button)) {
+      this.state.analogButtons[button] = pressed ? 1 : 0;
+    }
+
+    const dpadKey = dpadKeyFromButton(button);
+    if (dpadKey) {
+      this.state.dpad[dpadKey] = pressed;
+    }
+  }
+
+  private setTriggerInPlace(trigger: string, value: number): void {
+    this.state.analogButtons[trigger] = value;
+    this.state.buttons[trigger] = value > 0;
+  }
+
+  private setStickInPlace(stick: "LEFT" | "RIGHT", x: number, y: number): void {
+    const target =
+      stick === "LEFT" ? this.state.sticks.left : this.state.sticks.right;
+    target.x = x;
+    target.y = y;
+  }
+
+  private setDpadStateInPlace(direction: DpadState): void {
+    this.clearDpadState();
+    if (direction !== "NEUTRAL") {
+      for (const cardinal of dpadDirections(direction)) {
+        const key = dpadKeyFromCardinal(cardinal);
+        this.state.dpad[key] = true;
+        this.state.buttons[`DPAD_${cardinal}`] = true;
+      }
+    }
+  }
+
+  private setTouchpadInPlace(
+    contacts: ControllerTouchpadContactInput[] = [],
+    pressed = false,
+  ): void {
+    this.state.touchpad.pressed = pressed;
+    this.state.touchpad.contacts = contacts.map((contact, index) => ({
+      id: contact.id ?? index,
+      x: contact.x,
+      y: contact.y,
+      active: contact.active ?? true,
+      pressure: contact.pressure ?? 1,
+    }));
+  }
+
+  private patchTouchpadInPlace(
+    touchpad: NonNullable<ControllerStatePatch["touchpad"]>,
+  ): void {
+    if (touchpad.pressed !== undefined) {
+      this.state.touchpad.pressed = touchpad.pressed;
+    }
+    if (touchpad.contacts !== undefined) {
+      this.state.touchpad.contacts = touchpad.contacts.map(
+        (contact, index) => ({
+          id: contact.id ?? index,
+          x: contact.x,
+          y: contact.y,
+          active: contact.active ?? true,
+          pressure: contact.pressure ?? 1,
+        }),
+      );
+    }
+  }
+
+  private setMotionInPlace(motion: {
+    acceleration?: ControllerVector3;
+    gyroscope?: ControllerVector3;
+    orientation?: ControllerVector3;
+  }): void {
     if (motion.acceleration) {
       this.state.motion.acceleration = { ...motion.acceleration };
     }
@@ -123,7 +221,6 @@ export class ControllerStateStore {
     if (motion.orientation) {
       this.state.motion.orientation = { ...motion.orientation };
     }
-    return this.commit();
   }
 
   neutral(): ControllerState {
@@ -264,6 +361,13 @@ function neutralVector3(): ControllerVector3 {
     y: 0,
     z: 0,
   };
+}
+
+function normalizeButtonStateInput(value: ControllerButtonStateInput): {
+  pressed: boolean;
+  pressure?: number;
+} {
+  return typeof value === "boolean" ? { pressed: value } : value;
 }
 
 function dpadKeyFromButton(

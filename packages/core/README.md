@@ -29,7 +29,12 @@ await controller.moveStick("LEFT", { x: 0.75, y: 0 });
 await controller.setButton("LB", true);
 await controller.setTrigger("RT", 0.25);
 await controller.setDpad("UP_RIGHT");
-await controller.setDpad("NEUTRAL");
+await controller.setState({
+  buttons: { LB: true },
+  triggers: { RT: 0.1 },
+  sticks: { LEFT: { x: 0.4, y: 0 } },
+  dpad: "NEUTRAL",
+});
 await controller.neutral();
 await controller.disconnect();
 ```
@@ -111,6 +116,28 @@ These commands do not auto-release. They update `controller.getState()`, replay
 logs, WebSocket state messages, XInput/HID report adapters, and native bridge
 JSONL state snapshots until another command changes the same control or
 `controller.neutral()` resets everything.
+
+When one agent decision changes several controls, send a single atomic patch:
+
+```ts
+await controller.setState({
+  buttons: {
+    LB: true,
+    A: false,
+  },
+  triggers: {
+    RT: 0.35,
+  },
+  sticks: {
+    LEFT: { x: 0.5, y: -0.2 },
+  },
+  dpad: "NEUTRAL",
+});
+```
+
+`setState` accepts a partial patch. Omitted controls keep their current values,
+and the runtime emits one normalized command, one replay entry, and one state
+sync snapshot.
 
 ## Touchpad And Motion
 

@@ -2,10 +2,12 @@ import { ProfileError } from "../errors";
 import type {
   ControllerCommand,
   ControllerProfileName,
+  ControllerStatePatch,
   DpadCardinalDirection,
   DpadDirection,
   DpadState,
   NormalizedControllerCommand,
+  StickName,
 } from "../types";
 import { genericHidProfile } from "./generic-hid";
 import { keyboardMouseProfile } from "./keyboard-mouse";
@@ -326,6 +328,21 @@ export function normalizeCommand(
         ...(universal ? { universal: { dpad: universal } } : {}),
       };
     }
+    case "setState": {
+      const state = normalizeControllerStatePatch(profile, command.state);
+      const universal = universalStatePatch(profile, state);
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          state,
+        },
+        timestamp,
+        ...(universal ? { universal } : {}),
+      };
+    }
     case "combo": {
       const buttons = command.buttons.map((button) =>
         resolveButton(profile, button),
@@ -403,6 +420,156 @@ function universalDpadState(
     .map((button) => toUniversal(profile, button))
     .filter((button): button is UniversalControl => Boolean(button));
   return universal.length > 0 ? universal.join("+") : undefined;
+}
+
+function normalizeControllerStatePatch(
+  profile: ControllerProfile,
+  patch: ControllerStatePatch,
+): ControllerStatePatch {
+  const normalized: ControllerStatePatch = {};
+
+  if (patch.buttons) {
+    const buttons: Record<
+      string,
+      NonNullable<ControllerStatePatch["buttons"]>[string]
+    > = {};
+    for (const [inputButton, value] of Object.entries(patch.buttons)) {
+      const button = resolveButton(profile, inputButton);
+      buttons[button] =
+        typeof value === "boolean"
+          ? value
+          : {
+              pressed: value.pressed,
+              ...(value.pressure !== undefined
+                ? { pressure: clamp(value.pressure, 0, 1) }
+                : {}),
+            };
+    }
+    normalized.buttons = buttons;
+  }
+
+  if (patch.triggers) {
+    const triggers: Record<string, number> = {};
+    for (const [inputTrigger, value] of Object.entries(patch.triggers)) {
+      const trigger = resolveTrigger(profile, inputTrigger);
+      triggers[trigger] = clamp(value, 0, 1);
+    }
+    normalized.triggers = triggers;
+  }
+
+  if (patch.sticks) {
+    const sticks: NonNullable<ControllerStatePatch["sticks"]> = {};
+    for (const [inputStick, value] of Object.entries(patch.sticks)) {
+      const stick = normalizeStickName(inputStick);
+      sticks[stick] = {
+        x: clamp(value.x, -1, 1),
+        y: clamp(value.y, -1, 1),
+      };
+    }
+    normalized.sticks = sticks;
+  }
+
+  if (patch.dpad !== undefined) {
+    if (patch.dpad !== "NEUTRAL") {
+      for (const button of dpadButtons(patch.dpad)) {
+        resolveButton(profile, button);
+      }
+    }
+    normalized.dpad = patch.dpad;
+  }
+
+  if (patch.touchpad) {
+    if (!profile.features?.touchpad) {
+      throw new ProfileError(
+        `Touchpad input is not supported by ${profile.name}`,
+      );
+    }
+    normalized.touchpad = {
+      ...(patch.touchpad.contacts
+        ? { contacts: normalizeTouchpadContacts(patch.touchpad.contacts) }
+        : {}),
+      ...(patch.touchpad.pressed !== undefined
+        ? { pressed: patch.touchpad.pressed }
+        : {}),
+    };
+  }
+
+  if (patch.motion) {
+    if (!profile.features?.motion) {
+      throw new ProfileError(
+        `Motion input is not supported by ${profile.name}`,
+      );
+    }
+    normalized.motion = {
+      ...(patch.motion.acceleration
+        ? { acceleration: normalizeVector3(patch.motion.acceleration) }
+        : {}),
+      ...(patch.motion.gyroscope
+        ? { gyroscope: normalizeVector3(patch.motion.gyroscope) }
+        : {}),
+      ...(patch.motion.orientation
+        ? { orientation: normalizeVector3(patch.motion.orientation) }
+        : {}),
+    };
+  }
+
+  return normalized;
+}
+
+function normalizeTouchpadContacts(
+  contacts: NonNullable<
+    NonNullable<ControllerStatePatch["touchpad"]>["contacts"]
+  >,
+): NonNullable<NonNullable<ControllerStatePatch["touchpad"]>["contacts"]> {
+  return contacts.map((contact, index) => ({
+    id: contact.id ?? index,
+    x: clamp(contact.x, 0, 1),
+    y: clamp(contact.y, 0, 1),
+    active: contact.active ?? true,
+    pressure: clamp(contact.pressure ?? 1, 0, 1),
+  }));
+}
+
+function normalizeStickName(stick: string): StickName {
+  switch (stick) {
+    case "LEFT":
+    case "RIGHT":
+      return stick;
+    default:
+      throw new ProfileError(`Stick ${stick} is not supported`);
+  }
+}
+
+function universalStatePatch(
+  profile: ControllerProfile,
+  patch: ControllerStatePatch,
+): NormalizedControllerCommand["universal"] | undefined {
+  const universal: NonNullable<NormalizedControllerCommand["universal"]> = {};
+
+  if (patch.buttons) {
+    const buttons = Object.keys(patch.buttons)
+      .map((button) => toUniversal(profile, button))
+      .filter((button): button is UniversalControl => Boolean(button));
+    if (buttons.length > 0) {
+      universal.buttons = buttons;
+    }
+  }
+
+  if (patch.dpad !== undefined) {
+    const dpad = universalDpadState(profile, patch.dpad);
+    if (dpad) {
+      universal.dpad = dpad;
+    }
+  }
+
+  if (patch.sticks) {
+    const stick = Object.keys(patch.sticks).at(0);
+    if (stick === "LEFT" || stick === "RIGHT") {
+      universal.stick = stick;
+    }
+  }
+
+  return Object.keys(universal).length > 0 ? universal : undefined;
 }
 
 export * from "./universal";

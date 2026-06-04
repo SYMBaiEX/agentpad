@@ -39,6 +39,34 @@ export type ControllerTouchpadContactInput = {
   pressure?: number;
 };
 
+export type ControllerButtonStateInput =
+  | boolean
+  | {
+      pressed: boolean;
+      pressure?: number;
+    };
+
+export type ControllerStickStateInput = {
+  x: number;
+  y: number;
+};
+
+export type ControllerStatePatch = {
+  buttons?: Record<string, ControllerButtonStateInput>;
+  triggers?: Record<string, number>;
+  sticks?: Partial<Record<StickName, ControllerStickStateInput>>;
+  dpad?: DpadState;
+  touchpad?: {
+    contacts?: ControllerTouchpadContactInput[];
+    pressed?: boolean;
+  };
+  motion?: {
+    acceleration?: ControllerVector3;
+    gyroscope?: ControllerVector3;
+    orientation?: ControllerVector3;
+  };
+};
+
 export type ControllerCommand =
   | {
       type: "press";
@@ -88,6 +116,10 @@ export type ControllerCommand =
   | {
       type: "setDpad";
       direction: DpadState;
+    }
+  | {
+      type: "setState";
+      state: ControllerStatePatch;
     }
   | {
       type: "combo";

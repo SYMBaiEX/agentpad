@@ -5,7 +5,11 @@ import {
   resolveButton,
   toUniversal,
 } from "./profiles";
-import type { ControllerCommand, SafetyConfig } from "./types";
+import type {
+  ControllerCommand,
+  ControllerStatePatch,
+  SafetyConfig,
+} from "./types";
 
 export const defaultSafetyConfig: SafetyConfig = {
   maxCommandsPerSecond: 30,
@@ -158,6 +162,9 @@ export class SafetyGuard {
         }
         return;
       }
+      case "setState":
+        this.assertStatePatchAllowed(command.state);
+        return;
       case "stick":
       case "setStick":
       case "touchpad":
@@ -206,6 +213,30 @@ export class SafetyGuard {
         throw new SafetyError(
           `Combo ${buttons.join("+")} is disabled by safety config`,
         );
+      }
+    }
+  }
+
+  private assertStatePatchAllowed(patch: ControllerStatePatch): void {
+    if (patch.buttons) {
+      for (const button of Object.keys(patch.buttons)) {
+        this.assertButtonAllowed(button);
+      }
+    }
+
+    if (patch.triggers) {
+      for (const trigger of Object.keys(patch.triggers)) {
+        this.assertButtonAllowed(trigger);
+      }
+    }
+
+    if (patch.dpad !== undefined && patch.dpad !== "NEUTRAL") {
+      const buttons = dpadButtons(patch.dpad);
+      for (const button of buttons) {
+        this.assertButtonAllowed(button);
+      }
+      if (buttons.length > 1) {
+        this.assertComboAllowed(buttons);
       }
     }
   }

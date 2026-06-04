@@ -57,6 +57,8 @@ developer experience on top.
 - Button helper options for analog pressure, including trigger pressure mapped into XInput/HID report bytes
 - Explicit persistent-state helpers for held buttons, held sticks, analog
   triggers, and exact D-pad directions
+- Atomic state patches for applying a whole agent decision as one controller
+  update
 - Cardinal and diagonal D-pad commands mapped into combined controller state and XInput/HID report bits
 - PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
@@ -293,7 +295,12 @@ await controller.setButton("LB", true);
 await controller.setStick("LEFT", { x: 0.75, y: -0.2 });
 await controller.setTrigger("RT", 0.4);
 await controller.setDpad("UP_RIGHT");
-await controller.setDpad("NEUTRAL");
+await controller.setState({
+  buttons: { LB: true },
+  triggers: { RT: 0.2 },
+  sticks: { LEFT: { x: 0.5, y: -0.2 } },
+  dpad: "NEUTRAL"
+});
 await controller.setButton("LB", false);
 await controller.neutral();
 ```
@@ -301,7 +308,8 @@ await controller.neutral();
 Use `press`, `moveStick`, `trigger`, `dpad`, and `combo` for timed actions that
 return to neutral automatically. Use `setButton`, `setStick`, `setTrigger`, and
 `setDpad` when an agent needs to hold an exact controller state across planning
-steps.
+steps. Use `setState` when one agent tick should update several controls
+atomically and avoid intermediate controller states.
 
 ### Multiple Controllers
 

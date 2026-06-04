@@ -69,4 +69,6 @@ changes:
 WebSocket is the first integration path for richer profile-specific channels.
 It carries `touchpad` commands for PlayStation and `motion` commands for
 PlayStation/Switch in both `controller.command` messages and full
-`controller.state` snapshots.
+`controller.state` snapshots. It also carries `setState` commands when an agent
+applies an atomic partial state patch; consumers that do not special-case the
+command can follow the next `controller.state` message as the source of truth.

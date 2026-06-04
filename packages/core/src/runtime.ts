@@ -162,6 +162,9 @@ export class ControllerRuntime {
       case "setDpad":
         await this.runSetDpad(command, context);
         return;
+      case "setState":
+        await this.runSetState(command, context);
+        return;
     }
   }
 
@@ -379,6 +382,22 @@ export class ControllerRuntime {
     const before = this.state.getState();
     await this.adapter.send(normalized);
     const after = this.state.setDpadState(normalized.command.direction);
+    await this.logCommand(normalized.command, before, after, context);
+    await this.syncState(after);
+  }
+
+  private async runSetState(
+    command: Extract<ControllerCommand, { type: "setState" }>,
+    context: CommandContext,
+  ): Promise<void> {
+    const normalized = normalizeCommand(this.profile, this.id, command);
+    if (normalized.command.type !== "setState") {
+      return;
+    }
+
+    const before = this.state.getState();
+    await this.adapter.send(normalized);
+    const after = this.state.applyPatch(normalized.command.state);
     await this.logCommand(normalized.command, before, after, context);
     await this.syncState(after);
   }

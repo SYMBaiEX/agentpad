@@ -15,6 +15,8 @@ OpenController exposes two command styles:
 - Stateful commands such as `setButton`, `setStick`, `setTrigger`, and
   `setDpad` hold an exact controller state until the same control changes or
   `neutral` resets the controller.
+- Atomic state patches through `setState` update several controls as one
+  normalized command and one state-sync snapshot.
 
 Commands flow through the runtime in this order:
 

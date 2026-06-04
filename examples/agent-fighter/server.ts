@@ -6,6 +6,7 @@ import {
   type Controller,
   type ControllerCommand,
   type ControllerState,
+  type ControllerStatePatch,
   type DpadDirection,
   type DpadState,
   createControllerHub,
@@ -536,6 +537,9 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
     case "setDpad":
       setDpadState(state, command.direction);
       return;
+    case "setState":
+      applyStatePatch(state, command.state);
+      return;
     case "touchpad":
       state.touchpad.pressed = command.pressed ?? false;
       state.touchpad.contacts =
@@ -672,6 +676,69 @@ function setDpadState(state: ControllerState, direction: DpadState): void {
   }
   for (const button of dpadButtons(direction)) {
     setButtonState(state, button, true);
+  }
+}
+
+function applyStatePatch(
+  state: ControllerState,
+  patch: ControllerStatePatch,
+): void {
+  if (patch.buttons) {
+    for (const [button, value] of Object.entries(patch.buttons)) {
+      const input = typeof value === "boolean" ? { pressed: value } : value;
+      setButtonState(
+        state,
+        button,
+        input.pressed,
+        input.pressed ? input.pressure : 0,
+      );
+    }
+  }
+  if (patch.triggers) {
+    for (const [trigger, value] of Object.entries(patch.triggers)) {
+      state.analogButtons[trigger] = value;
+      state.buttons[trigger] = value > 0;
+    }
+  }
+  if (patch.sticks) {
+    for (const [stickName, value] of Object.entries(patch.sticks)) {
+      if (stickName === "LEFT" || stickName === "RIGHT") {
+        const stick =
+          stickName === "LEFT" ? state.sticks.left : state.sticks.right;
+        stick.x = value.x;
+        stick.y = value.y;
+      }
+    }
+  }
+  if (patch.dpad !== undefined) {
+    setDpadState(state, patch.dpad);
+  }
+  if (patch.touchpad) {
+    if (patch.touchpad.pressed !== undefined) {
+      state.touchpad.pressed = patch.touchpad.pressed;
+    }
+    if (patch.touchpad.contacts !== undefined) {
+      state.touchpad.contacts = patch.touchpad.contacts.map(
+        (contact, index) => ({
+          id: contact.id ?? index,
+          x: contact.x,
+          y: contact.y,
+          active: contact.active ?? true,
+          pressure: contact.pressure ?? 1,
+        }),
+      );
+    }
+  }
+  if (patch.motion) {
+    if (patch.motion.acceleration) {
+      state.motion.acceleration = { ...patch.motion.acceleration };
+    }
+    if (patch.motion.gyroscope) {
+      state.motion.gyroscope = { ...patch.motion.gyroscope };
+    }
+    if (patch.motion.orientation) {
+      state.motion.orientation = { ...patch.motion.orientation };
+    }
   }
 }
 
@@ -1276,6 +1343,9 @@ async function performAction(
         break;
       case "setDpad":
         await controller.setDpad(command.direction);
+        break;
+      case "setState":
+        await controller.setState(command.state);
         break;
       case "touchpad":
         await controller.touchpad(touchpadInput(command), command.durationMs);

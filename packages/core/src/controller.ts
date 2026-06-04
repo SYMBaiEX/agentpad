@@ -5,6 +5,7 @@ import type {
   ControllerCommand,
   ControllerPressOptions,
   ControllerSetButtonOptions,
+  ControllerStatePatch,
   ControllerTouchpadContactInput,
   ControllerVector3,
   CreateControllerOptions,
@@ -164,6 +165,13 @@ export class Controller {
 
   async setDpad(direction: DpadState, context?: CommandContext): Promise<void> {
     await this.runtime.send({ type: "setDpad", direction }, context);
+  }
+
+  async setState(
+    state: ControllerStatePatch,
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send({ type: "setState", state }, context);
   }
 
   async combo(

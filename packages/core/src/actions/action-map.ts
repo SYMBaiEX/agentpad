@@ -72,6 +72,7 @@ function applyDuration(
     case "setStick":
     case "setTrigger":
     case "setDpad":
+    case "setState":
     case "wait":
     case "neutral":
       return command;
