@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/SYMBaiEX/OpenController)](https://github.com/SYMBaiEX/OpenController/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Security Policy](https://img.shields.io/badge/security-policy-brightgreen.svg)](SECURITY.md)
+[![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-active-blue.svg)](CODE_OF_CONDUCT.md)
 
 OpenController is a Bun-first TypeScript framework for giving AI agents a real
 controller interface.
@@ -198,9 +199,9 @@ Native setup helpers generate reviewed assets, plans, and commands. They do not
 silently install unsigned drivers, alter system permissions, or perform
 privileged changes without explicit user action.
 
-Please read [SECURITY.md](SECURITY.md) before reporting vulnerabilities, and see
-[CONTRIBUTING.md](CONTRIBUTING.md) for the release-check and contribution
-workflow.
+Please read [SECURITY.md](SECURITY.md) before reporting vulnerabilities,
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before participating, and
+[CONTRIBUTING.md](CONTRIBUTING.md) for the release-check and contribution flow.
 
 ## Developer Surface
 
@@ -632,9 +633,9 @@ Clean generated files:
 bun run clean
 ```
 
-## Publishing Checklist
+## Release Maintenance
 
-Before publishing packages to npm:
+Before publishing a new npm package version:
 
 ```bash
 bun run clean
@@ -642,13 +643,24 @@ bun run build
 bun run pack:check
 ```
 
+Check the live npm versions directly after publishing:
+
+```bash
+npm view @opencontroller/core version
+npm view @opencontroller/overlay version
+npm view @opencontroller/native-linux-uinput version
+npm view @opencontroller/native-windows-virtual-gamepad version
+npm view @opencontroller/native-macos-driverkit version
+npm view @opencontroller/native version
+npm view @opencontroller/cli version
+```
+
 Then confirm:
 
-- npm scope ownership is settled
-- package names are final
 - `dist` files are built from the current source and included in pack output
 - package-local READMEs, bins, exports, and type declarations are present
 - examples still run from a fresh install
+- npm shows the expected package versions
 - GitHub Actions is green
 - release tags and notes match the package version
 

@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- No unreleased changes yet.
+- `CODE_OF_CONDUCT.md` added for open-source community participation.
+- README and contributing release guidance updated for ongoing `@opencontroller`
+  npm package maintenance and live `npm view` verification.
 
 ## v0.1.0
 

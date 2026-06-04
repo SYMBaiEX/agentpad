@@ -2,6 +2,8 @@
 
 Thanks for helping with OpenController.
 
+Please follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) when participating.
+
 ## Development Setup
 
 ```bash
@@ -25,17 +27,20 @@ workspace.
 
 ## Release Checklist
 
-Before publishing npm packages:
+Before publishing a new npm package version:
 
-- Confirm the npm account owns or belongs to the `@opencontroller` scope.
 - Use npm 2FA or a granular access token that is allowed to publish.
 - Run `bun run release:check`.
+- Run `npm view @opencontroller/core version` and the same command for changed
+  packages to inspect current npm registry versions.
 - Publish packages in dependency order:
   `@opencontroller/core`, `@opencontroller/overlay`,
   `@opencontroller/native-linux-uinput`,
   `@opencontroller/native-windows-virtual-gamepad`,
   `@opencontroller/native-macos-driverkit`, `@opencontroller/native`,
   `@opencontroller/cli`.
+- Run `npm view <package> version` after publishing to confirm npm sees every
+  changed package at the expected version.
 - Verify a clean install in a temporary directory before announcing the release.
 
 ## Safety Expectations
