@@ -130,6 +130,9 @@ validation.
   passed.
 - `npm publish --workspace packages/native-macos-driverkit --access public --dry-run --json`:
   passed.
+- Consumer install smoke from local tarballs: passed for all publishable
+  packages, including `@opencontroller/core`, `@opencontroller/native`,
+  `@opencontroller/overlay/server`, and the installed `opencontroller` CLI.
 - High-confidence local secret scan: no matches.
 - Dangerous frontend sink scan for `packages/` and `examples/`: no remaining
   `innerHTML`, `dangerouslySetInnerHTML`, `insertAdjacentHTML`,
