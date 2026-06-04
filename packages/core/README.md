@@ -68,6 +68,17 @@ await controller.press("RT", {
 Use the object form when an agent needs analog pressure on a button. Pressure is
 normalized to `0..1`, stored in `state.analogButtons`, included in replay/native
 bridge state, and mapped into XInput/HID trigger bytes for trigger-like buttons.
+Plain binary presses on trigger-like buttons, such as `press("RT", 0)`, map to a
+full analog pull.
+
+Direct D-pad button presses also keep the structured D-pad state synchronized:
+
+```ts
+await controller.press("DPAD_UP", 0);
+
+console.log(controller.getState().buttons.DPAD_UP);
+console.log(controller.getState().dpad.up);
+```
 
 ## Touchpad And Motion
 

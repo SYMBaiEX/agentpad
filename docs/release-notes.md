@@ -4,6 +4,8 @@
 
 - Added `controller.press(button, { durationMs, pressure, context })` so agents
   can express analog button pressure without dropping to raw command objects.
+- Direct trigger button presses now map to full analog trigger state, and direct
+  D-pad button presses now keep structured `state.dpad` values synchronized.
 - Prepared workspace package manifests for the next `0.1.1` npm patch release.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.
 - README and contributing release guidance updated for ongoing `@opencontroller`

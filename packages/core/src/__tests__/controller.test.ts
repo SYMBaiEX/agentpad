@@ -109,6 +109,36 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("maps binary trigger button presses to full analog pulls", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await controller.press("RT", 0);
+
+    const pressedState = controller.getState();
+    const pressedReport = decodeXInputReport(encodeXInputReport(pressedState));
+
+    expect(pressedState.buttons.RT).toBe(true);
+    expect(pressedState.analogButtons.RT).toBe(1);
+    expect(pressedReport.rightTrigger).toBe(255);
+
+    await controller.release("RT");
+
+    const releasedState = controller.getState();
+    const releasedReport = decodeXInputReport(
+      encodeXInputReport(releasedState),
+    );
+
+    expect(releasedState.buttons.RT).toBe(false);
+    expect(releasedState.analogButtons.RT).toBe(0);
+    expect(releasedReport.rightTrigger).toBe(0);
+
+    await controller.disconnect();
+  });
+
   test("moves sticks and returns them to neutral", async () => {
     const controller = await createController({
       profile: "xbox",
@@ -138,6 +168,41 @@ describe("controller runtime", () => {
       { type: "dpad", direction: "UP", durationMs: 5 },
       { type: "release", button: "DPAD_UP" },
     ]);
+
+    await controller.disconnect();
+  });
+
+  test("keeps direct dpad button state and structured dpad state in sync", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.press("DPAD_UP", 0);
+
+    const pressedState = controller.getState();
+    const pressedReport = decodeXInputReport(encodeXInputReport(pressedState));
+
+    expect(pressedState.buttons.DPAD_UP).toBe(true);
+    expect(pressedState.dpad.up).toBe(true);
+    expect(pressedReport.buttons & xInputButtonBits.DPAD_UP).toBe(
+      xInputButtonBits.DPAD_UP,
+    );
+    expect(adapter.stateHistory.at(-1)?.dpad.up).toBe(true);
+
+    await controller.release("DPAD_UP");
+
+    const releasedState = controller.getState();
+    const releasedReport = decodeXInputReport(
+      encodeXInputReport(releasedState),
+    );
+
+    expect(releasedState.buttons.DPAD_UP).toBe(false);
+    expect(releasedState.dpad.up).toBe(false);
+    expect(releasedReport.buttons & xInputButtonBits.DPAD_UP).toBe(0);
+    expect(adapter.stateHistory.at(-1)?.dpad.up).toBe(false);
 
     await controller.disconnect();
   });

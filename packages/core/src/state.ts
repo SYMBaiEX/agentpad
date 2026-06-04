@@ -15,7 +15,10 @@ export class ControllerStateStore {
   private state: ControllerState;
   private readonly events = new EventEmitter<StateEvents>();
 
-  constructor(id: string, profile: ControllerProfile) {
+  constructor(
+    id: string,
+    private readonly profile: ControllerProfile,
+  ) {
     this.state = createInitialControllerState(id, profile);
   }
 
@@ -40,6 +43,13 @@ export class ControllerStateStore {
     this.state.buttons[button] = pressed;
     if (pressure !== undefined) {
       this.state.analogButtons[button] = pressure;
+    } else if (this.profile.triggers.includes(button)) {
+      this.state.analogButtons[button] = pressed ? 1 : 0;
+    }
+
+    const dpadKey = dpadKeyFromButton(button);
+    if (dpadKey) {
+      this.state.dpad[dpadKey] = pressed;
     }
     return this.commit();
   }
@@ -226,4 +236,21 @@ function neutralVector3(): ControllerVector3 {
     y: 0,
     z: 0,
   };
+}
+
+function dpadKeyFromButton(
+  button: string,
+): keyof ControllerState["dpad"] | undefined {
+  switch (button) {
+    case "DPAD_UP":
+      return "up";
+    case "DPAD_DOWN":
+      return "down";
+    case "DPAD_LEFT":
+      return "left";
+    case "DPAD_RIGHT":
+      return "right";
+    default:
+      return undefined;
+  }
 }
