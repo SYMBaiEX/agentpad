@@ -172,6 +172,48 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("presses diagonal dpad directions as combined cardinal buttons", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.dpad("UP_RIGHT", 5);
+
+    const pressedState = adapter.stateHistory.find(
+      (state) => state.dpad.up && state.dpad.right,
+    );
+    if (!pressedState) {
+      throw new Error("Expected an UP_RIGHT D-pad state snapshot");
+    }
+
+    const pressedReport = decodeXInputReport(encodeXInputReport(pressedState));
+
+    expect(pressedState.buttons.DPAD_UP).toBe(true);
+    expect(pressedState.buttons.DPAD_RIGHT).toBe(true);
+    expect(pressedReport.buttons & xInputButtonBits.DPAD_UP).toBe(
+      xInputButtonBits.DPAD_UP,
+    );
+    expect(pressedReport.buttons & xInputButtonBits.DPAD_RIGHT).toBe(
+      xInputButtonBits.DPAD_RIGHT,
+    );
+    expect(controller.getState().dpad).toEqual({
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+    });
+    expect(adapter.history.map((entry) => entry.command)).toEqual([
+      { type: "dpad", direction: "UP_RIGHT", durationMs: 5 },
+      { type: "release", button: "DPAD_UP" },
+      { type: "release", button: "DPAD_RIGHT" },
+    ]);
+
+    await controller.disconnect();
+  });
+
   test("keeps direct dpad button state and structured dpad state in sync", async () => {
     const adapter = new DryRunAdapter();
     const controller = await createController({

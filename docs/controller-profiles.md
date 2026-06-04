@@ -17,6 +17,7 @@ PlayStation aliases are supported:
 ```ts
 await controller.press("X", 100); // resolves to CROSS
 await controller.press("O", 100); // resolves to CIRCLE
+await controller.dpad("UP_RIGHT", 100); // presses UP and RIGHT together
 ```
 
 ## Touchpad And Motion

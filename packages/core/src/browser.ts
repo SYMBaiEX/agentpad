@@ -11,6 +11,8 @@ export {
 export {
   controllerProfiles,
   dpadButton,
+  dpadButtons,
+  dpadDirections,
   resolveButton,
   resolveProfile,
   resolveTrigger,

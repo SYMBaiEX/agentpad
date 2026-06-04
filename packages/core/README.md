@@ -80,6 +80,13 @@ console.log(controller.getState().buttons.DPAD_UP);
 console.log(controller.getState().dpad.up);
 ```
 
+The D-pad helper supports cardinal and diagonal directions. Diagonals are stored
+as combined cardinal state and encode as combined D-pad report bits:
+
+```ts
+await controller.dpad("UP_RIGHT", 120);
+```
+
 ## Touchpad And Motion
 
 ```ts

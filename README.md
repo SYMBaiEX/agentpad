@@ -55,6 +55,7 @@ developer experience on top.
 
 - Typed controller runtime for Xbox, PlayStation, Switch, generic HID, and keyboard/mouse-style profiles
 - Button helper options for analog pressure, including trigger pressure mapped into XInput/HID report bytes
+- Cardinal and diagonal D-pad commands mapped into combined controller state and XInput/HID report bits
 - PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors

@@ -1,9 +1,11 @@
 import { EventEmitter, type Unsubscribe } from "./events";
-import type { ControllerProfile } from "./profiles";
+import { type ControllerProfile, dpadDirections } from "./profiles";
 import type {
   ControllerState,
   ControllerTouchpadContactInput,
   ControllerVector3,
+  DpadCardinalDirection,
+  DpadDirection,
   StateListener,
 } from "./types";
 
@@ -68,13 +70,12 @@ export class ControllerStateStore {
     return this.commit();
   }
 
-  setDpad(
-    direction: "UP" | "DOWN" | "LEFT" | "RIGHT",
-    pressed: boolean,
-  ): ControllerState {
-    this.state.dpad[direction.toLowerCase() as keyof ControllerState["dpad"]] =
-      pressed;
-    this.state.buttons[`DPAD_${direction}`] = pressed;
+  setDpad(direction: DpadDirection, pressed: boolean): ControllerState {
+    for (const cardinal of dpadDirections(direction)) {
+      const key = dpadKeyFromCardinal(cardinal);
+      this.state.dpad[key] = pressed;
+      this.state.buttons[`DPAD_${cardinal}`] = pressed;
+    }
     return this.commit();
   }
 
@@ -252,5 +253,20 @@ function dpadKeyFromButton(
       return "right";
     default:
       return undefined;
+  }
+}
+
+function dpadKeyFromCardinal(
+  direction: DpadCardinalDirection,
+): keyof ControllerState["dpad"] {
+  switch (direction) {
+    case "UP":
+      return "up";
+    case "DOWN":
+      return "down";
+    case "LEFT":
+      return "left";
+    case "RIGHT":
+      return "right";
   }
 }

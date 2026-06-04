@@ -8,7 +8,13 @@ export type ControllerProfileName =
   | "keyboard-mouse";
 
 export type StickName = "LEFT" | "RIGHT";
-export type DpadDirection = "UP" | "DOWN" | "LEFT" | "RIGHT";
+export type DpadCardinalDirection = "UP" | "DOWN" | "LEFT" | "RIGHT";
+export type DpadDiagonalDirection =
+  | "UP_LEFT"
+  | "UP_RIGHT"
+  | "DOWN_LEFT"
+  | "DOWN_RIGHT";
+export type DpadDirection = DpadCardinalDirection | DpadDiagonalDirection;
 
 export type ControllerVector3 = {
   x: number;

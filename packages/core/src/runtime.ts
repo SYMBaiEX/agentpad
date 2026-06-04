@@ -2,6 +2,7 @@ import type { ControllerAdapter } from "./adapters";
 import type { Unsubscribe } from "./events";
 import {
   type ControllerProfile,
+  dpadButtons,
   normalizeCommand,
   resolveProfile,
 } from "./profiles";
@@ -289,28 +290,9 @@ export class ControllerRuntime {
       normalized.command.durationMs > 0
     ) {
       await sleep(normalized.command.durationMs);
-      const releaseBefore = this.state.getState();
-      const releaseCommand: ControllerCommand = {
-        type: "release",
-        button: `DPAD_${normalized.command.direction}`,
-      };
-      const releaseNormalized = normalizeCommand(
-        this.profile,
-        this.id,
-        releaseCommand,
-      );
-      await this.adapter.send(releaseNormalized);
-      const releaseAfter = this.state.setDpad(
-        normalized.command.direction,
-        false,
-      );
-      await this.logCommand(
-        releaseNormalized.command,
-        releaseBefore,
-        releaseAfter,
-        context,
-      );
-      await this.syncState(releaseAfter);
+      for (const button of dpadButtons(normalized.command.direction)) {
+        await this.runRelease({ type: "release", button }, context);
+      }
     }
   }
 

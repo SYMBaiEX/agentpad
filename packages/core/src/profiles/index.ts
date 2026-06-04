@@ -2,6 +2,7 @@ import { ProfileError } from "../errors";
 import type {
   ControllerCommand,
   ControllerProfileName,
+  DpadCardinalDirection,
   DpadDirection,
   NormalizedControllerCommand,
 } from "../types";
@@ -79,8 +80,32 @@ export function toUniversal(
   return profile.toUniversal[resolved];
 }
 
-export function dpadButton(direction: DpadDirection): string {
+export function dpadButton(direction: DpadCardinalDirection): string {
   return `DPAD_${direction}`;
+}
+
+export function dpadDirections(
+  direction: DpadDirection,
+): readonly DpadCardinalDirection[] {
+  switch (direction) {
+    case "UP":
+    case "DOWN":
+    case "LEFT":
+    case "RIGHT":
+      return [direction];
+    case "UP_LEFT":
+      return ["UP", "LEFT"];
+    case "UP_RIGHT":
+      return ["UP", "RIGHT"];
+    case "DOWN_LEFT":
+      return ["DOWN", "LEFT"];
+    case "DOWN_RIGHT":
+      return ["DOWN", "RIGHT"];
+  }
+}
+
+export function dpadButtons(direction: DpadDirection): string[] {
+  return dpadDirections(direction).map(dpadButton);
 }
 
 export function normalizeCommand(
@@ -218,15 +243,21 @@ export function normalizeCommand(
         timestamp,
       };
     case "dpad": {
-      const button = resolveButton(profile, dpadButton(command.direction));
-      const universal = toUniversal(profile, button);
+      const buttons = dpadButtons(command.direction).map((button) =>
+        resolveButton(profile, button),
+      );
+      const universal = buttons
+        .map((button) => toUniversal(profile, button))
+        .filter((button): button is UniversalControl => Boolean(button));
       return {
         id,
         controllerId,
         profile: profile.name,
         command,
         timestamp,
-        ...(universal ? { universal: { dpad: universal } } : {}),
+        ...(universal.length > 0
+          ? { universal: { dpad: universal.join("+") } }
+          : {}),
       };
     }
     case "combo": {

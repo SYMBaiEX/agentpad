@@ -6,8 +6,10 @@ import {
   type Controller,
   type ControllerCommand,
   type ControllerState,
+  type DpadDirection,
   createControllerHub,
   createInitialControllerState,
+  dpadButtons,
   resolveProfile,
 } from "@opencontroller/core";
 import type { ServerWebSocket } from "bun";
@@ -485,26 +487,11 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
   state.updatedAt = Date.now();
   switch (command.type) {
     case "press":
-      state.buttons[command.button] = true;
-      if (command.pressure !== undefined) {
-        state.analogButtons[command.button] = command.pressure;
-      }
+      setButtonState(state, command.button, true, command.pressure);
       scheduleRelease(playerId, command.button, command.durationMs);
       return;
     case "release":
-      state.buttons[command.button] = false;
-      state.analogButtons[command.button] = 0;
-      if (command.button.startsWith("DPAD_")) {
-        const direction = command.button.slice(5).toLowerCase();
-        if (
-          direction === "up" ||
-          direction === "down" ||
-          direction === "left" ||
-          direction === "right"
-        ) {
-          state.dpad[direction] = false;
-        }
-      }
+      setButtonState(state, command.button, false);
       return;
     case "stick": {
       const stick =
@@ -520,11 +507,9 @@ function applyCommand(playerId: PlayerId, command: ControllerCommand): void {
       scheduleTriggerNeutral(playerId, command.trigger, command.durationMs);
       return;
     case "dpad": {
-      const key =
-        command.direction.toLowerCase() as keyof ControllerState["dpad"];
-      const button = `DPAD_${command.direction}`;
-      state.dpad[key] = true;
-      state.buttons[button] = true;
+      for (const button of dpadButtons(command.direction)) {
+        setButtonState(state, button, true);
+      }
       scheduleDpadRelease(playerId, command.direction, command.durationMs);
       return;
     }
@@ -622,20 +607,54 @@ function scheduleTriggerNeutral(
 
 function scheduleDpadRelease(
   playerId: PlayerId,
-  direction: "UP" | "DOWN" | "LEFT" | "RIGHT",
+  direction: DpadDirection,
   durationMs = 0,
 ): void {
   if (durationMs <= 0) {
     return;
   }
   schedule(`${playerId}:dpad:${direction}`, durationMs, () => {
-    const state = controllerStates[playerId];
-    const key = direction.toLowerCase() as keyof ControllerState["dpad"];
-    state.dpad[key] = false;
-    state.buttons[`DPAD_${direction}`] = false;
-    state.updatedAt = Date.now();
+    for (const button of dpadButtons(direction)) {
+      applyCommand(playerId, { type: "release", button });
+    }
     broadcastControllerStates();
   });
+}
+
+function setButtonState(
+  state: ControllerState,
+  button: string,
+  pressed: boolean,
+  pressure?: number,
+): void {
+  state.buttons[button] = pressed;
+  if (pressure !== undefined) {
+    state.analogButtons[button] = pressure;
+  } else if (button in state.analogButtons) {
+    state.analogButtons[button] = pressed ? 1 : 0;
+  }
+
+  const dpadKey = dpadKeyFromButton(button);
+  if (dpadKey) {
+    state.dpad[dpadKey] = pressed;
+  }
+}
+
+function dpadKeyFromButton(
+  button: string,
+): keyof ControllerState["dpad"] | undefined {
+  switch (button) {
+    case "DPAD_UP":
+      return "up";
+    case "DPAD_DOWN":
+      return "down";
+    case "DPAD_LEFT":
+      return "left";
+    case "DPAD_RIGHT":
+      return "right";
+    default:
+      return undefined;
+  }
 }
 
 function schedule(key: string, durationMs: number, callback: () => void): void {
