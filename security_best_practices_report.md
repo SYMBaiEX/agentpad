@@ -69,6 +69,20 @@ validation.
 - Fix: CI now uses read-only default permissions and runs `bun run lint` and
   `bun audit`.
 
+### SBP-005: npm Bin Metadata Would Be Auto-Corrected During Publish
+
+- Severity: Low
+- Location: `packages/cli/package.json:17`,
+  `packages/native-linux-uinput/package.json:44`,
+  `packages/native-windows-virtual-gamepad/package.json:47`,
+  `packages/native-macos-driverkit/package.json:42`
+- Evidence: npm dry-run publish warned that it would auto-correct bin metadata
+  for platform packages.
+- Impact: package command entry points should not rely on npm publish-time
+  normalization, especially for setup and doctor commands.
+- Fix: bin targets are now normalized to npm's package metadata format and all
+  package dry-run publishes are warning-free.
+
 ## Current Open Release Blockers
 
 ### PUB-001: npm Scope Does Not Exist
@@ -105,6 +119,16 @@ validation.
 - `npm publish --workspace packages/core --access public --dry-run --json`:
   passed.
 - `npm publish --workspace packages/overlay --access public --dry-run --json`:
+  passed.
+- `npm publish --workspace packages/cli --access public --dry-run --json`:
+  passed.
+- `npm publish --workspace packages/native --access public --dry-run --json`:
+  passed.
+- `npm publish --workspace packages/native-linux-uinput --access public --dry-run --json`:
+  passed.
+- `npm publish --workspace packages/native-windows-virtual-gamepad --access public --dry-run --json`:
+  passed.
+- `npm publish --workspace packages/native-macos-driverkit --access public --dry-run --json`:
   passed.
 - High-confidence local secret scan: no matches.
 - Dangerous frontend sink scan for `packages/` and `examples/`: no remaining

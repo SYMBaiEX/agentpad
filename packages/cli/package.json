@@ -15,7 +15,7 @@
   },
   "keywords": ["ai", "controller", "gamepad", "cli", "opencontroller"],
   "bin": {
-    "opencontroller": "./dist/index.js"
+    "opencontroller": "dist/index.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

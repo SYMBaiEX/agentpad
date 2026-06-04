@@ -45,9 +45,9 @@
     }
   },
   "bin": {
-    "opencontroller-windows-gamepad-doctor": "./dist/bin/doctor.js",
-    "opencontroller-windows-vhf-assets": "./dist/bin/vhf-assets.js",
-    "opencontroller-windows-vhf-setup": "./dist/bin/setup.js"
+    "opencontroller-windows-gamepad-doctor": "dist/bin/doctor.js",
+    "opencontroller-windows-vhf-assets": "dist/bin/vhf-assets.js",
+    "opencontroller-windows-vhf-setup": "dist/bin/setup.js"
   },
   "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
