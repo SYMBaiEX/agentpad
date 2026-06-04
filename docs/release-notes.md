@@ -8,6 +8,8 @@
   D-pad button presses now keep structured `state.dpad` values synchronized.
 - `controller.dpad()` now supports diagonal directions such as `UP_RIGHT`,
   encoded as combined cardinal D-pad state and report bits.
+- D-pad helper commands now honor disabled-button, disabled-combo, and
+  max-button-hold safety policies through their underlying `DPAD_*` buttons.
 - Prepared workspace package manifests for the next `0.1.1` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.

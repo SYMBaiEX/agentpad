@@ -1,5 +1,10 @@
 import { SafetyError } from "./errors";
-import { type ControllerProfile, resolveButton, toUniversal } from "./profiles";
+import {
+  type ControllerProfile,
+  dpadButtons,
+  resolveButton,
+  toUniversal,
+} from "./profiles";
 import type { ControllerCommand, SafetyConfig } from "./types";
 
 export const defaultSafetyConfig: SafetyConfig = {
@@ -76,7 +81,9 @@ export class SafetyGuard {
 
   private assertDurations(command: ControllerCommand): void {
     if (
-      (command.type === "press" || command.type === "combo") &&
+      (command.type === "press" ||
+        command.type === "combo" ||
+        command.type === "dpad") &&
       command.durationMs
     ) {
       if (command.durationMs > this.config.maxButtonHoldMs) {
@@ -126,7 +133,16 @@ export class SafetyGuard {
       case "trigger":
         this.assertButtonAllowed(command.trigger);
         return;
-      case "dpad":
+      case "dpad": {
+        const buttons = dpadButtons(command.direction);
+        for (const button of buttons) {
+          this.assertButtonAllowed(button);
+        }
+        if (buttons.length > 1) {
+          this.assertComboAllowed(buttons);
+        }
+        return;
+      }
       case "stick":
       case "touchpad":
       case "motion":

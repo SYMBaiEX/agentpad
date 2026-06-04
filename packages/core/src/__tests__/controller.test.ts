@@ -263,6 +263,60 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("applies disabled button safety to dpad helper commands", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+      safety: {
+        disabledButtons: ["DPAD_UP"],
+      },
+    });
+
+    await expect(controller.dpad("UP", 5)).rejects.toThrow(
+      "Button DPAD_UP is disabled by safety config",
+    );
+    await expect(controller.dpad("UP_RIGHT", 5)).rejects.toThrow(
+      "Button DPAD_UP is disabled by safety config",
+    );
+
+    await controller.disconnect();
+  });
+
+  test("applies disabled combo safety to diagonal dpad helper commands", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+      safety: {
+        disabledCombos: [["DPAD_UP", "DPAD_RIGHT"]],
+      },
+    });
+
+    await expect(controller.dpad("UP_RIGHT", 5)).rejects.toThrow(
+      "Combo DPAD_UP+DPAD_RIGHT is disabled by safety config",
+    );
+
+    await controller.disconnect();
+  });
+
+  test("limits dpad hold duration through button safety", async () => {
+    const controller = await createController({
+      profile: "xbox",
+      adapter: "dry-run",
+      replay: false,
+      safety: {
+        maxButtonHoldMs: 50,
+      },
+    });
+
+    await expect(controller.dpad("UP_RIGHT", 51)).rejects.toThrow(
+      "Button hold duration 51ms exceeds 50ms",
+    );
+
+    await controller.disconnect();
+  });
+
   test("describes adapter emulation capabilities", () => {
     const dryRun = new DryRunAdapter().capabilities();
     const websocket = new WebSocketAdapter({
