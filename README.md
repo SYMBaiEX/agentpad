@@ -647,6 +647,20 @@ Before publishing a new npm package version:
 bun run clean
 bun run build
 bun run pack:check
+bun run publish:npm:dry-run
+```
+
+Publish the package set in dependency order:
+
+```bash
+bun run publish:npm -- --confirm --otp 123456
+```
+
+If your npm account uses a granular automation token with publish 2FA bypass,
+omit `--otp`. To retry one package, pass one or more workspaces:
+
+```bash
+bun run publish:npm -- --confirm --otp 123456 --workspace packages/core
 ```
 
 Check the live npm versions directly after publishing:

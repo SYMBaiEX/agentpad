@@ -30,6 +30,8 @@
     "test": "bun test packages/core/src/__tests__/controller.test.ts packages/cli/src/__tests__ packages/native/src/__tests__ packages/native-linux-uinput/src/__tests__ packages/native-windows-virtual-gamepad/src/__tests__ packages/native-macos-driverkit/src/__tests__",
     "typecheck": "tsc -b",
     "pack:check": "node scripts/check-npm-packages.mjs",
+    "publish:npm": "node scripts/publish-npm-packages.mjs",
+    "publish:npm:dry-run": "node scripts/publish-npm-packages.mjs --dry-run",
     "release:check": "bun run lint && bun run typecheck && bun run test && bun run build && bun audit && bun run pack:check",
     "lint": "biome check .",
     "format": "biome check --write ."

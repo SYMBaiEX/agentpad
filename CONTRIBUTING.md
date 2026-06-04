@@ -31,6 +31,7 @@ Before publishing a new npm package version:
 
 - Use npm 2FA or a granular access token that is allowed to publish.
 - Run `bun run release:check`.
+- Preview publish output with `bun run publish:npm:dry-run`.
 - Run `npm view @opencontroller/core version` and the same command for changed
   packages to inspect current npm registry versions.
 - Publish packages in dependency order:
@@ -39,6 +40,8 @@ Before publishing a new npm package version:
   `@opencontroller/native-windows-virtual-gamepad`,
   `@opencontroller/native-macos-driverkit`, `@opencontroller/native`,
   `@opencontroller/cli`.
+- Use `bun run publish:npm -- --confirm --otp <code>` for a 2FA-protected
+  account, or omit `--otp` when using a granular publish token with 2FA bypass.
 - Run `npm view <package> version` after publishing to confirm npm sees every
   changed package at the expected version.
 - Verify a clean install in a temporary directory before announcing the release.

@@ -7,6 +7,8 @@
 - Direct trigger button presses now map to full analog trigger state, and direct
   D-pad button presses now keep structured `state.dpad` values synchronized.
 - Prepared workspace package manifests for the next `0.1.1` npm patch release.
+- Added a guarded `publish:npm` helper that publishes packages in dependency
+  order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.
 - README and contributing release guidance updated for ongoing `@opencontroller`
   npm package maintenance and live `npm view` verification.
