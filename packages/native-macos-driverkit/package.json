@@ -4,6 +4,10 @@
   "description": "macOS DriverKit HID virtual gamepad assets, diagnostics, and bridge helpers for OpenController.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/SYMBaiEX/OpenController#readme",
+  "bugs": {
+    "url": "https://github.com/SYMBaiEX/OpenController/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SYMBaiEX/OpenController.git",
@@ -40,7 +44,7 @@
     "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js",
     "opencontroller-macos-driverkit-setup": "./dist/bin/setup.js"
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist && chmod +x dist/bin/*.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",

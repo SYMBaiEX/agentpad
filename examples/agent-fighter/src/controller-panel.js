@@ -112,7 +112,7 @@ function render(payload) {
     const agent = payload.agents?.[player.id];
     const controller = payload.controllers?.[player.id];
     const root = document.getElementById(player.id);
-    root.innerHTML = agentTemplate(player, agent, controller);
+    root.replaceChildren(agentCard(player, agent, controller));
   }
 }
 
@@ -122,102 +122,113 @@ function setButtonsBusy(isBusy) {
   resetButton.disabled = isBusy;
 }
 
-function agentTemplate(player, agent, controller) {
+function agentCard(player, agent, controller) {
   const last = agent?.last;
-  return `
-    <div class="agentHeader">
-      <div class="agentName">
-        <span class="swatch" style="background:${player.color}"></span>
-        <span>${player.name}</span>
-      </div>
-      <div class="meta">${escapeHtml(player.id)} | ${escapeHtml(
-        last?.model ?? "waiting",
-      )}</div>
-    </div>
-    <div class="body">
-      ${controllerTemplate(controller)}
-      <div class="decision">
-        <div><strong>${escapeHtml(last?.action ?? "waiting")}</strong> ${
-          last ? escapeHtml(last.source) : ""
-        }</div>
-        <div class="meta">${escapeHtml(agent?.style ?? "")}</div>
-        <p class="rationale">${escapeHtml(
+  const fragment = document.createDocumentFragment();
+  const swatch = el("span", { className: "swatch" });
+  swatch.style.background = player.color;
+
+  fragment.append(
+    el("div", { className: "agentHeader" }, [
+      el("div", { className: "agentName" }, [
+        swatch,
+        el("span", {}, [player.name]),
+      ]),
+      el("div", { className: "meta" }, [
+        `${player.id} | ${last?.model ?? "waiting"}`,
+      ]),
+    ]),
+    el("div", { className: "body" }, [
+      controllerView(controller),
+      el("div", { className: "decision" }, [
+        el("div", {}, [
+          el("strong", {}, [last?.action ?? "waiting"]),
+          last ? ` ${last.source}` : "",
+        ]),
+        el("div", { className: "meta" }, [agent?.style ?? ""]),
+        el("p", { className: "rationale" }, [
           last?.rationale ?? "Waiting for the next agent decision.",
-        )}</p>
-      </div>
-      <div class="logs">${logTemplate(agent?.recent ?? [])}</div>
-    </div>
-  `;
+        ]),
+      ]),
+      el("div", { className: "logs" }, [logView(agent?.recent ?? [])]),
+    ]),
+  );
+
+  return fragment;
 }
 
-function controllerTemplate(controller) {
+function controllerView(controller) {
   const buttons = controller?.buttons ?? {};
   const analog = controller?.analogButtons ?? {};
   const left = controller?.sticks?.left ?? { x: 0, y: 0 };
-  return `
-    <div class="controller">
-      <div class="dpad">
-        ${dir("up", buttons.DPAD_UP)}
-        ${dir("left", buttons.DPAD_LEFT)}
-        ${dir("right", buttons.DPAD_RIGHT)}
-        ${dir("down", buttons.DPAD_DOWN)}
-      </div>
-      <div class="padMid">
-        <div class="triggers">
-          ${trigger(analog.LT ?? 0)}
-          ${trigger(analog.RT ?? 0)}
-        </div>
-        <div class="stick">
-          <span class="nub" style="--x:${Math.round(
-            left.x * 28,
-          )}px; --y:${Math.round(left.y * 28)}px"></span>
-        </div>
-      </div>
-      <div class="buttons">
-        ${button("y", "Y", buttons.Y)}
-        ${button("x", "X", buttons.X)}
-        ${button("b", "B", buttons.B)}
-        ${button("a", "A", buttons.A)}
-      </div>
-    </div>
-  `;
+
+  const nub = el("span", { className: "nub" });
+  nub.style.setProperty("--x", `${Math.round(left.x * 28)}px`);
+  nub.style.setProperty("--y", `${Math.round(left.y * 28)}px`);
+
+  return el("div", { className: "controller" }, [
+    el("div", { className: "dpad" }, [
+      dir("up", buttons.DPAD_UP),
+      dir("left", buttons.DPAD_LEFT),
+      dir("right", buttons.DPAD_RIGHT),
+      dir("down", buttons.DPAD_DOWN),
+    ]),
+    el("div", { className: "padMid" }, [
+      el("div", { className: "triggers" }, [
+        trigger(analog.LT ?? 0),
+        trigger(analog.RT ?? 0),
+      ]),
+      el("div", { className: "stick" }, [nub]),
+    ]),
+    el("div", { className: "buttons" }, [
+      button("y", "Y", buttons.Y),
+      button("x", "X", buttons.X),
+      button("b", "B", buttons.B),
+      button("a", "A", buttons.A),
+    ]),
+  ]);
 }
 
-function logTemplate(events) {
+function logView(events) {
   if (events.length === 0) {
-    return `<div class="log"><p class="rationale">No decisions recorded yet.</p></div>`;
+    return el("div", { className: "log" }, [
+      el("p", { className: "rationale" }, ["No decisions recorded yet."]),
+    ]);
   }
-  return events
-    .map(
-      (event) => `
-        <article class="log">
-          <div class="logTop">
-            <span>${new Date(event.timestamp).toLocaleTimeString()}</span>
-            <span>${escapeHtml(event.source)} | ${escapeHtml(event.model)}</span>
-          </div>
-          <div class="logAction">${escapeHtml(event.action)}</div>
-          <p class="rationale">${escapeHtml(event.rationale)}</p>
-          <div class="controls">${escapeHtml(commandSummary(event.controls))}</div>
-        </article>
-      `,
-    )
-    .join("");
+  const fragment = document.createDocumentFragment();
+  for (const event of events) {
+    fragment.append(
+      el("article", { className: "log" }, [
+        el("div", { className: "logTop" }, [
+          el("span", {}, [new Date(event.timestamp).toLocaleTimeString()]),
+          el("span", {}, [`${event.source} | ${event.model}`]),
+        ]),
+        el("div", { className: "logAction" }, [event.action]),
+        el("p", { className: "rationale" }, [event.rationale]),
+        el("div", { className: "controls" }, [commandSummary(event.controls)]),
+      ]),
+    );
+  }
+  return fragment;
 }
 
 function button(slot, label, active) {
-  return `<span class="button ${slot} ${active ? "active" : ""}">${label}</span>`;
+  return el("span", { className: `button ${slot} ${active ? "active" : ""}` }, [
+    label,
+  ]);
 }
 
 function dir(slot, active) {
   const label = { up: "U", down: "D", left: "L", right: "R" }[slot];
-  return `<span class="dir ${slot} ${active ? "active" : ""}">${label}</span>`;
+  return el("span", { className: `dir ${slot} ${active ? "active" : ""}` }, [
+    label,
+  ]);
 }
 
 function trigger(value) {
-  return `<div class="trigger"><span style="--value:${Math.max(
-    0,
-    Math.min(1, value),
-  )}"></span></div>`;
+  const fill = el("span");
+  fill.style.setProperty("--value", String(Math.max(0, Math.min(1, value))));
+  return el("div", { className: "trigger" }, [fill]);
 }
 
 function commandSummary(commands) {
@@ -242,11 +253,15 @@ function commandSummary(commands) {
     .join(" + ");
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function el(tag, options = {}, children = []) {
+  const element = document.createElement(tag);
+  if (options.className) {
+    element.className = options.className;
+  }
+  for (const child of children) {
+    element.append(
+      child instanceof Node ? child : document.createTextNode(child),
+    );
+  }
+  return element;
 }

@@ -102,8 +102,8 @@ function renderOverlayHtml(
   state: ControllerState,
   theme: ReturnType<typeof resolveOverlayTheme>,
 ): string {
-  const initialState = JSON.stringify(state);
-  const initialTheme = JSON.stringify(theme);
+  const initialState = serializeScriptJson(state);
+  const initialTheme = serializeScriptJson(theme);
 
   return `<!doctype html>
 <html lang="en">
@@ -147,18 +147,110 @@ function renderOverlayHtml(
         return Math.max(0, Math.min(1, (state.analogButtons && state.analogButtons[button]) || 0));
       }
 
+      const svgNamespace = "http://www.w3.org/2000/svg";
+
+      function svgElement(name, attributes, children) {
+        const element = document.createElementNS(svgNamespace, name);
+        for (const [key, value] of Object.entries(attributes || {})) {
+          element.setAttribute(key, String(value));
+        }
+        for (const child of children || []) {
+          element.append(child);
+        }
+        return element;
+      }
+
+      function svgText(x, y, label, attributes) {
+        const text = svgElement("text", { x, y, ...attributes });
+        text.textContent = label;
+        return text;
+      }
+
       function circle(cx, cy, r, label, active) {
-        return '<g><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + (active ? theme.active : theme.control) + '" stroke="' + (active ? theme.activeStroke : theme.controlStroke) + '" stroke-width="3"></circle><text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" fill="' + (active ? "#08111f" : theme.text) + '" font-size="18" font-weight="700">' + label + '</text></g>';
+        return svgElement("g", {}, [
+          svgElement("circle", {
+            cx,
+            cy,
+            r,
+            fill: active ? theme.active : theme.control,
+            stroke: active ? theme.activeStroke : theme.controlStroke,
+            "stroke-width": 3,
+          }),
+          svgText(cx, cy + 5, label, {
+            "text-anchor": "middle",
+            fill: active ? "#08111f" : theme.text,
+            "font-size": 18,
+            "font-weight": 700,
+          }),
+        ]);
       }
 
       function stick(cx, cy, stickState) {
         const x = cx + ((stickState && stickState.x) || 0) * 24;
         const y = cy + ((stickState && stickState.y) || 0) * 24;
-        return '<g><circle cx="' + cx + '" cy="' + cy + '" r="42" fill="none" stroke="' + theme.controlStroke + '" stroke-dasharray="4 8" stroke-width="2"></circle><circle cx="' + cx + '" cy="' + cy + '" r="28" fill="' + theme.control + '" stroke="' + theme.controlStroke + '" stroke-width="3"></circle><line x1="' + cx + '" y1="' + cy + '" x2="' + x + '" y2="' + y + '" stroke="' + theme.active + '" stroke-width="4"></line><circle cx="' + x + '" cy="' + y + '" r="18" fill="' + theme.active + '" stroke="' + theme.activeStroke + '" stroke-width="3"></circle></g>';
+        return svgElement("g", {}, [
+          svgElement("circle", {
+            cx,
+            cy,
+            r: 42,
+            fill: "none",
+            stroke: theme.controlStroke,
+            "stroke-dasharray": "4 8",
+            "stroke-width": 2,
+          }),
+          svgElement("circle", {
+            cx,
+            cy,
+            r: 28,
+            fill: theme.control,
+            stroke: theme.controlStroke,
+            "stroke-width": 3,
+          }),
+          svgElement("line", {
+            x1: cx,
+            y1: cy,
+            x2: x,
+            y2: y,
+            stroke: theme.active,
+            "stroke-width": 4,
+          }),
+          svgElement("circle", {
+            cx: x,
+            cy: y,
+            r: 18,
+            fill: theme.active,
+            stroke: theme.activeStroke,
+            "stroke-width": 3,
+          }),
+        ]);
       }
 
       function trigger(x, y, label, value) {
-        return '<g><rect x="' + x + '" y="' + y + '" width="116" height="24" rx="6" fill="' + theme.control + '" stroke="' + theme.controlStroke + '"></rect><rect x="' + (x + 3) + '" y="' + (y + 3) + '" width="' + (110 * value) + '" height="18" rx="4" fill="' + theme.active + '"></rect><text x="' + (x + 58) + '" y="' + (y + 17) + '" text-anchor="middle" fill="' + theme.text + '" font-size="12" font-weight="700">' + label + '</text></g>';
+        return svgElement("g", {}, [
+          svgElement("rect", {
+            x,
+            y,
+            width: 116,
+            height: 24,
+            rx: 6,
+            fill: theme.control,
+            stroke: theme.controlStroke,
+          }),
+          svgElement("rect", {
+            x: x + 3,
+            y: y + 3,
+            width: 110 * value,
+            height: 18,
+            rx: 4,
+            fill: theme.active,
+          }),
+          svgText(x + 58, y + 17, label, {
+            "text-anchor": "middle",
+            fill: theme.text,
+            "font-size": 12,
+            "font-weight": 700,
+          }),
+        ]);
       }
 
       function profileConfig() {
@@ -200,7 +292,32 @@ function renderOverlayHtml(
 
       function render() {
         const config = profileConfig();
-        app.innerHTML = '<svg viewBox="0 0 640 360" role="img" aria-label="OpenController controller overlay"><rect width="640" height="360" fill="' + (theme.transparent ? "transparent" : theme.background) + '"></rect><path d="' + config.shell + '" fill="' + theme.shell + '" stroke="' + theme.shellStroke + '" stroke-width="4"></path>' + trigger(126, 48, config.leftTrigger, analog(config.leftTrigger)) + trigger(398, 48, config.rightTrigger, analog(config.rightTrigger)) + stick(210, 204, state.sticks.left) + stick(396, 224, state.sticks.right) + circle(470, 176, 20, config.text[0], pressed(config.labels[0])) + circle(510, 216, 20, config.text[1], pressed(config.labels[1])) + circle(430, 216, 20, config.text[2], pressed(config.labels[2])) + circle(470, 256, 20, config.text[3], pressed(config.labels[3])) + '</svg>';
+        const svg = svgElement("svg", {
+          viewBox: "0 0 640 360",
+          role: "img",
+          "aria-label": "OpenController controller overlay",
+        }, [
+          svgElement("rect", {
+            width: 640,
+            height: 360,
+            fill: theme.transparent ? "transparent" : theme.background,
+          }),
+          svgElement("path", {
+            d: config.shell,
+            fill: theme.shell,
+            stroke: theme.shellStroke,
+            "stroke-width": 4,
+          }),
+          trigger(126, 48, config.leftTrigger, analog(config.leftTrigger)),
+          trigger(398, 48, config.rightTrigger, analog(config.rightTrigger)),
+          stick(210, 204, state.sticks && state.sticks.left),
+          stick(396, 224, state.sticks && state.sticks.right),
+          circle(470, 176, 20, config.text[0], pressed(config.labels[0])),
+          circle(510, 216, 20, config.text[1], pressed(config.labels[1])),
+          circle(430, 216, 20, config.text[2], pressed(config.labels[2])),
+          circle(470, 256, 20, config.text[3], pressed(config.labels[3])),
+        ]);
+        app.replaceChildren(svg);
       }
 
       render();
@@ -215,4 +332,13 @@ function renderOverlayHtml(
     </script>
   </body>
 </html>`;
+}
+
+function serializeScriptJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replaceAll("<", "\\u003c")
+    .replaceAll(">", "\\u003e")
+    .replaceAll("&", "\\u0026")
+    .replaceAll("\u2028", "\\u2028")
+    .replaceAll("\u2029", "\\u2029");
 }

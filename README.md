@@ -3,6 +3,7 @@
 [![CI](https://github.com/SYMBaiEX/OpenController/actions/workflows/ci.yml/badge.svg)](https://github.com/SYMBaiEX/OpenController/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/SYMBaiEX/OpenController)](https://github.com/SYMBaiEX/OpenController/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/security-policy-brightgreen.svg)](SECURITY.md)
 
 OpenController is a Bun-first TypeScript framework for giving AI agents a real
 controller interface.
@@ -189,6 +190,21 @@ npm install @opencontroller/core @opencontroller/native-macos-driverkit
 Important npm note: these packages are configured for the `@opencontroller`
 scope. Before publishing, confirm ownership of that npm scope or rename the
 packages to an owned scope such as `@symbaiex/*`.
+
+## Security And Safety
+
+OpenController is designed for local agents, accessibility tooling, testing,
+research, emulators, stream overlays, and controlled single-player experiments.
+It is not intended for anti-cheat bypasses, stealth automation, credential
+theft, or online competitive game automation.
+
+Native setup helpers generate reviewed assets, plans, and commands. They do not
+silently install unsigned drivers, alter system permissions, or perform
+privileged changes without explicit user action.
+
+Please read [SECURITY.md](SECURITY.md) before reporting vulnerabilities, and see
+[CONTRIBUTING.md](CONTRIBUTING.md) for the release-check and contribution
+workflow.
 
 ## Developer Surface
 

@@ -56,6 +56,16 @@ function checkWorkspace(workspace) {
   if (manifest.type !== "module") {
     errors.push('type must be "module"');
   }
+  if (
+    manifest.homepage !== "https://github.com/SYMBaiEX/OpenController#readme"
+  ) {
+    errors.push("homepage must point to the GitHub README");
+  }
+  if (
+    manifest.bugs?.url !== "https://github.com/SYMBaiEX/OpenController/issues"
+  ) {
+    errors.push("bugs.url must point to the GitHub issue tracker");
+  }
   if (manifest.repository?.directory !== workspace) {
     errors.push(`repository.directory must be ${workspace}`);
   }
@@ -67,6 +77,9 @@ function checkWorkspace(workspace) {
   }
   if (!manifest.files?.includes("README.md")) {
     errors.push('files must include "README.md"');
+  }
+  if (!manifest.files?.includes("LICENSE")) {
+    errors.push('files must include "LICENSE"');
   }
 
   const pack = spawnSync(
@@ -105,6 +118,7 @@ function checkWorkspace(workspace) {
 
   requirePackedFile(packedFiles, "package.json", errors);
   requirePackedFile(packedFiles, "README.md", errors);
+  requirePackedFile(packedFiles, "LICENSE", errors);
   requireManifestPath(packageDir, packedFiles, manifest.main, "main", errors);
   requireManifestPath(packageDir, packedFiles, manifest.types, "types", errors);
 
@@ -215,6 +229,17 @@ function validatePackedPath(workspace, path, errors) {
   }
   if (path.startsWith("node_modules/")) {
     errors.push(`node_modules leaked into package: ${path}`);
+  }
+  if (
+    path === ".npmrc" ||
+    path.endsWith(".env") ||
+    path.includes("/.env") ||
+    path.endsWith(".pem") ||
+    path.endsWith(".key") ||
+    path.endsWith(".p12") ||
+    path.endsWith(".pfx")
+  ) {
+    errors.push(`sensitive local file leaked into package: ${path}`);
   }
 }
 

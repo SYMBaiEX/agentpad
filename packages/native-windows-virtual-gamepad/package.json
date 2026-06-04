@@ -4,6 +4,10 @@
   "description": "Windows VHF/HID virtual gamepad helpers, XUSB compatibility helpers, and diagnostics for OpenController.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/SYMBaiEX/OpenController#readme",
+  "bugs": {
+    "url": "https://github.com/SYMBaiEX/OpenController/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SYMBaiEX/OpenController.git",
@@ -45,7 +49,7 @@
     "opencontroller-windows-vhf-assets": "./dist/bin/vhf-assets.js",
     "opencontroller-windows-vhf-setup": "./dist/bin/setup.js"
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist && chmod +x dist/bin/*.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",

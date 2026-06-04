@@ -4,6 +4,10 @@
   "description": "React and OBS-friendly controller overlays for OpenController.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/SYMBaiEX/OpenController#readme",
+  "bugs": {
+    "url": "https://github.com/SYMBaiEX/OpenController/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SYMBaiEX/OpenController.git",
@@ -33,7 +37,7 @@
       "import": "./dist/server/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "rm -rf dist tsconfig.tsbuildinfo && tsc -p tsconfig.json && node ../../scripts/fix-esm-extensions.mjs dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
