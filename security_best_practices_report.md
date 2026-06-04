@@ -5,10 +5,9 @@ Generated: 2026-06-04
 ## Executive Summary
 
 No open critical or high severity code findings were found in the current
-JavaScript/TypeScript security pass. The repo is publish-ready from a code,
-test, and package-content standpoint, but npm publication is blocked by account
-setup: the `@opencontroller` npm scope does not exist yet, and the npm account
-currently has 2FA disabled.
+JavaScript/TypeScript security pass. The repo is published and release-verified
+from a code, test, package-content, and public registry install standpoint. All
+seven `@opencontroller/*` npm packages were published at version `0.1.0`.
 
 Release validation passes with `bun run release:check`: lint, TypeScript
 project references, 92 tests, build, `bun audit`, and npm package dry-run
@@ -83,27 +82,9 @@ validation.
 - Fix: bin targets are now normalized to npm's package metadata format and all
   package dry-run publishes are warning-free.
 
-## Current Open Release Blockers
+## Current Open Release Notes
 
-### PUB-001: npm Scope Does Not Exist
-
-- Severity: Release blocker
-- Evidence: `npm access list packages @opencontroller --json` returns
-  `E404 Scope not found`.
-- Impact: publishing `@opencontroller/*` packages cannot succeed until the
-  `opencontroller` npm organization/scope exists and the publishing account has
-  access.
-- Fix: create the `opencontroller` npm organization/scope, or rename packages to
-  an owned scope such as `@symbaiex/*`.
-
-### PUB-002: npm 2FA Is Disabled
-
-- Severity: Release blocker
-- Evidence: `npm profile get --json` returns `"tfa": false`.
-- Impact: npm direct publishing currently requires either account 2FA or a
-  granular access token that is allowed to publish.
-- Fix: enable npm 2FA or create a short-lived granular publish token with the
-  required scope/package access.
+No open release blockers remain for `0.1.0`.
 
 ## Repository Security Settings
 
@@ -116,6 +97,16 @@ validation.
 ## Verification
 
 - `bun run release:check`: passed.
+- `npm publish --workspace packages/core --access public`: passed.
+- `npm publish --workspace packages/overlay --access public`: passed.
+- `npm publish --workspace packages/cli --access public`: passed.
+- `npm publish --workspace packages/native --access public`: passed.
+- `npm publish --workspace packages/native-linux-uinput --access public`:
+  passed.
+- `npm publish --workspace packages/native-windows-virtual-gamepad --access public`:
+  passed.
+- `npm publish --workspace packages/native-macos-driverkit --access public`:
+  passed.
 - `npm publish --workspace packages/core --access public --dry-run --json`:
   passed.
 - `npm publish --workspace packages/overlay --access public --dry-run --json`:
@@ -130,8 +121,15 @@ validation.
   passed.
 - `npm publish --workspace packages/native-macos-driverkit --access public --dry-run --json`:
   passed.
+- Public `npm view` registry visibility: passed for all seven packages at
+  `0.1.0`.
+- Published package metadata verification: passed for license, repository,
+  homepage, issue tracker, and CLI bin fields.
 - Consumer install smoke from local tarballs: passed for all publishable
   packages, including `@opencontroller/core`, `@opencontroller/native`,
+  `@opencontroller/overlay/server`, and the installed `opencontroller` CLI.
+- Consumer install smoke from the public npm registry: passed for
+  `@opencontroller/core`, `@opencontroller/native`,
   `@opencontroller/overlay/server`, and the installed `opencontroller` CLI.
 - High-confidence local secret scan: no matches.
 - Dangerous frontend sink scan for `packages/` and `examples/`: no remaining

@@ -142,10 +142,7 @@ channels, so the demo still works offline.
 
 ## Install
 
-OpenController is currently published as a source release on GitHub. The package
-manifests are prepared for npm, but the packages are not published yet.
-
-Once published:
+OpenController is published on npm under the `@opencontroller` scope.
 
 ```bash
 npm install @opencontroller/core
@@ -187,9 +184,8 @@ For macOS DriverKit virtual HID work:
 npm install @opencontroller/core @opencontroller/native-macos-driverkit
 ```
 
-Important npm note: these packages are configured for the `@opencontroller`
-scope. Before publishing, confirm ownership of that npm scope or rename the
-packages to an owned scope such as `@symbaiex/*`.
+Source packages in this repository use workspace links for local development.
+External projects should install the npm packages shown above.
 
 ## Security And Safety
 

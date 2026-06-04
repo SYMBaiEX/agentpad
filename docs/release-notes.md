@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- No unreleased changes yet.
+
+## v0.1.0
+
+Initial npm package release for OpenController, published under the
+`@opencontroller` scope.
+
+Published packages:
+
+- `@opencontroller/core`
+- `@opencontroller/overlay`
+- `@opencontroller/cli`
+- `@opencontroller/native`
+- `@opencontroller/native-linux-uinput`
+- `@opencontroller/native-windows-virtual-gamepad`
+- `@opencontroller/native-macos-driverkit`
+
+### Published SDK Updates
+
 - adapter contract now supports full controller state synchronization
 - WebSocket adapter now emits `controller.state` messages
 - XInput report encoder added for native virtual-device bridge processes
@@ -108,9 +127,9 @@
   source, entitlements, manifest, and activation/test commands without
   privileged changes
 
-## v0.1.0
+### Initial Source Release
 
-Initial release:
+Initial source release contents:
 
 - OpenController project branding
 - `@opencontroller/core`
