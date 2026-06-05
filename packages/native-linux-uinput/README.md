@@ -11,6 +11,8 @@ This package provides:
   Linux gamepad events through `/dev/uinput`
 - Linux `FF_RUMBLE` force-feedback support that emits OpenController feedback
   JSONL back to `controller.onFeedback(...)`
+- Linux `EV_LED` player-indicator feedback that emits the shared
+  `"hid-gamepad-lights"` feedback payload
 
 It is the first platform backend toward full OS-level virtual controller
 emulation. It only works on Linux systems with the `uinput` module and write
@@ -73,7 +75,9 @@ profile payloads also map touch contacts to Linux multitouch events such as
 `BTN_TOUCH`, `ABS_MT_SLOT`, `ABS_MT_POSITION_X`, and `ABS_MT_PRESSURE`.
 The helper also advertises Linux `FF_RUMBLE`; when a game uploads and plays a
 rumble effect through evdev, the helper converts the weak/strong magnitudes into
-OpenController's shared HID rumble feedback JSONL on stdout.
+OpenController's shared HID rumble feedback JSONL on stdout. It also advertises
+four Linux player LEDs and maps EV_LED changes to OpenController's shared
+`"hid-gamepad-lights"` feedback JSONL with a player light mask.
 
 Use dry-run mode to verify the stream without opening `/dev/uinput`:
 
@@ -108,6 +112,9 @@ const controller = await createController({
 controller.onFeedback((event) => {
   if (event.type === "rumble") {
     console.log(event.weakMotor, event.strongMotor);
+  }
+  if (event.type === "lights") {
+    console.log(event.playerLightMask);
   }
 });
 ```

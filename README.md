@@ -290,6 +290,8 @@ The Linux native package adds:
 - profile HID parsing for PlayStation touchpad reports and Switch motion
   reports before falling back to generic HID/XInput payloads
 - Linux `FF_RUMBLE` feedback handling with native bridge feedback JSONL
+- Linux `EV_LED` player-indicator feedback through the shared
+  `"hid-gamepad-lights"` native bridge payload
 - setup helper for compiling the bridge and printing reviewed udev-rule commands
 
 The Windows native package adds:
@@ -602,7 +604,8 @@ virtual device only reacts to its assigned controller. Real device mode
 requires Linux and write access to `/dev/uinput`. Games that use evdev
 `FF_RUMBLE` can send weak/strong rumble back through helper stdout as
 `opencontroller.bridge.feedback`, which the SDK exposes through
-`controller.onFeedback(...)`.
+`controller.onFeedback(...)`. Hosts that toggle Linux player LEDs also surface
+as `"hid-gamepad-lights"` feedback with the current player light mask.
 
 The Windows VHF and macOS DriverKit host bridge adapters use the same
 `controllerId` option and `OPENCONTROLLER_CONTROLLER_ID` environment contract,

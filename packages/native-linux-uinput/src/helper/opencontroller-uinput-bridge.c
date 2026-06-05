@@ -22,6 +22,9 @@
 #define OC_RUMBLE_REPORT_BYTES 5
 #define OC_RUMBLE_REPORT_ID 2
 #define OC_RUMBLE_REPORT_BASE64_BYTES 8
+#define OC_LIGHT_REPORT_BYTES 7
+#define OC_LIGHT_REPORT_ID 5
+#define OC_LIGHT_REPORT_BASE64_BYTES 12
 #define OC_MAX_FF_EFFECTS 16
 #define OC_LINE_MAX 8192
 #define OC_CONTROLLER_ID_MAX 256
@@ -65,6 +68,12 @@ struct oc_rumble_effect {
   uint16_t strong_magnitude;
 };
 
+struct oc_led_map {
+  int code;
+  uint8_t player_light_mask;
+  uint8_t player_index;
+};
+
 static const struct oc_button_map button_map[] = {
     {0x1000, BTN_SOUTH},      {0x2000, BTN_EAST},
     {0x4000, BTN_WEST},       {0x8000, BTN_NORTH},
@@ -76,6 +85,13 @@ static const struct oc_button_map button_map[] = {
     {0x0004, BTN_DPAD_LEFT},  {0x0008, BTN_DPAD_RIGHT},
 };
 
+static const struct oc_led_map led_map[] = {
+    {LED_NUML, 0x01, 1},
+    {LED_CAPSL, 0x02, 2},
+    {LED_SCROLLL, 0x04, 3},
+    {LED_COMPOSE, 0x08, 4},
+};
+
 static int invert_axis(int16_t value);
 static int process_bridge_line(int fd, const char *line,
                                const char *controller_id,
@@ -84,7 +100,8 @@ static int process_bridge_line(int fd, const char *line,
                                int *should_stop);
 static int handle_uinput_events(int fd, const char *controller_id,
                                 struct oc_rumble_effect effects[],
-                                size_t effect_count);
+                                size_t effect_count,
+                                uint8_t *player_light_mask);
 static int handle_uinput_upload(int fd, int request_id,
                                 struct oc_rumble_effect effects[],
                                 size_t effect_count);
@@ -95,9 +112,15 @@ static int handle_uinput_playback(const struct input_event *event,
                                   const char *controller_id,
                                   const struct oc_rumble_effect effects[],
                                   size_t effect_count);
+static int handle_led_event(const struct input_event *event,
+                            const char *controller_id,
+                            uint8_t *player_light_mask);
 static void print_rumble_feedback(const char *controller_id,
                                   uint8_t weak_motor,
                                   uint8_t strong_motor);
+static void print_light_feedback(const char *controller_id,
+                                 uint8_t player_index,
+                                 uint8_t player_light_mask);
 static void encode_base64_bytes(const uint8_t *input, size_t input_length,
                                 char *output, size_t output_length);
 static unsigned long long timestamp_ms(void);
@@ -150,10 +173,18 @@ static int setup_device(int fd, const char *name) {
   if (ioctl(fd, UI_SET_FFBIT, FF_RUMBLE) < 0) {
     return -1;
   }
+  if (ioctl(fd, UI_SET_EVBIT, EV_LED) < 0) {
+    return -1;
+  }
 
   for (index = 0; index < sizeof(button_map) / sizeof(button_map[0]);
        index++) {
     if (ioctl(fd, UI_SET_KEYBIT, button_map[index].code) < 0) {
+      return -1;
+    }
+  }
+  for (index = 0; index < sizeof(led_map) / sizeof(led_map[0]); index++) {
+    if (ioctl(fd, UI_SET_LEDBIT, led_map[index].code) < 0) {
       return -1;
     }
   }
@@ -650,7 +681,8 @@ static int process_bridge_line(int fd, const char *line,
 
 static int handle_uinput_events(int fd, const char *controller_id,
                                 struct oc_rumble_effect effects[],
-                                size_t effect_count) {
+                                size_t effect_count,
+                                uint8_t *player_light_mask) {
   for (;;) {
     struct input_event event;
     ssize_t bytes_read = read(fd, &event, sizeof(event));
@@ -667,6 +699,10 @@ static int handle_uinput_events(int fd, const char *controller_id,
       } else if (event.type == EV_FF) {
         if (handle_uinput_playback(&event, controller_id, effects,
                                    effect_count) < 0) {
+          return -1;
+        }
+      } else if (event.type == EV_LED) {
+        if (handle_led_event(&event, controller_id, player_light_mask) < 0) {
           return -1;
         }
       }
@@ -765,6 +801,34 @@ static int handle_uinput_playback(const struct input_event *event,
   return 0;
 }
 
+static int handle_led_event(const struct input_event *event,
+                            const char *controller_id,
+                            uint8_t *player_light_mask) {
+  size_t index;
+
+  if (player_light_mask == NULL) {
+    return 0;
+  }
+
+  for (index = 0; index < sizeof(led_map) / sizeof(led_map[0]); index++) {
+    if (event->code != led_map[index].code) {
+      continue;
+    }
+
+    if (event->value != 0) {
+      *player_light_mask |= led_map[index].player_light_mask;
+    } else {
+      *player_light_mask &= (uint8_t)~led_map[index].player_light_mask;
+    }
+
+    print_light_feedback(controller_id, led_map[index].player_index,
+                         *player_light_mask);
+    return 0;
+  }
+
+  return 0;
+}
+
 static void print_rumble_feedback(const char *controller_id,
                                   uint8_t weak_motor,
                                   uint8_t strong_motor) {
@@ -786,6 +850,34 @@ static void print_rumble_feedback(const char *controller_id,
       "\"leftTriggerMotor\":0.000000,\"rightTriggerMotor\":0.000000}\n",
       timestamp_ms(), (unsigned int)OC_RUMBLE_REPORT_ID, report_base64,
       (double)weak_motor / 255.0, (double)strong_motor / 255.0);
+  fflush(stdout);
+}
+
+static void print_light_feedback(const char *controller_id,
+                                 uint8_t player_index,
+                                 uint8_t player_light_mask) {
+  uint8_t brightness = player_light_mask == 0 ? 0x00 : 0xff;
+  uint8_t report[OC_LIGHT_REPORT_BYTES] = {
+      OC_LIGHT_REPORT_ID, 0x00, 0x00, 0x00,
+      brightness,         player_index, player_light_mask};
+  char report_base64[OC_LIGHT_REPORT_BASE64_BYTES + 1];
+
+  encode_base64_bytes(report, sizeof(report), report_base64,
+                      sizeof(report_base64));
+
+  printf(
+      "{\"type\":\"opencontroller.bridge.feedback\",\"version\":1,"
+      "\"controllerId\":\"");
+  print_json_string(controller_id);
+  printf(
+      "\",\"timestamp\":%llu,\"feedbackType\":\"lights\","
+      "\"reportFormat\":\"hid-gamepad-lights\",\"reportId\":%u,"
+      "\"reportBase64\":\"%s\",\"red\":0.000000,\"green\":0.000000,"
+      "\"blue\":0.000000,\"brightness\":%.6f,\"playerIndex\":%u,"
+      "\"playerLightMask\":%u}\n",
+      timestamp_ms(), (unsigned int)OC_LIGHT_REPORT_ID, report_base64,
+      (double)brightness / 255.0, (unsigned int)player_index,
+      (unsigned int)player_light_mask);
   fflush(stdout);
 }
 
@@ -926,6 +1018,7 @@ int main(int argc, char **argv) {
   int created = 0;
   struct oc_rumble_effect effects[OC_MAX_FF_EFFECTS];
   char feedback_controller_id[OC_CONTROLLER_ID_MAX];
+  uint8_t player_light_mask = 0;
 
   for (arg_index = 1; arg_index < argc; arg_index++) {
     if (strcmp(argv[arg_index], "--dry-run") == 0) {
@@ -1014,8 +1107,8 @@ int main(int argc, char **argv) {
 
     if (FD_ISSET(fd, &read_fds) &&
         handle_uinput_events(fd, feedback_controller_id, effects,
-                             OC_MAX_FF_EFFECTS) < 0) {
-      fprintf(stderr, "opencontroller-uinput: failed to handle rumble event: %s\n",
+                             OC_MAX_FF_EFFECTS, &player_light_mask) < 0) {
+      fprintf(stderr, "opencontroller-uinput: failed to handle output event: %s\n",
               strerror(errno));
       break;
     }

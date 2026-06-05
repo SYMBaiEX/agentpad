@@ -66,6 +66,7 @@ describe("native host bridge facade", () => {
     });
 
     expect(adapter.capabilities().supportsRumble).toBe(true);
+    expect(adapter.capabilities().supportsLights).toBe(true);
     await driveAdapter(adapter);
 
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");

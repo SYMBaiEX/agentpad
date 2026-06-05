@@ -120,6 +120,9 @@ The helper:
 - advertises Linux `FF_RUMBLE`, handles uinput upload/erase/playback callbacks,
   and emits `opencontroller.bridge.feedback` JSONL for weak/strong rumble
   events
+- advertises Linux `EV_LED` player LEDs and emits
+  `opencontroller.bridge.feedback` JSONL with `"hid-gamepad-lights"` plus the
+  current player light mask when a host changes them
 - neutralizes and destroys the virtual device when the stream ends
 - supports `--dry-run` or `OPENCONTROLLER_UINPUT_DRY_RUN=1` to decode bridge
   streams without opening `/dev/uinput`
@@ -181,11 +184,20 @@ reported as zero because evdev rumble does not carry separate trigger motors.
 The SDK parses helper stdout and forwards the event through
 `controller.onFeedback(...)`.
 
+## Player LED Feedback
+
+The helper enables `EV_LED` with four player-indicator LEDs. When a host toggles
+those LED outputs, the helper maintains the current player light mask and emits
+OpenController's shared `"hid-gamepad-lights"` feedback JSONL. Linux LED events
+do not carry RGB values, so the report sets color channels to zero and uses
+`brightness` plus `playerLightMask` to describe the active player indicators.
+
 ## Current Limitations
 
 - Linux only
 - no trigger-motor rumble separation on Linux; evdev `FF_RUMBLE` exposes only
   weak and strong motors
+- no RGB lightbar values on Linux; EV_LED only exposes player indicator state
 - no automatic permission changes
 - helper source is included and buildable, but not prebuilt
 - one helper creates one virtual device; run one helper per emulated controller

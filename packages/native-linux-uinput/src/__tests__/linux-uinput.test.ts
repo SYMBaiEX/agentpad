@@ -74,10 +74,12 @@ describe("linux uinput adapter helpers", () => {
     expect(calls).toHaveLength(1);
     const capabilities = controller.capabilities();
     expect(capabilities.supportsRumble).toBe(true);
+    expect(capabilities.supportsLights).toBe(true);
     expect(capabilities.supportsVirtualDevice).toBe(false);
     expect(capabilities.virtualDeviceKind).toBe("native-helper");
-    expect(capabilities.feedbackTypes).toEqual(["rumble"]);
+    expect(capabilities.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(capabilities.reportFormats).toContain("hid-gamepad-rumble");
+    expect(capabilities.reportFormats).toContain("hid-gamepad-lights");
     expect(calls[0]?.command).toBe("/tmp/opencontroller-uinput-bridge");
     expect(calls[0]?.args).toEqual([
       "--dry-run",
@@ -107,6 +109,19 @@ describe("linux uinput adapter helpers", () => {
     expect(source).toContain("EV_UINPUT");
     expect(source).toContain("opencontroller.bridge.feedback");
     expect(source).toContain("O_RDWR | O_NONBLOCK");
+  });
+
+  test("helper source advertises Linux player LED feedback", async () => {
+    const source = await readFile(linuxUinputHelperSourcePath, "utf8");
+
+    expect(source).toContain("UI_SET_EVBIT, EV_LED");
+    expect(source).toContain("UI_SET_LEDBIT");
+    expect(source).toContain("LED_NUML");
+    expect(source).toContain("LED_CAPSL");
+    expect(source).toContain("handle_led_event");
+    expect(source).toContain('feedbackType\\":\\"lights');
+    expect(source).toContain("hid-gamepad-lights");
+    expect(source).toContain("playerLightMask");
   });
 
   test("helper source consumes PlayStation profile HID touchpad reports", async () => {

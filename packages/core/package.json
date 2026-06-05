@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/core",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Core OpenController controller runtime for AI-agent virtual controller control.",
   "type": "module",
   "license": "MIT",
