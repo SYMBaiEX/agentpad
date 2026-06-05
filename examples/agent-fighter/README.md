@@ -1,7 +1,7 @@
-# Agent Fighter
+# OpenController Agent Fighter
 
-Agent Fighter is a two-player browser fighting game controlled through
-OpenController controller states.
+OpenController Agent Fighter is a two-player browser fighting game controlled
+through OpenController controller states.
 
 Run it:
 
@@ -25,7 +25,7 @@ Run a headless benchmark match or series:
 
 ```bash
 bun --cwd examples/agent-fighter headless --duration-ms 15000
-bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./opencontroller-agent-fighter-series.json
 bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
 ```
 

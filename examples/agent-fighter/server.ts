@@ -325,7 +325,7 @@ const server = Bun.serve<SocketData>({
 });
 
 console.log(
-  `Agent Fighter running at http://${server.hostname}:${server.port}/`,
+  `OpenController Agent Fighter running at http://${server.hostname}:${server.port}/`,
 );
 void startAgents();
 

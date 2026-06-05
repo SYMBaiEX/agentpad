@@ -457,7 +457,7 @@ async function waitForServer(
   while (Date.now() - startedAt < startupTimeoutMs) {
     if (serverExitCode !== undefined) {
       throw new Error(
-        `Spawned Agent Fighter server exited before ${baseUrl} was ready (code ${serverExitCode})`,
+        `Spawned OpenController Agent Fighter server exited before ${baseUrl} was ready (code ${serverExitCode})`,
       );
     }
     try {

@@ -1,6 +1,7 @@
-# Agent Fighter
+# OpenController Agent Fighter
 
-Agent Fighter is a complete two-player browser game example for OpenController.
+OpenController Agent Fighter is a complete two-player browser game example for
+OpenController.
 
 Run it:
 
@@ -23,7 +24,7 @@ http://127.0.0.1:5173/controllers
 Run a headless match series:
 
 ```bash
-bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./opencontroller-agent-fighter-series.json
 bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
 ```
 

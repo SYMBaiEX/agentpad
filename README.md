@@ -6,16 +6,16 @@
 [![Security Policy](https://img.shields.io/badge/security-policy-brightgreen.svg)](SECURITY.md)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-active-blue.svg)](CODE_OF_CONDUCT.md)
 
-OpenController is a Bun-first TypeScript framework for giving AI agents a real
+OpenController is an open-source TypeScript SDK for giving AI agents a real
 controller interface.
 
-Instead of building one-off tools for every game, simulator, overlay, emulator,
-or browser app, OpenController exposes a small typed API that feels like a gamepad:
-press buttons, move sticks, pull triggers, run combos, stream controller state,
-record replays, and visualize what happened.
+Instead of wiring one-off scripts into every game, simulator, overlay, emulator,
+or browser app, OpenController gives agents a small, typed API that behaves like
+a gamepad: press buttons, move sticks, pull triggers, run combos, stream state,
+record replays, receive host feedback, and visualize exactly what happened.
 
 The goal is simple: make controller input a clean, inspectable, reusable
-software primitive for local agents and experiments.
+software primitive for local agents, tests, accessibility tools, and experiments.
 
 ```ts
 import { createController } from "@opencontroller/core";
@@ -33,7 +33,7 @@ await controller.neutral();
 await controller.disconnect();
 ```
 
-## Why This Exists
+## Why OpenController
 
 AI agents need a better input layer than brittle app-specific scripts. A
 controller is already the shared language for games, emulators, robotics
@@ -48,8 +48,9 @@ OpenController turns that language into a reusable controller layer:
 - safety policies can constrain dangerous or repetitive input
 - native bridge processes can translate state into virtual device reports
 
-The long-term aim is full virtual controller emulation with a clean TypeScript
-developer experience on top.
+The long-term aim is full virtual controller emulation with a clean npm SDK on
+top: agent logic in TypeScript, host integration through adapters, and native
+device bridges where the operating system requires them.
 
 ## What You Get
 
@@ -79,25 +80,66 @@ research, plugins, emulators, stream overlays, and controlled single-player
 experiments. It is not intended for anti-cheat bypasses, stealth automation, or
 online competitive game automation.
 
+## Start Here
+
+Clone the repo, install dependencies, and run the flagship OpenController demo:
+
+```bash
+bun install
+bun run dev:fighter
+```
+
+Open the game:
+
+```txt
+http://127.0.0.1:5173/
+```
+
+Open the controller telemetry panel:
+
+```txt
+http://127.0.0.1:5173/controllers
+```
+
+Run the release checks:
+
+```bash
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+bun run pack:check
+```
+
+Run a headless benchmark duel:
+
+```bash
+bun --cwd examples/agent-fighter headless --duration-ms 15000
+```
+
 ## Where It Stands
 
 OpenController is ready to use from source today. The core runtime, package
 layout, CLI, overlays, examples, docs, CI, release notes, and npm package
 manifests are in place.
 
-The developer surface is complete enough for local builds, demos, browser games,
-WebSocket integrations, overlays, replay capture, touchpad/motion state, and
-native bridge prototyping. It is not yet a full cross-platform native virtual
-controller driver stack. The current emulation boundary is the adapter layer,
-XInput-compatible binary report encoding, a descriptor-backed HID gamepad report
-format, PlayStation extended HID report bytes for touchpad/motion data, a
-versioned JSONL protocol for native bridge processes, the first Linux `uinput`
-bridge package, Windows VHF host bridge helpers, and macOS DriverKit host bridge
+The SDK surface is complete enough for local builds, demos, browser games,
+WebSocket integrations, overlays, replay capture, touchpad/motion state, HID
+report streams, host rumble feedback, and native bridge prototyping. It is not
+yet a full cross-platform native virtual controller driver stack.
+
+The current emulation boundary is the adapter layer, XInput-compatible binary
+report encoding, descriptor-backed HID gamepad reports, PlayStation extended HID
+report bytes for touchpad/motion data, Switch HID motion reports, a versioned
+JSONL protocol for native bridge processes, the first Linux `uinput` bridge
+package, Windows VHF host bridge helpers, and macOS DriverKit host bridge
 helpers. Touchpad and motion commands flow through the runtime, replay logs,
-dry-run, WebSocket state stream, native bridge extensions, and PlayStation
-profile HID payloads today. The next milestone is turning those host bridge
-surfaces into signed, installable native device flows and teaching native helper
-templates to consume richer profile-specific reports directly.
+dry-run, WebSocket state stream, native bridge extensions, and profile HID
+payloads today. Host rumble feedback flows back through HID adapters, native
+bridge feedback JSONL, and `controller.onFeedback(...)`.
+
+The next milestone is turning those host bridge surfaces into signed,
+installable native device flows and expanding host feedback beyond rumble.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
@@ -105,12 +147,12 @@ bridge. Windows users can inspect VHF/HID assets, legacy ViGEmBus compatibility,
 and XUSB report mapping. macOS users can generate DriverKit HID assets, wrap a
 signed host bridge process, and check local signing/tool readiness.
 
-## Try Agent Fighter
+## Run OpenController Agent Fighter
 
-Agent Fighter is the flagship demo: two autonomous agents drive two separate
-OpenController channels and fight inside a browser game. The game reads
-controller state only, so the agents interact through the same input surface a
-player would.
+OpenController Agent Fighter is the flagship demo: two autonomous agents drive
+two separate OpenController channels and fight inside a browser game. The game
+reads controller state only, so the agents interact through the same input
+surface a player would.
 
 ```bash
 bun install
@@ -132,9 +174,9 @@ http://127.0.0.1:5173/controllers
 Agents start stopped by default. Use the telemetry panel to start, stop, and
 reset the duel.
 
-If `OPENAI_API_KEY` is present, Agent Fighter uses the OpenAI Responses API for
-agent decisions. Without a key, local policies drive the same controller
-channels, so the demo still works offline.
+If `OPENAI_API_KEY` is present, OpenController Agent Fighter uses the OpenAI
+Responses API for agent decisions. Without a key, local policies drive the same
+controller channels, so the demo still works offline.
 
 ## Packages
 
@@ -210,7 +252,7 @@ Please read [SECURITY.md](SECURITY.md) before reporting vulnerabilities,
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before participating, and
 [CONTRIBUTING.md](CONTRIBUTING.md) for the release-check and contribution flow.
 
-## Developer Surface
+## SDK Surface
 
 The core package exports:
 
@@ -226,6 +268,9 @@ The core package exports:
 - PlayStation extended HID report descriptor and report helpers from `@opencontroller/core/hid`
 - bridge helpers from `@opencontroller/core/bridge`
 - profile, action-map, and browser-friendly entry points
+
+For npm consumers, `@opencontroller/core` is the main package. Add overlays,
+CLI workflows, or native host bridge packages only when your app needs them.
 
 The unified native package adds:
 
@@ -647,7 +692,7 @@ if (
 bun --cwd examples/basic-dry-run dev
 bun run dev:fighter
 bun --cwd examples/agent-fighter headless --duration-ms 15000
-bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./agent-fighter-series.json
+bun --cwd examples/agent-fighter headless --matches 5 --duration-ms 10000 --output ./opencontroller-agent-fighter-series.json
 bun --cwd examples/agent-fighter headless --matches 3 --duration-ms 10000 --min-decisions-per-player 10 --min-total-damage 1
 bun --cwd examples/react-overlay dev
 bun --cwd examples/obs-overlay dev
@@ -658,8 +703,8 @@ bun --cwd examples/native-bridge-jsonl dev
 Example folders:
 
 - `examples/basic-dry-run`: minimal controller API usage
-- `examples/agent-fighter`: two-agent browser fighting game with a gated
-  headless match-series runner
+- `examples/agent-fighter`: OpenController Agent Fighter, a two-agent browser
+  fighting game with a gated headless match-series runner
 - `examples/react-overlay`: React controller visualization
 - `examples/obs-overlay`: local OBS browser-source overlay server
 - `examples/websocket-bridge`: WebSocket adapter target example
@@ -750,7 +795,7 @@ Included:
 - React/OBS overlays
 - CLI workflows
 - docs and examples
-- Agent Fighter demo and gated headless match-series runner
+- OpenController Agent Fighter demo and gated headless match-series runner
 
 Not included yet:
 
@@ -765,7 +810,7 @@ Not included yet:
 - Verify Linux `FF_RUMBLE` across more game launchers and distributions
 - Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics
-- Add stored regression baselines for headless Agent Fighter match series
+- Add stored regression baselines for headless OpenController Agent Fighter match series
 - Export replay data to JSON, CSV, and training-friendly formats
 - Add richer telemetry dashboards for agents and controller state
 - Expand adapter examples for emulators, desktop apps, and browser games

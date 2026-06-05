@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- README, docs, and demo-facing labels now consistently present the project as
+  OpenController, including OpenController Agent Fighter startup guidance.
 - Added direct `HidGamepadReportAdapter` and
   `HidPlayStationExtendedReportAdapter` callback adapters for in-process HID
   report byte streams.
@@ -74,10 +76,10 @@ Published packages:
   formats, report formats, feedback channels, transport, and virtual-device kind
 - controller runtime now tracks PlayStation touchpad and PlayStation/Switch
   motion commands for dry-run, replay, and WebSocket integrations
-- Agent Fighter example now includes a headless Chromium match-series runner
-  for repeatable agent duels, telemetry polling, aggregate win/decision
-  scoring, HP damage metrics, configurable quality gates, summary JSON, and
-  local smoke checks
+- OpenController Agent Fighter example now includes a headless Chromium
+  match-series runner for repeatable agent duels, telemetry polling, aggregate
+  win/decision scoring, HP damage metrics, configurable quality gates, summary
+  JSON, and local smoke checks
 - npm pack checks now verify every publishable workspace includes package-local
   docs, built entrypoints, exports, executable bins, and clean tarball contents
 - `@opencontroller/native-linux-uinput` package added with Linux event mapping
