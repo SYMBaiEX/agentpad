@@ -753,10 +753,14 @@ Before publishing a new npm package version:
 
 ```bash
 bun run clean
-bun run build
-bun run pack:check
+bun run release:check
+bun run npm:status
 bun run publish:npm:dry-run
 ```
+
+`bun run npm:status` compares every publishable workspace with the live npm
+registry. It exits non-zero when local packages are ahead of npm, which is the
+expected state immediately before a new publish.
 
 Publish the package set in dependency order:
 
@@ -774,13 +778,7 @@ bun run publish:npm -- --confirm --otp 123456 --workspace packages/core
 Check the live npm versions directly after publishing:
 
 ```bash
-npm view @opencontroller/core version
-npm view @opencontroller/overlay version
-npm view @opencontroller/native-linux-uinput version
-npm view @opencontroller/native-windows-virtual-gamepad version
-npm view @opencontroller/native-macos-driverkit version
-npm view @opencontroller/native version
-npm view @opencontroller/cli version
+bun run npm:status
 ```
 
 Then confirm:

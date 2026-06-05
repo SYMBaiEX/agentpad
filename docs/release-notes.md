@@ -5,6 +5,8 @@
 - Added HID light/player-indicator output reports and native bridge light
   feedback messages so hosts can surface lightbar and player LED state through
   `controller.onFeedback(...)`.
+- Added `bun run npm:status` to compare local OpenController package versions
+  against the live npm registry before and after publish.
 - README, docs, and demo-facing labels now consistently present the project as
   OpenController, including OpenController Agent Fighter startup guidance.
 - Added direct `HidGamepadReportAdapter` and
