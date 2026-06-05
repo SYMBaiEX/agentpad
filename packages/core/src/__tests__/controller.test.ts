@@ -2191,11 +2191,23 @@ describe("controller runtime", () => {
         readFileSync(feedbackPath, "utf8").includes('"type":"lights"'),
     );
     const feedbackLines = readFileSync(feedbackPath, "utf8").trim().split("\n");
+    const feedbackEvents = feedbackLines.map(
+      (line) =>
+        JSON.parse(line) as {
+          type: string;
+          feedback: ControllerFeedbackEvent;
+          stateAfter?: unknown;
+        },
+    );
     expect(feedbackLines).toHaveLength(2);
-    expect(feedbackLines[0]).toContain('"type":"feedback"');
-    expect(feedbackLines[0]).toContain('"feedback":{"type":"rumble"');
-    expect(feedbackLines[1]).toContain('"feedback":{"type":"lights"');
-    expect(feedbackLines[1]).toContain('"stateAfter"');
+    expect(feedbackEvents.every((event) => event.type === "feedback")).toBe(
+      true,
+    );
+    expect(feedbackEvents.map((event) => event.feedback.type).sort()).toEqual([
+      "lights",
+      "rumble",
+    ]);
+    expect(feedbackEvents.every((event) => event.stateAfter)).toBe(true);
 
     unsubscribeA();
     unsubscribeB();
