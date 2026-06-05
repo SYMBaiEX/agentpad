@@ -34,6 +34,8 @@ await controller.disconnect();
 matching host bridge helper, streams OpenController native bridge JSONL to its
 stdin, sends an `opencontroller.bridge.connect` lifecycle message before the
 first state report, and sends a disconnect message before closing the stream.
+The connect message carries backend device identity metadata so helpers can
+create or select the intended virtual device before input reports arrive.
 
 ## Override Backend Paths
 
@@ -53,7 +55,11 @@ const adapter = createNativeHostBridgeAdapter({
     controllerId: "player-1",
     hostBridgePath:
       "/Applications/OpenController.app/Contents/MacOS/OpenControllerDriverKitHostBridge",
-    driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad"
+    driverBundleIdentifier: "com.opencontroller.driverkit.virtual-gamepad",
+    device: {
+      deviceName: "OpenController Tournament Pad",
+      serialNumber: "player-1"
+    }
   }
 });
 ```

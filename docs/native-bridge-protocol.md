@@ -96,15 +96,30 @@ virtual device before input reports arrive.
   "profile": "xbox",
   "timestamp": 1770000000000,
   "reportFormats": ["xinput", "hid-gamepad"],
-  "feedbackTypes": ["rumble", "lights"]
+  "feedbackTypes": ["rumble", "lights"],
+  "device": {
+    "deviceName": "OpenController Xbox Virtual Gamepad",
+    "manufacturerName": "OpenController",
+    "vendorId": 20291,
+    "productId": 1,
+    "versionNumber": 1,
+    "busType": "virtual",
+    "serialNumber": "player-1"
+  }
 }
 ```
 
 `reportFormats` lists the input payloads the stream can emit. PlayStation
 controllers also include `hid-playstation-extended`; Switch controllers include
 `hid-switch-extended`. `feedbackTypes` lists host output channels the helper can
-send back to the SDK through feedback JSONL. Helpers that do not need lifecycle
-metadata can ignore connect messages.
+send back to the SDK through feedback JSONL.
+
+`device` gives native helpers a stable virtual device identity before input
+reports arrive. `vendorId`, `productId`, and `versionNumber` are unsigned
+16-bit values; `busType` is `virtual`, `usb`, `bluetooth`, or `other`.
+Platform wrappers fill this from their backend identity defaults, and callers
+can override it through adapter `device` options. Helpers that do not need
+lifecycle metadata can ignore connect messages.
 
 Set `includeConnectMessage: false` on `NativeBridgeAdapter` or
 `NativeProcessBridgeAdapter` only for legacy helpers that cannot ignore unknown

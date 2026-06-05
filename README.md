@@ -709,8 +709,9 @@ and host drivers can send haptics back to AI agents.
 
 Native bridge streams start with an `opencontroller.bridge.connect` message for
 each controller before state reports begin. The message carries the controller
-ID, profile, available report formats, and helper feedback channels so native
-bridges can create or select the right virtual device before input bytes arrive.
+ID, profile, available report formats, helper feedback channels, and virtual
+device identity so native bridges can create or select the right device before
+input bytes arrive.
 
 Every adapter exposes capability metadata through `controller.capabilities()`.
 Agents can inspect supported profiles, command types, output formats, report

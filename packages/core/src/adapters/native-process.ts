@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 import {
   type CreateNativeBridgeStateMessageOptions,
   type NativeBridgeConnectReportFormat,
+  type NativeBridgeDeviceInfo,
   type NativeBridgeMessage,
   createNativeBridgeConnectMessage,
   createNativeBridgeDisconnectMessage,
@@ -57,6 +58,7 @@ export type NativeProcessBridgeAdapterOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   includeConnectMessage?: boolean;
+  device?: Partial<NativeBridgeDeviceInfo>;
   includeState?: boolean;
   includeExtensions?: boolean;
   includeProfileHidReport?: boolean;
@@ -239,6 +241,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
           ...(this.options.supportsRumble ? (["rumble"] as const) : []),
           ...(this.options.supportsLights ? (["lights"] as const) : []),
         ],
+        ...(this.options.device ? { device: this.options.device } : {}),
       }),
     );
     this.connectedControllerIds.add(state.id);

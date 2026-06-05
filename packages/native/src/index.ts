@@ -40,6 +40,8 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "args"
   | "cwd"
   | "env"
+  | "includeConnectMessage"
+  | "device"
   | "includeState"
   | "includeExtensions"
   | "includeProfileHidReport"
@@ -212,6 +214,12 @@ function commonNativeProcessBridgeOptions(
   }
   if (options.env !== undefined) {
     common.env = options.env;
+  }
+  if (options.includeConnectMessage !== undefined) {
+    common.includeConnectMessage = options.includeConnectMessage;
+  }
+  if (options.device !== undefined) {
+    common.device = options.device;
   }
   if (options.includeState !== undefined) {
     common.includeState = options.includeState;

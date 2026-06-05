@@ -814,6 +814,10 @@ describe("windows VHF helpers", () => {
     );
     expect(writes[0]).toContain("opencontroller.bridge.connect");
     expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
+    expect(writes[0]).toContain(
+      '"deviceName":"OpenController Virtual HID Gamepad"',
+    );
+    expect(writes[0]).toContain('"vendorId":20291');
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );

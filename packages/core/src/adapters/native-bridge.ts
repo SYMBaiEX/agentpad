@@ -1,6 +1,7 @@
 import {
   type CreateNativeBridgeStateMessageOptions,
   type NativeBridgeConnectReportFormat,
+  type NativeBridgeDeviceInfo,
   type NativeBridgeMessage,
   createNativeBridgeConnectMessage,
   createNativeBridgeDisconnectMessage,
@@ -22,6 +23,7 @@ export type NativeBridgeWrite = (
 export type NativeBridgeAdapterOptions = {
   write?: NativeBridgeWrite;
   includeConnectMessage?: boolean;
+  device?: Partial<NativeBridgeDeviceInfo>;
   includeState?: boolean;
   includeExtensions?: boolean;
   includeProfileHidReport?: boolean;
@@ -111,6 +113,7 @@ export class NativeBridgeAdapter implements ControllerAdapter {
     await this.emit(
       createNativeBridgeConnectMessage(state, {
         reportFormats: this.connectReportFormats(state),
+        ...(this.options.device ? { device: this.options.device } : {}),
       }),
     );
     this.connectedControllerIds.add(state.id);

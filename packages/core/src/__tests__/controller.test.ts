@@ -17,6 +17,7 @@ import {
   createController,
   createControllerHub,
   createNativeBridgeConnectMessage,
+  createNativeBridgeDeviceInfo,
   createNativeBridgeLightFeedbackMessage,
   createNativeBridgeRumbleFeedbackMessage,
   createNativeBridgeStateMessage,
@@ -1475,6 +1476,12 @@ describe("controller runtime", () => {
     const message = createNativeBridgeConnectMessage(controller.getState(), {
       timestamp: 123,
       feedbackTypes: ["rumble", "lights", "rumble"],
+      device: {
+        deviceName: "OpenController Lab Pad",
+        vendorId: 0x123456,
+        productId: -1,
+        serialNumber: "lab-7",
+      },
     });
     const parsed = parseNativeBridgeMessage(JSON.stringify(message));
 
@@ -1486,6 +1493,29 @@ describe("controller runtime", () => {
       timestamp: 123,
       reportFormats: ["xinput", "hid-gamepad", "hid-playstation-extended"],
       feedbackTypes: ["rumble", "lights"],
+      device: {
+        deviceName: "OpenController Lab Pad",
+        manufacturerName: "OpenController",
+        vendorId: 0xffff,
+        productId: 0,
+        versionNumber: 1,
+        busType: "virtual",
+        serialNumber: "lab-7",
+      },
+    });
+
+    expect(
+      createNativeBridgeDeviceInfo(controller.getState(), {
+        deviceName: "",
+        manufacturerName: "",
+        busType: "spacewire" as never,
+        serialNumber: "",
+      }),
+    ).toMatchObject({
+      deviceName: "OpenController PlayStation Virtual Gamepad",
+      manufacturerName: "OpenController",
+      busType: "virtual",
+      serialNumber: "connect-player",
     });
 
     await controller.disconnect();
@@ -1704,6 +1734,10 @@ describe("controller runtime", () => {
     expect(legacyConnectMessage).toMatchObject({
       type: "opencontroller.bridge.connect",
       reportFormats: ["xinput", "hid-gamepad"],
+      device: {
+        deviceName: "OpenController PlayStation Virtual Gamepad",
+        productId: 2,
+      },
     });
     expect(legacyStateMessage?.type).toBe("opencontroller.bridge.state");
     if (
@@ -1917,6 +1951,15 @@ describe("controller runtime", () => {
       profile: "xbox",
       reportFormats: ["xinput", "hid-gamepad"],
       feedbackTypes: [],
+      device: {
+        deviceName: "OpenController Xbox Virtual Gamepad",
+        manufacturerName: "OpenController",
+        vendorId: 0x4f43,
+        productId: 1,
+        versionNumber: 1,
+        busType: "virtual",
+        serialNumber: "player-1",
+      },
     });
     expect(
       messages.filter(
@@ -2010,6 +2053,9 @@ describe("controller runtime", () => {
       controllerId: "player-1",
       profile: "xbox",
       feedbackTypes: [],
+      device: {
+        serialNumber: "player-1",
+      },
     });
     const aPressed = messages.find(
       (message) =>

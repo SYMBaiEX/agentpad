@@ -57,6 +57,21 @@ export type NativeBridgeFeedbackType = "rumble" | "lights";
 export type NativeBridgeFeedbackReportFormat =
   | "hid-gamepad-rumble"
   | "hid-gamepad-lights";
+export type NativeBridgeDeviceBusType =
+  | "virtual"
+  | "usb"
+  | "bluetooth"
+  | "other";
+
+export type NativeBridgeDeviceInfo = {
+  deviceName: string;
+  manufacturerName: string;
+  vendorId: number;
+  productId: number;
+  versionNumber: number;
+  busType: NativeBridgeDeviceBusType;
+  serialNumber?: string;
+};
 
 export type NativeBridgeHidGamepadReport = {
   reportId: 1;
@@ -119,6 +134,7 @@ export type NativeBridgeConnectMessage = {
   timestamp: number;
   reportFormats: NativeBridgeConnectReportFormat[];
   feedbackTypes: NativeBridgeFeedbackType[];
+  device: NativeBridgeDeviceInfo;
 };
 
 export type NativeBridgeDisconnectMessage = {
@@ -175,6 +191,7 @@ export type CreateNativeBridgeConnectMessageOptions = {
   timestamp?: number;
   reportFormats?: readonly NativeBridgeConnectReportFormat[];
   feedbackTypes?: readonly NativeBridgeFeedbackType[];
+  device?: Partial<NativeBridgeDeviceInfo>;
 };
 
 export type CreateNativeBridgeStateMessageOptions = {
@@ -255,6 +272,7 @@ export function createNativeBridgeConnectMessage(
       options.reportFormats ?? defaultNativeBridgeConnectReportFormats(state),
     ),
     feedbackTypes: uniqueNativeBridgeFeedbackTypes(options.feedbackTypes ?? []),
+    device: createNativeBridgeDeviceInfo(state, options.device),
   };
 }
 
@@ -269,6 +287,45 @@ export function defaultNativeBridgeConnectReportFormats(
       : []),
     ...(state.profile === "switch" ? (["hid-switch-extended"] as const) : []),
   ];
+}
+
+export function createNativeBridgeDeviceInfo(
+  state: Pick<ControllerState, "id" | "profile">,
+  device: Partial<NativeBridgeDeviceInfo> = {},
+): NativeBridgeDeviceInfo {
+  const defaults = defaultNativeBridgeDeviceInfo(state);
+  const serialNumber =
+    nonEmptyOptionalString(device.serialNumber) ??
+    nonEmptyOptionalString(defaults.serialNumber);
+
+  return {
+    deviceName: nonEmptyString(device.deviceName, defaults.deviceName),
+    manufacturerName: nonEmptyString(
+      device.manufacturerName,
+      defaults.manufacturerName,
+    ),
+    vendorId: clampUint16(device.vendorId ?? defaults.vendorId),
+    productId: clampUint16(device.productId ?? defaults.productId),
+    versionNumber: clampUint16(device.versionNumber ?? defaults.versionNumber),
+    busType: isNativeBridgeDeviceBusType(device.busType)
+      ? device.busType
+      : defaults.busType,
+    ...(serialNumber !== undefined ? { serialNumber } : {}),
+  };
+}
+
+export function defaultNativeBridgeDeviceInfo(
+  state: Pick<ControllerState, "id" | "profile">,
+): NativeBridgeDeviceInfo {
+  return {
+    deviceName: defaultNativeBridgeDeviceName(state.profile),
+    manufacturerName: "OpenController",
+    vendorId: 0x4f43,
+    productId: defaultNativeBridgeProductId(state.profile),
+    versionNumber: 0x0001,
+    busType: "virtual",
+    serialNumber: state.id,
+  };
 }
 
 export function createNativeBridgeProfileHidReportPayload(
@@ -639,7 +696,26 @@ export function isNativeBridgeConnectMessage(
     Array.isArray(value.reportFormats) &&
     value.reportFormats.every(isNativeBridgeConnectReportFormat) &&
     Array.isArray(value.feedbackTypes) &&
-    value.feedbackTypes.every(isNativeBridgeFeedbackType)
+    value.feedbackTypes.every(isNativeBridgeFeedbackType) &&
+    isNativeBridgeDeviceInfo(value.device)
+  );
+}
+
+export function isNativeBridgeDeviceInfo(
+  value: unknown,
+): value is NativeBridgeDeviceInfo {
+  return (
+    isRecord(value) &&
+    typeof value.deviceName === "string" &&
+    value.deviceName.length > 0 &&
+    typeof value.manufacturerName === "string" &&
+    value.manufacturerName.length > 0 &&
+    isUint16(value.vendorId) &&
+    isUint16(value.productId) &&
+    isUint16(value.versionNumber) &&
+    isNativeBridgeDeviceBusType(value.busType) &&
+    (value.serialNumber === undefined ||
+      (typeof value.serialNumber === "string" && value.serialNumber.length > 0))
   );
 }
 
@@ -709,6 +785,17 @@ function isNativeBridgeFeedbackType(
   value: unknown,
 ): value is NativeBridgeFeedbackType {
   return value === "rumble" || value === "lights";
+}
+
+function isNativeBridgeDeviceBusType(
+  value: unknown,
+): value is NativeBridgeDeviceBusType {
+  return (
+    value === "virtual" ||
+    value === "usb" ||
+    value === "bluetooth" ||
+    value === "other"
+  );
 }
 
 function isXInputReport(value: unknown): value is XInputGamepadReport {
@@ -1091,6 +1178,16 @@ function isByteNumber(value: unknown): value is number {
   );
 }
 
+function isUint16(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 0xffff
+  );
+}
+
 function clampNormalized(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
@@ -1103,6 +1200,51 @@ function clampByte(value: number): number {
     return 0;
   }
   return Math.round(Math.min(255, Math.max(0, value)));
+}
+
+function clampUint16(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(0xffff, Math.max(0, value)));
+}
+
+function nonEmptyString(value: string | undefined, fallback: string): string {
+  return value && value.length > 0 ? value : fallback;
+}
+
+function nonEmptyOptionalString(value: string | undefined): string | undefined {
+  return value && value.length > 0 ? value : undefined;
+}
+
+function defaultNativeBridgeDeviceName(profile: ControllerProfileName): string {
+  switch (profile) {
+    case "playstation":
+      return "OpenController PlayStation Virtual Gamepad";
+    case "switch":
+      return "OpenController Switch Virtual Gamepad";
+    case "generic-hid":
+      return "OpenController Generic HID Gamepad";
+    case "keyboard-mouse":
+      return "OpenController Virtual Keyboard Mouse";
+    case "xbox":
+      return "OpenController Xbox Virtual Gamepad";
+  }
+}
+
+function defaultNativeBridgeProductId(profile: ControllerProfileName): number {
+  switch (profile) {
+    case "playstation":
+      return 0x0002;
+    case "switch":
+      return 0x0003;
+    case "generic-hid":
+      return 0x0004;
+    case "keyboard-mouse":
+      return 0x0005;
+    case "xbox":
+      return 0x0001;
+  }
 }
 
 function normalizedToByte(value: number): number {

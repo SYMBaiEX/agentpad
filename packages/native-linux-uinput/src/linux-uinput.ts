@@ -48,6 +48,8 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "args"
   | "cwd"
   | "env"
+  | "includeConnectMessage"
+  | "device"
   | "includeState"
   | "includeExtensions"
   | "includeProfileHidReport"
@@ -215,6 +217,13 @@ export function createLinuxUinputBridgeAdapter(
     args,
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createLinuxUinputBridgeEnv(options),
+    ...(options.includeConnectMessage !== undefined
+      ? { includeConnectMessage: options.includeConnectMessage }
+      : {}),
+    device: {
+      deviceName: options.deviceName ?? "OpenController Linux uinput Gamepad",
+      ...(options.device ?? {}),
+    },
     includeState: options.includeState ?? false,
     includeExtensions: options.includeExtensions ?? true,
     includeProfileHidReport: options.includeProfileHidReport ?? true,

@@ -115,6 +115,8 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
   | "args"
   | "cwd"
   | "env"
+  | "includeConnectMessage"
+  | "device"
   | "includeState"
   | "includeExtensions"
   | "includeProfileHidReport"
@@ -397,6 +399,16 @@ export function createMacosDriverKitHostBridgeAdapter(
     args: options.args ?? [],
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createMacosDriverKitHostBridgeEnv(options),
+    ...(options.includeConnectMessage !== undefined
+      ? { includeConnectMessage: options.includeConnectMessage }
+      : {}),
+    device: {
+      deviceName: defaultMacosDriverKitBundleOptions.productName,
+      manufacturerName: "OpenController",
+      vendorId: defaultMacosDriverKitBundleOptions.vendorId,
+      productId: defaultMacosDriverKitBundleOptions.productId,
+      ...(options.device ?? {}),
+    },
     includeState: options.includeState ?? false,
     includeExtensions: options.includeExtensions ?? true,
     includeProfileHidReport: options.includeProfileHidReport ?? true,

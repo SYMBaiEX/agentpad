@@ -125,6 +125,8 @@ export type WindowsVhfHostBridgeAdapterOptions = Pick<
   | "args"
   | "cwd"
   | "env"
+  | "includeConnectMessage"
+  | "device"
   | "includeState"
   | "includeExtensions"
   | "includeProfileHidReport"
@@ -393,6 +395,17 @@ export function createWindowsVhfHostBridgeAdapter(
     args: options.args ?? [],
     ...(options.cwd ? { cwd: options.cwd } : {}),
     env: createWindowsVhfHostBridgeEnv(options),
+    ...(options.includeConnectMessage !== undefined
+      ? { includeConnectMessage: options.includeConnectMessage }
+      : {}),
+    device: {
+      deviceName: defaultWindowsVhfInfOptions.deviceName,
+      manufacturerName: defaultWindowsVhfInfOptions.manufacturerName,
+      vendorId: defaultWindowsVhfDriverSourceOptions.vendorId,
+      productId: defaultWindowsVhfDriverSourceOptions.productId,
+      versionNumber: defaultWindowsVhfDriverSourceOptions.versionNumber,
+      ...(options.device ?? {}),
+    },
     includeState: options.includeState ?? false,
     includeExtensions: options.includeExtensions ?? true,
     includeProfileHidReport: options.includeProfileHidReport ?? true,

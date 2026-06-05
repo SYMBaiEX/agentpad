@@ -83,6 +83,7 @@ describe("native host bridge facade", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_DRY_RUN).toBe("1");
     expect(writes[0]).toContain("opencontroller.bridge.connect");
     expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
+    expect(writes[0]).toContain('"deviceName":"OpenController Unified Linux"');
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );
@@ -114,6 +115,9 @@ describe("native host bridge facade", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("native-player");
     expect(writes[0]).toContain("opencontroller.bridge.connect");
     expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
+    expect(writes[0]).toContain(
+      '"deviceName":"OpenController Virtual HID Gamepad"',
+    );
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );
@@ -147,6 +151,9 @@ describe("native host bridge facade", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_CONTROLLER_ID).toBe("native-player");
     expect(writes[0]).toContain("opencontroller.bridge.connect");
     expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
+    expect(writes[0]).toContain(
+      '"deviceName":"OpenController Virtual HID Gamepad"',
+    );
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );

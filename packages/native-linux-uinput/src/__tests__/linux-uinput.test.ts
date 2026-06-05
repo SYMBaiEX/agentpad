@@ -94,6 +94,7 @@ describe("linux uinput adapter helpers", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_UINPUT_DRY_RUN).toBe("1");
     expect(writes[0]).toContain("opencontroller.bridge.connect");
     expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
+    expect(writes[0]).toContain('"deviceName":"OpenController Test Pad"');
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );

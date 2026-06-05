@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/native",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Unified native host bridge adapter selection for OpenController virtual controller emulation.",
   "type": "module",
   "license": "MIT",
@@ -39,10 +39,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "^0.1.13",
-    "@opencontroller/native-linux-uinput": "^0.1.13",
-    "@opencontroller/native-macos-driverkit": "^0.1.13",
-    "@opencontroller/native-windows-virtual-gamepad": "^0.1.13"
+    "@opencontroller/core": "^0.1.14",
+    "@opencontroller/native-linux-uinput": "^0.1.14",
+    "@opencontroller/native-macos-driverkit": "^0.1.14",
+    "@opencontroller/native-windows-virtual-gamepad": "^0.1.14"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",

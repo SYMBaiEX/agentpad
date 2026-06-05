@@ -298,7 +298,9 @@ The native bridge helpers emit JSONL messages such as
 `opencontroller.bridge.connect`, `opencontroller.bridge.state`,
 `opencontroller.bridge.feedback`, and `opencontroller.bridge.disconnect`.
 Connect messages identify the controller, profile, report formats, and helper
-feedback channels before state reports begin. State messages include XInput/HID
+feedback channels before state reports begin. They also include virtual device
+identity fields such as device name, manufacturer, vendor ID, product ID,
+version, serial number, and bus type. State messages include XInput/HID
 payloads, PlayStation profile HID payloads for touchpad/motion data, Switch
 profile HID payloads for motion data, and optional touchpad/motion/status
 `extensions`. Platform packages consume those messages to drive Linux `uinput`,
