@@ -5,6 +5,7 @@ import { DryRunAdapter } from "./dry-run";
 import {
   HidGamepadReportAdapter,
   HidPlayStationExtendedReportAdapter,
+  HidSwitchExtendedReportAdapter,
 } from "./hid-report";
 import { NativeBridgeAdapter } from "./native-bridge";
 import { WebSocketAdapter } from "./websocket";
@@ -34,6 +35,8 @@ export async function resolveAdapter(
       return new HidGamepadReportAdapter();
     case "hid-playstation-extended-report":
       return new HidPlayStationExtendedReportAdapter();
+    case "hid-switch-extended-report":
+      return new HidSwitchExtendedReportAdapter();
     case "native-bridge":
       return new NativeBridgeAdapter();
   }

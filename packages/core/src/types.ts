@@ -240,12 +240,14 @@ export type ControllerAdapterOutputFormat =
   | "xinput-report"
   | "hid-gamepad-report"
   | "hid-playstation-extended-report"
+  | "hid-switch-extended-report"
   | "native-bridge-jsonl";
 
 export type ControllerAdapterReportFormat =
   | "xinput"
   | "hid-gamepad"
   | "hid-playstation-extended"
+  | "hid-switch-extended"
   | "hid-gamepad-rumble";
 
 export type ControllerAdapterFeedbackType = ControllerFeedbackEvent["type"];
@@ -344,6 +346,7 @@ export type AdapterName =
   | "xinput-report"
   | "hid-gamepad-report"
   | "hid-playstation-extended-report"
+  | "hid-switch-extended-report"
   | "native-bridge";
 
 export type CreateControllerOptions = {

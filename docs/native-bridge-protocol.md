@@ -121,8 +121,9 @@ each message. `reportBase64` remains the compatibility XInput payload.
 Descriptor-backed native drivers should prefer `hidReportBase64`, which is the
 13-byte OpenController HID gamepad report matching the shared descriptor.
 
-For PlayStation profiles, state messages also include a profile-specific HID
-payload by default:
+For PlayStation and Switch profiles, state messages also include a
+profile-specific HID payload by default. PlayStation reports use
+`hid-playstation-extended`:
 
 ```json
 {
@@ -155,11 +156,38 @@ payload by default:
 }
 ```
 
+Switch reports use `hid-switch-extended`, a 31-byte report containing the
+common gamepad fields plus signed acceleration, gyroscope, and orientation
+vectors:
+
+```json
+{
+  "profileHidReportFormat": "hid-switch-extended",
+  "profileHidReport": {
+    "reportId": 4,
+    "buttons": 0,
+    "leftTrigger": 0,
+    "rightTrigger": 0,
+    "leftStickX": 0,
+    "leftStickY": 0,
+    "rightStickX": 0,
+    "rightStickY": 0,
+    "accelerationX": 8192,
+    "accelerationY": -8192,
+    "accelerationZ": 16384,
+    "gyroscopeX": -16384,
+    "gyroscopeY": 16384,
+    "gyroscopeZ": 32767,
+    "orientationX": 0,
+    "orientationY": 0,
+    "orientationZ": 0
+  },
+  "profileHidReportBase64": "BAAAAAAAAAAAAAAAAAAgAOAAQADAAED/fwAAAAAAAA=="
+}
+```
+
 Use `nativeBridgeMessageToProfileHidReportBytes(message)` to validate and
-decode `profileHidReportBase64`. The current profile payload is
-`hid-playstation-extended`, a 47-byte report containing the common gamepad
-fields plus two touch contacts and signed acceleration, gyroscope, and
-orientation vectors.
+decode `profileHidReportBase64`.
 
 When richer profile-specific state is active, state messages may also include an
 `extensions` object. This side channel is for bridge authors who want touchpad

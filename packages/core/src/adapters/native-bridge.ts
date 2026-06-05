@@ -72,9 +72,16 @@ export class NativeBridgeAdapter implements ControllerAdapter {
         "controller-state",
         "xinput-report",
         "hid-gamepad-report",
+        "hid-playstation-extended-report",
+        "hid-switch-extended-report",
         "native-bridge-jsonl",
       ],
-      reportFormats: ["xinput", "hid-gamepad", "hid-playstation-extended"],
+      reportFormats: [
+        "xinput",
+        "hid-gamepad",
+        "hid-playstation-extended",
+        "hid-switch-extended",
+      ],
       transport: "callback",
     });
   }

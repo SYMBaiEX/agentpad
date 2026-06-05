@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/native-macos-driverkit",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "macOS DriverKit HID virtual gamepad assets, diagnostics, and bridge helpers for OpenController.",
   "type": "module",
   "license": "MIT",
@@ -54,7 +54,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "^0.1.5"
+    "@opencontroller/core": "^0.1.6"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",

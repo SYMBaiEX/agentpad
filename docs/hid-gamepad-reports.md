@@ -162,6 +162,49 @@ Native bridge state messages for PlayStation profiles include
 `NativeBridgeAdapter` or `NativeProcessBridgeAdapter` to keep a legacy compact
 stream.
 
+## Switch Extended Input Report
+
+```ts
+import { HidSwitchExtendedReportAdapter, createController } from "@opencontroller/core";
+import {
+  decodeHidSwitchExtendedReport,
+  encodeHidSwitchExtendedReport,
+  hidSwitchExtendedReportDescriptor
+} from "@opencontroller/core/hid";
+
+const adapter = new HidSwitchExtendedReportAdapter({
+  onReport({ bytes }) {
+    console.log(bytes);
+  }
+});
+
+const controller = await createController({
+  profile: "switch",
+  adapter,
+  replay: false
+});
+
+const bytes = encodeHidSwitchExtendedReport(controller.getState());
+const report = decodeHidSwitchExtendedReport(bytes);
+```
+
+The Switch extended report uses report id `4` and is 31 bytes. The first 13
+bytes mirror the common HID gamepad report layout. The remaining bytes carry
+signed motion vectors:
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| `0` | 1 byte | report id `4` |
+| `1` | 12 bytes | common gamepad payload: buttons, sticks, triggers |
+| `13` | 6 bytes | acceleration X/Y/Z signed int16 |
+| `19` | 6 bytes | gyroscope X/Y/Z signed int16 |
+| `25` | 6 bytes | orientation X/Y/Z signed int16 |
+
+Motion vectors are clamped to `-1` through `1` and encoded as signed 16-bit
+values. Native bridge state messages for Switch profiles include
+`profileHidReportFormat: "hid-switch-extended"` and `profileHidReportBase64`
+by default.
+
 ## Rumble Output Report
 
 ```ts

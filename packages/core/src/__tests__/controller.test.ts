@@ -7,6 +7,7 @@ import {
   DryRunAdapter,
   HidGamepadReportAdapter,
   HidPlayStationExtendedReportAdapter,
+  HidSwitchExtendedReportAdapter,
   NativeBridgeAdapter,
   NativeProcessBridgeAdapter,
   WebSocketAdapter,
@@ -19,10 +20,12 @@ import {
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
+  decodeHidSwitchExtendedReport,
   decodeXInputReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
+  encodeHidSwitchExtendedReport,
   encodeXInputReport,
   hidGamepadButtonBits,
   hidGamepadReportByteLength,
@@ -36,6 +39,10 @@ import {
   hidPlayStationExtendedReportDescriptor,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
+  hidSwitchExtendedReportByteLength,
+  hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithRumble,
+  hidSwitchExtendedReportId,
   nativeBridgeFeedbackMessageToControllerFeedback,
   nativeBridgeFeedbackMessageToRumbleReportBytes,
   nativeBridgeMessageToHidGamepadReportBytes,
@@ -580,6 +587,7 @@ describe("controller runtime", () => {
     const hidGamepad = new HidGamepadReportAdapter().capabilities();
     const hidPlayStation =
       new HidPlayStationExtendedReportAdapter().capabilities();
+    const hidSwitch = new HidSwitchExtendedReportAdapter().capabilities();
     expect(hidGamepad.reportFormats).toEqual([
       "hid-gamepad",
       "hid-gamepad-rumble",
@@ -600,12 +608,26 @@ describe("controller runtime", () => {
     expect(hidPlayStation.supportsGyro).toBe(true);
     expect(hidPlayStation.supportsRumble).toBe(true);
     expect(hidPlayStation.feedbackTypes).toEqual(["rumble"]);
+    expect(hidSwitch.reportFormats).toEqual([
+      "hid-switch-extended",
+      "hid-gamepad-rumble",
+    ]);
+    expect(hidSwitch.outputFormats).toContain("hid-switch-extended-report");
+    expect(hidSwitch.supportedProfiles).toEqual(["switch"]);
+    expect(hidSwitch.supportsGyro).toBe(true);
+    expect(hidSwitch.supportsRumble).toBe(true);
+    expect(hidSwitch.feedbackTypes).toEqual(["rumble"]);
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
+    expect(nativeBridge.outputFormats).toContain(
+      "hid-playstation-extended-report",
+    );
+    expect(nativeBridge.outputFormats).toContain("hid-switch-extended-report");
     expect(nativeBridge.reportFormats).toEqual([
       "xinput",
       "hid-gamepad",
       "hid-playstation-extended",
+      "hid-switch-extended",
     ]);
     expect(nativeBridge.supportedCommands).toContain("touchpad");
     expect(nativeBridge.supportedCommands).toContain("motion");
@@ -615,6 +637,7 @@ describe("controller runtime", () => {
     expect(nativeProcess.supportsVirtualDevice).toBe(true);
     expect(nativeProcess.supportsRumble).toBe(true);
     expect(nativeProcess.reportFormats).toContain("hid-playstation-extended");
+    expect(nativeProcess.reportFormats).toContain("hid-switch-extended");
     expect(nativeProcess.feedbackTypes).toEqual(["rumble"]);
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
     expect(nativeProcess.transport).toBe("native-process");
@@ -782,6 +805,11 @@ describe("controller runtime", () => {
       adapter: "hid-playstation-extended-report",
       replay: false,
     });
+    const switchController = await createController({
+      profile: "switch",
+      adapter: "hid-switch-extended-report",
+      replay: false,
+    });
 
     expect(hidGamepad.capabilities().reportFormats).toEqual([
       "hid-gamepad",
@@ -791,9 +819,14 @@ describe("controller runtime", () => {
       "hid-playstation-extended",
       "hid-gamepad-rumble",
     ]);
+    expect(switchController.capabilities().reportFormats).toEqual([
+      "hid-switch-extended",
+      "hid-gamepad-rumble",
+    ]);
 
     await hidGamepad.disconnect();
     await playstation.disconnect();
+    await switchController.disconnect();
   });
 
   test("streams controller state as HID gamepad reports", async () => {
@@ -1058,6 +1091,93 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("encodes Switch extended HID reports with motion", async () => {
+    const controller = await createController({
+      profile: "switch",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    await controller.setState({
+      buttons: { A: true, PLUS: true },
+      triggers: { ZR: 0.75 },
+      sticks: {
+        LEFT: { x: -1, y: 1 },
+        RIGHT: { x: 0.5, y: -0.5 },
+      },
+      motion: {
+        acceleration: { x: -1, y: 0, z: 1 },
+        gyroscope: { x: 0.25, y: -0.25, z: 0.5 },
+        orientation: { x: 0.1, y: 0.2, z: -0.3 },
+      },
+    });
+
+    const bytes = encodeHidSwitchExtendedReport(controller.getState());
+    const report = decodeHidSwitchExtendedReport(bytes);
+
+    expect(bytes.byteLength).toBe(hidSwitchExtendedReportByteLength);
+    expect(hidSwitchExtendedReportDescriptor.byteLength).toBeGreaterThan(0);
+    expect(
+      hidSwitchExtendedReportDescriptorWithRumble.byteLength,
+    ).toBeGreaterThan(hidSwitchExtendedReportDescriptor.byteLength);
+    expect(report.reportId).toBe(hidSwitchExtendedReportId);
+    expect(report.buttons & xInputButtonBits.B).toBe(xInputButtonBits.B);
+    expect(report.buttons & xInputButtonBits.START).toBe(
+      xInputButtonBits.START,
+    );
+    expect(report.rightTrigger).toBe(191);
+    expect(report.leftStickX).toBe(-32768);
+    expect(report.leftStickY).toBe(-32768);
+    expect(report.rightStickX).toBe(16384);
+    expect(report.rightStickY).toBe(16384);
+    expect(report.accelerationX).toBe(-32768);
+    expect(report.accelerationZ).toBe(32767);
+    expect(report.gyroscopeX).toBe(8192);
+    expect(report.gyroscopeY).toBe(-8192);
+    expect(report.gyroscopeZ).toBe(16384);
+    expect(report.orientationX).toBe(3277);
+    expect(report.orientationY).toBe(6553);
+    expect(report.orientationZ).toBe(-9830);
+
+    await controller.disconnect();
+  });
+
+  test("streams Switch extended HID reports", async () => {
+    const callbackReports: number[] = [];
+    const adapter = new HidSwitchExtendedReportAdapter({
+      onReport({ report }) {
+        callbackReports.push(report.reportId);
+      },
+    });
+    const controller = await createController({
+      profile: "switch",
+      adapter,
+      replay: false,
+    });
+
+    await controller.motion(
+      {
+        acceleration: { x: 0.1, y: 0.2, z: 0.3 },
+        gyroscope: { x: -0.1, y: -0.2, z: -0.3 },
+      },
+      0,
+    );
+
+    const latest = adapter.reports.at(-1);
+    if (!latest) {
+      throw new Error("Expected a Switch extended HID report");
+    }
+    const report = decodeHidSwitchExtendedReport(latest.bytes);
+
+    expect(callbackReports).toHaveLength(adapter.reports.length);
+    expect(latest.bytes.byteLength).toBe(hidSwitchExtendedReportByteLength);
+    expect(report.reportId).toBe(hidSwitchExtendedReportId);
+    expect(report.accelerationZ).toBe(9830);
+    expect(report.gyroscopeZ).toBe(-9830);
+
+    await controller.disconnect();
+  });
+
   test("round-trips native bridge rumble feedback messages", () => {
     const message = createNativeBridgeRumbleFeedbackMessage({
       controllerId: "player-1",
@@ -1147,7 +1267,9 @@ describe("controller runtime", () => {
       (message) =>
         message.type === "opencontroller.bridge.state" &&
         message.profileHidReportFormat === "hid-playstation-extended" &&
-        message.profileHidReport?.touchpadContacts[0]?.active,
+        message.profileHidReport !== undefined &&
+        "touchpadContacts" in message.profileHidReport &&
+        message.profileHidReport.touchpadContacts[0]?.active,
     );
 
     expect(touchpadMessage?.type).toBe("opencontroller.bridge.state");
@@ -1202,7 +1324,11 @@ describe("controller runtime", () => {
     expect(profileHidBytes?.byteLength).toBe(
       hidPlayStationExtendedReportByteLength,
     );
-    expect(profileHidMessage.profileHidReport?.touchpadContacts[0]).toEqual({
+    const profileHidReport = profileHidMessage.profileHidReport;
+    if (!profileHidReport || !("touchpadContacts" in profileHidReport)) {
+      throw new Error("Expected a PlayStation profile HID report");
+    }
+    expect(profileHidReport.touchpadContacts[0]).toEqual({
       id: 2,
       active: true,
       x: 16384,
@@ -1211,7 +1337,7 @@ describe("controller runtime", () => {
     });
     expect(
       decodeHidPlayStationExtendedReport(profileHidBytes ?? new Uint8Array()),
-    ).toEqual(profileHidMessage.profileHidReport);
+    ).toEqual(profileHidReport);
 
     const legacyMessage = createNativeBridgeStateMessage(
       controller.getState(),
@@ -1263,6 +1389,61 @@ describe("controller runtime", () => {
     expect(legacyStateMessage.profileHidReport).toBeUndefined();
 
     await legacyController.disconnect();
+    await controller.disconnect();
+  });
+
+  test("streams Switch native bridge profile HID reports", async () => {
+    const lines: string[] = [];
+    const adapter = new NativeBridgeAdapter({
+      includeState: false,
+      write(line) {
+        lines.push(line);
+      },
+    });
+    const controller = await createController({
+      profile: "switch",
+      adapter,
+      replay: false,
+    });
+
+    await controller.motion(
+      {
+        acceleration: { x: 0.25, y: -0.25, z: 0.5 },
+        gyroscope: { x: -0.5, y: 0.5, z: 1 },
+        orientation: { x: 0.1, y: 0.2, z: 0.3 },
+      },
+      0,
+    );
+
+    const profileHidMessage = lines
+      .map(parseNativeBridgeMessage)
+      .find(
+        (message) =>
+          message.type === "opencontroller.bridge.state" &&
+          message.profileHidReportFormat === "hid-switch-extended" &&
+          message.profileHidReport?.gyroscopeZ === 32767,
+      );
+
+    expect(profileHidMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !profileHidMessage ||
+      profileHidMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a Switch native bridge profile HID message");
+    }
+    const profileHidBytes =
+      nativeBridgeMessageToProfileHidReportBytes(profileHidMessage);
+    expect(profileHidBytes?.byteLength).toBe(hidSwitchExtendedReportByteLength);
+    expect(profileHidMessage.profileHidReportFormat).toBe(
+      "hid-switch-extended",
+    );
+    expect(profileHidMessage.profileHidReport?.accelerationX).toBe(8192);
+    expect(profileHidMessage.profileHidReport?.gyroscopeX).toBe(-16384);
+    expect(profileHidMessage.profileHidReport?.gyroscopeZ).toBe(32767);
+    expect(
+      decodeHidSwitchExtendedReport(profileHidBytes ?? new Uint8Array()),
+    ).toEqual(profileHidMessage.profileHidReport);
+
     await controller.disconnect();
   });
 

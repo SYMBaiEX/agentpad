@@ -8,6 +8,14 @@ import {
   isHidPlayStationExtendedReport,
 } from "../hid/playstation";
 import {
+  type HidSwitchExtendedReport,
+  createHidSwitchExtendedReport,
+  decodeHidSwitchExtendedReport,
+  encodeHidSwitchExtendedReport,
+  hidSwitchExtendedReportsEqual,
+  isHidSwitchExtendedReport,
+} from "../hid/switch";
+import {
   type XInputGamepadReport,
   createXInputReport,
   decodeXInputReport,
@@ -27,7 +35,9 @@ export const nativeBridgeHidGamepadRumbleReportByteLength = 5;
 
 export type NativeBridgeReportFormat = "xinput";
 export type NativeBridgeHidReportFormat = "hid-gamepad";
-export type NativeBridgeProfileHidReportFormat = "hid-playstation-extended";
+export type NativeBridgeProfileHidReportFormat =
+  | "hid-playstation-extended"
+  | "hid-switch-extended";
 export type NativeBridgeFeedbackType = "rumble";
 export type NativeBridgeFeedbackReportFormat = "hid-gamepad-rumble";
 
@@ -60,7 +70,7 @@ export type NativeBridgeStateExtensions = {
 
 export type NativeBridgeProfileHidReportPayload = {
   profileHidReportFormat: NativeBridgeProfileHidReportFormat;
-  profileHidReport: HidPlayStationExtendedReport;
+  profileHidReport: HidPlayStationExtendedReport | HidSwitchExtendedReport;
   profileHidReportBase64: string;
 };
 
@@ -77,7 +87,7 @@ export type NativeBridgeStateMessage = {
   hidReport?: NativeBridgeHidGamepadReport;
   hidReportBase64?: string;
   profileHidReportFormat?: NativeBridgeProfileHidReportFormat;
-  profileHidReport?: HidPlayStationExtendedReport;
+  profileHidReport?: HidPlayStationExtendedReport | HidSwitchExtendedReport;
   profileHidReportBase64?: string;
   extensions?: NativeBridgeStateExtensions;
   state?: ControllerState;
@@ -169,19 +179,31 @@ export function createNativeBridgeStateMessage(
 export function createNativeBridgeProfileHidReportPayload(
   state: ControllerState,
 ): NativeBridgeProfileHidReportPayload | undefined {
-  if (state.profile !== "playstation") {
-    return undefined;
+  if (state.profile === "playstation") {
+    const profileHidReport = createHidPlayStationExtendedReport(state);
+    const profileHidReportBytes =
+      encodeHidPlayStationExtendedReport(profileHidReport);
+
+    return {
+      profileHidReportFormat: "hid-playstation-extended",
+      profileHidReport,
+      profileHidReportBase64: bytesToBase64(profileHidReportBytes),
+    };
   }
 
-  const profileHidReport = createHidPlayStationExtendedReport(state);
-  const profileHidReportBytes =
-    encodeHidPlayStationExtendedReport(profileHidReport);
+  if (state.profile === "switch") {
+    const profileHidReport = createHidSwitchExtendedReport(state);
+    const profileHidReportBytes =
+      encodeHidSwitchExtendedReport(profileHidReport);
 
-  return {
-    profileHidReportFormat: "hid-playstation-extended",
-    profileHidReport,
-    profileHidReportBase64: bytesToBase64(profileHidReportBytes),
-  };
+    return {
+      profileHidReportFormat: "hid-switch-extended",
+      profileHidReport,
+      profileHidReportBase64: bytesToBase64(profileHidReportBytes),
+    };
+  }
+
+  return undefined;
 }
 
 export function createNativeBridgeStateExtensions(
@@ -324,21 +346,38 @@ export function nativeBridgeMessageToProfileHidReportBytes(
     return undefined;
   }
 
-  if (message.profileHidReportFormat !== "hid-playstation-extended") {
-    throw new TypeError(
-      `Unsupported native bridge profile HID report format: ${message.profileHidReportFormat}`,
-    );
-  }
-
   const bytes = base64ToBytes(message.profileHidReportBase64);
-  const decoded = decodeHidPlayStationExtendedReport(bytes);
-  if (!hidPlayStationExtendedReportsEqual(decoded, message.profileHidReport)) {
-    throw new TypeError(
-      "Native bridge profile HID report bytes do not match profile HID report JSON",
-    );
+  if (message.profileHidReportFormat === "hid-playstation-extended") {
+    if (!isHidPlayStationExtendedReport(message.profileHidReport)) {
+      throw new TypeError("Invalid PlayStation native bridge profile report");
+    }
+    const decoded = decodeHidPlayStationExtendedReport(bytes);
+    if (
+      !hidPlayStationExtendedReportsEqual(decoded, message.profileHidReport)
+    ) {
+      throw new TypeError(
+        "Native bridge profile HID report bytes do not match profile HID report JSON",
+      );
+    }
+    return bytes;
   }
 
-  return bytes;
+  if (message.profileHidReportFormat === "hid-switch-extended") {
+    if (!isHidSwitchExtendedReport(message.profileHidReport)) {
+      throw new TypeError("Invalid Switch native bridge profile report");
+    }
+    const decoded = decodeHidSwitchExtendedReport(bytes);
+    if (!hidSwitchExtendedReportsEqual(decoded, message.profileHidReport)) {
+      throw new TypeError(
+        "Native bridge profile HID report bytes do not match profile HID report JSON",
+      );
+    }
+    return bytes;
+  }
+
+  throw new TypeError(
+    `Unsupported native bridge profile HID report format: ${message.profileHidReportFormat}`,
+  );
 }
 
 export function nativeBridgeFeedbackMessageToRumbleReportBytes(
@@ -478,12 +517,25 @@ function hasValidOptionalProfileHidReport(
     return true;
   }
 
-  return (
+  if (typeof value.profileHidReportBase64 !== "string") {
+    return false;
+  }
+
+  if (
     value.profile === "playstation" &&
-    value.profileHidReportFormat === "hid-playstation-extended" &&
-    typeof value.profileHidReportBase64 === "string" &&
-    isHidPlayStationExtendedReport(value.profileHidReport)
-  );
+    value.profileHidReportFormat === "hid-playstation-extended"
+  ) {
+    return isHidPlayStationExtendedReport(value.profileHidReport);
+  }
+
+  if (
+    value.profile === "switch" &&
+    value.profileHidReportFormat === "hid-switch-extended"
+  ) {
+    return isHidSwitchExtendedReport(value.profileHidReport);
+  }
+
+  return false;
 }
 
 function hasValidOptionalStateExtensions(

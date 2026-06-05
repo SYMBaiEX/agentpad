@@ -9,6 +9,7 @@ Current adapters:
 - `xinput-report`
 - `hid-gamepad-report`
 - `hid-playstation-extended-report`
+- `hid-switch-extended-report`
 - `native-bridge`
 - `NativeProcessBridgeAdapter`
 
@@ -29,7 +30,7 @@ new metadata fields make backend selection easier for agents and host apps:
 - `supportedProfiles`: profiles accepted by the adapter
 - `supportedCommands`: command types accepted by the runtime/adapter path
 - `outputFormats`: normalized command, state, WebSocket, XInput, HID, or JSONL outputs
-- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, `hid-playstation-extended`, and `hid-gamepad-rumble`
+- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, `hid-playstation-extended`, `hid-switch-extended`, and `hid-gamepad-rumble`
 - `feedbackTypes`: host feedback channels such as `rumble`
 - `transport`: memory, callback, WebSocket, or native process
 - `virtualDeviceKind`: none, native helper, or OS virtual gamepad
@@ -45,9 +46,9 @@ if (capabilities.feedbackTypes.includes("rumble")) {
 ```
 
 Use `native-bridge` when a separate process needs JSONL messages with packed
-XInput/HID report bytes. Use `xinput-report`, `hid-gamepad-report`, or
-`hid-playstation-extended-report` when code in the same process wants direct
-access to reports without a wire format.
+XInput/HID report bytes. Use `xinput-report`, `hid-gamepad-report`,
+`hid-playstation-extended-report`, or `hid-switch-extended-report` when code in
+the same process wants direct access to reports without a wire format.
 
 Use `NativeProcessBridgeAdapter` when OpenController should spawn and own a
 helper process such as `opencontroller-uinput-bridge`. It writes the same JSONL

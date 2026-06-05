@@ -610,6 +610,7 @@ Current adapters:
 - `xinput-report`: turns controller state into 12-byte XInput gamepad reports for native bridge processes
 - `hid-gamepad-report`: turns controller state into 13-byte descriptor-backed HID gamepad reports
 - `hid-playstation-extended-report`: turns PlayStation state into 47-byte HID reports with touchpad and motion bytes
+- `hid-switch-extended-report`: turns Switch state into 31-byte HID reports with motion bytes
 - `native-bridge`: emits versioned JSONL messages with XInput, generic HID, and profile HID report payloads for native bridge processes
 - `NativeProcessBridgeAdapter`: streams JSONL directly to a helper process stdin
 

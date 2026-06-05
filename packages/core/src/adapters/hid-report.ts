@@ -14,6 +14,11 @@ import {
   createHidPlayStationExtendedReport,
   encodeHidPlayStationExtendedReport,
 } from "../hid/playstation";
+import {
+  type HidSwitchExtendedReport,
+  createHidSwitchExtendedReport,
+  encodeHidSwitchExtendedReport,
+} from "../hid/switch";
 import type {
   ControllerFeedbackEvent,
   ControllerState,
@@ -36,6 +41,13 @@ export type HidPlayStationExtendedReportSink = (event: {
   bytes: Uint8Array;
 }) => Promise<void> | void;
 
+export type HidSwitchExtendedReportSink = (event: {
+  controllerId: string;
+  state: ControllerState;
+  report: HidSwitchExtendedReport;
+  bytes: Uint8Array;
+}) => Promise<void> | void;
+
 export type HidRumbleFeedbackOptions = {
   controllerId?: string;
   timestamp?: number;
@@ -50,6 +62,11 @@ export type HidGamepadReportAdapterOptions = {
 
 export type HidPlayStationExtendedReportAdapterOptions = {
   onReport?: HidPlayStationExtendedReportSink;
+  onFeedback?: FeedbackListener;
+};
+
+export type HidSwitchExtendedReportAdapterOptions = {
+  onReport?: HidSwitchExtendedReportSink;
   onFeedback?: FeedbackListener;
 };
 
@@ -314,6 +331,140 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
   private assertConnected(): void {
     if (!this.connected) {
       throw new Error("HidPlayStationExtendedReportAdapter is not connected");
+    }
+  }
+}
+
+export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
+  readonly name = "hid-switch-extended-report";
+  readonly platform = "all" as const;
+  readonly reports: Array<{
+    controllerId: string;
+    report: HidSwitchExtendedReport;
+    bytes: Uint8Array;
+  }> = [];
+  private readonly feedbackEvents = new EventEmitter<{
+    feedback: ControllerFeedbackEvent;
+  }>();
+  private connected = false;
+  private controllerId: string | undefined;
+
+  constructor(
+    private readonly options: HidSwitchExtendedReportAdapterOptions = {},
+  ) {}
+
+  async connect(): Promise<void> {
+    this.connected = true;
+  }
+
+  async send(_command: NormalizedControllerCommand): Promise<void> {
+    this.assertConnected();
+  }
+
+  async syncState(state: ControllerState): Promise<void> {
+    this.assertConnected();
+    this.controllerId = state.id;
+    const report = createHidSwitchExtendedReport(state);
+    const bytes = encodeHidSwitchExtendedReport(report);
+    const event = {
+      controllerId: state.id,
+      state,
+      report,
+      bytes,
+    };
+    this.reports.push({
+      controllerId: event.controllerId,
+      report,
+      bytes,
+    });
+    await this.options.onReport?.(event);
+  }
+
+  receiveOutputReport(
+    bytes: Uint8Array,
+    options: HidRumbleFeedbackOptions = {},
+  ): ControllerFeedbackEvent {
+    this.assertConnected();
+    const report = decodeHidGamepadRumbleReport(bytes);
+    const canonicalBytes = encodeHidGamepadRumbleReport(report);
+    return this.emitRumbleFeedback(report, canonicalBytes, options);
+  }
+
+  receiveRumbleReport(
+    effectOrReport: HidGamepadRumbleEffect | HidGamepadRumbleReport,
+    options: HidRumbleFeedbackOptions = {},
+  ): ControllerFeedbackEvent {
+    this.assertConnected();
+    const report =
+      "reportId" in effectOrReport
+        ? effectOrReport
+        : createHidGamepadRumbleReport(effectOrReport);
+    const bytes = encodeHidGamepadRumbleReport(report);
+    const decoded = decodeHidGamepadRumbleReport(bytes);
+    return this.emitRumbleFeedback(decoded, bytes, options);
+  }
+
+  async neutral(): Promise<void> {
+    this.assertConnected();
+  }
+
+  onFeedback(listener: FeedbackListener): Unsubscribe {
+    return this.feedbackEvents.on("feedback", listener);
+  }
+
+  async disconnect(): Promise<void> {
+    this.connected = false;
+  }
+
+  capabilities() {
+    return createAdapterCapabilities({
+      supportsStateSync: true,
+      supportsRumble: true,
+      supportsGyro: true,
+      supportedProfiles: ["switch"],
+      outputFormats: ["controller-state", "hid-switch-extended-report"],
+      reportFormats: ["hid-switch-extended", "hid-gamepad-rumble"],
+      feedbackTypes: ["rumble"],
+      transport: "callback",
+    });
+  }
+
+  private emitRumbleFeedback(
+    report: HidGamepadRumbleReport,
+    bytes: Uint8Array,
+    options: HidRumbleFeedbackOptions,
+  ): ControllerFeedbackEvent {
+    const controllerId = options.controllerId ?? this.controllerId;
+    if (!controllerId) {
+      throw new Error(
+        "HidSwitchExtendedReportAdapter has not synced a controller state; pass controllerId to receiveOutputReport",
+      );
+    }
+
+    const event: ControllerFeedbackEvent = {
+      type: "rumble",
+      controllerId,
+      timestamp: options.timestamp ?? Date.now(),
+      weakMotor: fromU8(report.weakMotor),
+      strongMotor: fromU8(report.strongMotor),
+      leftTriggerMotor: fromU8(report.leftTriggerMotor),
+      rightTriggerMotor: fromU8(report.rightTriggerMotor),
+      source: options.source ?? this.name,
+      reportFormat: "hid-gamepad-rumble",
+      reportId: report.reportId,
+      reportBase64: bytesToBase64(bytes),
+      ...(options.durationMs !== undefined
+        ? { durationMs: options.durationMs }
+        : {}),
+    };
+    this.options.onFeedback?.(event);
+    this.feedbackEvents.emit("feedback", event);
+    return event;
+  }
+
+  private assertConnected(): void {
+    if (!this.connected) {
+      throw new Error("HidSwitchExtendedReportAdapter is not connected");
     }
   }
 }

@@ -407,6 +407,11 @@ export function macosDriverKitInputReportBytesFromNativeBridgeMessage(
 export function macosDriverKitPlayStationInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
 ): MacosDriverKitPlayStationInputReport {
+  if (message.profileHidReportFormat !== "hid-playstation-extended") {
+    throw new TypeError(
+      "Native bridge message does not include a PlayStation profile HID report",
+    );
+  }
   const bytes = nativeBridgeMessageToProfileHidReportBytes(message);
   if (!bytes) {
     throw new TypeError(

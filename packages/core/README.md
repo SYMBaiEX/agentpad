@@ -171,6 +171,7 @@ touch or sensor channels.
 import {
   HidGamepadReportAdapter,
   HidPlayStationExtendedReportAdapter,
+  HidSwitchExtendedReportAdapter,
   XInputReportAdapter
 } from "@opencontroller/core";
 
@@ -194,13 +195,21 @@ const playstation = new HidPlayStationExtendedReportAdapter({
     console.log("playstation", bytes);
   },
 });
+
+const switchController = new HidSwitchExtendedReportAdapter({
+  onReport({ bytes }) {
+    console.log("switch", bytes);
+  },
+});
 ```
 
 Use `xinput-report` for the compact 12-byte XInput compatibility payload,
 `hid-gamepad-report` for the 13-byte descriptor-backed generic HID gamepad
 payload, and `hid-playstation-extended-report` for the 47-byte PlayStation
-profile payload that carries touchpad contacts and motion vectors. The HID
-report adapters also accept the shared 5-byte rumble output report through
+profile payload that carries touchpad contacts and motion vectors.
+`hid-switch-extended-report` carries the common gamepad payload plus Switch
+motion vectors in a 31-byte profile report. The HID report adapters also accept
+the shared 5-byte rumble output report through
 `adapter.receiveOutputReport(bytes)` and surface it through
 `controller.onFeedback(...)`.
 
@@ -240,9 +249,10 @@ channels they can surface back to agents.
 The native bridge helpers emit JSONL messages such as
 `opencontroller.bridge.state`, `opencontroller.bridge.feedback`, and
 `opencontroller.bridge.disconnect`. State messages include XInput/HID payloads,
-PlayStation profile HID payloads for touchpad/motion data, and optional
-touchpad/motion `extensions`. Platform packages consume those messages to drive
-Linux `uinput`, Windows VHF, or macOS DriverKit host bridges.
+PlayStation profile HID payloads for touchpad/motion data, Switch profile HID
+payloads for motion data, and optional touchpad/motion `extensions`. Platform
+packages consume those messages to drive Linux `uinput`, Windows VHF, or macOS
+DriverKit host bridges.
 
 OpenController keeps privileged driver installation outside the core runtime.
 The core package focuses on deterministic controller state, command safety,

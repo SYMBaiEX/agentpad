@@ -86,6 +86,8 @@ opencontroller native setup --backend macos-driverkit --report-profile playstati
 Use `--report-profile playstation` when generating Windows VHF or macOS
 DriverKit kits that should expose OpenController's 47-byte
 `hid-playstation-extended` report for touchpad contacts and motion vectors.
+Switch-aware host bridges can consume the 31-byte `hid-switch-extended` profile
+report for motion vectors.
 
 ## Smoke Test A Native Bridge
 

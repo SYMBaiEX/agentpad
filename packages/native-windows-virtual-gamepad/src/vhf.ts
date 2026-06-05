@@ -401,6 +401,11 @@ export function windowsVhfInputReportBytesFromNativeBridgeMessage(
 export function windowsVhfPlayStationInputReportFromNativeBridgeMessage(
   message: NativeBridgeStateMessage,
 ): WindowsVhfPlayStationInputReport {
+  if (message.profileHidReportFormat !== "hid-playstation-extended") {
+    throw new TypeError(
+      "Native bridge message does not include a PlayStation profile HID report",
+    );
+  }
   const bytes = nativeBridgeMessageToProfileHidReportBytes(message);
   if (!bytes) {
     throw new TypeError(

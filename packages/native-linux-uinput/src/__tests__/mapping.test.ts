@@ -5,6 +5,7 @@ import { hidGamepadButtonBits } from "@opencontroller/core/hid";
 import {
   linuxEventsFromHidGamepadReport,
   linuxEventsFromHidPlayStationExtendedReport,
+  linuxEventsFromHidSwitchExtendedReport,
   linuxEventsFromNativeBridgeMessage,
   linuxEventsFromXInputReport,
 } from "../events";
@@ -244,6 +245,105 @@ describe("linux uinput event mapping", () => {
     expect(find(events, "ABS_MT_POSITION_X")).toBe(65535);
     expect(find(events, "ABS_MT_POSITION_Y")).toBe(1);
     expect(find(events, "ABS_MT_PRESSURE")).toBe(255);
+  });
+
+  test("maps Switch profile HID reports to Linux gamepad events", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "switch",
+      connected: true,
+      buttons: {
+        A: true,
+        B: false,
+        X: false,
+        Y: false,
+        L: false,
+        R: false,
+        ZL: false,
+        ZR: true,
+        MINUS: false,
+        PLUS: true,
+        HOME: false,
+        CAPTURE: false,
+        LS: false,
+        RS: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        ZL: 0,
+        ZR: 0.5,
+      },
+      sticks: {
+        left: { x: -1, y: 1 },
+        right: { x: 0.5, y: -0.5 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: false,
+        contacts: [],
+      },
+      motion: {
+        acceleration: { x: 0.25, y: -0.25, z: 0.5 },
+        gyroscope: { x: -0.5, y: 0.5, z: 1 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const events = linuxEventsFromNativeBridgeMessage(message);
+
+    expect(message.profileHidReportFormat).toBe("hid-switch-extended");
+    expect(find(events, "BTN_EAST")).toBe(1);
+    expect(find(events, "BTN_START")).toBe(1);
+    expect(find(events, "ABS_RZ")).toBe(128);
+    expect(find(events, "ABS_X")).toBe(-32768);
+    expect(find(events, "ABS_Y")).toBe(32767);
+    expect(find(events, "ABS_RX")).toBe(16384);
+    expect(find(events, "ABS_RY")).toBe(-16384);
+    expect(find(events, "BTN_TOUCH")).toBeUndefined();
+  });
+
+  test("maps Switch profile HID reports directly", () => {
+    const events = linuxEventsFromHidSwitchExtendedReport({
+      reportId: 4,
+      buttons: hidGamepadButtonBits.CAPTURE,
+      leftTrigger: 0,
+      rightTrigger: 255,
+      leftStickX: 100,
+      leftStickY: -100,
+      rightStickX: 200,
+      rightStickY: -200,
+      accelerationX: 0,
+      accelerationY: 0,
+      accelerationZ: 32767,
+      gyroscopeX: 0,
+      gyroscopeY: 0,
+      gyroscopeZ: -32768,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    });
+
+    expect(find(events, "ABS_X")).toBe(100);
+    expect(find(events, "ABS_Y")).toBe(100);
+    expect(find(events, "ABS_RX")).toBe(200);
+    expect(find(events, "ABS_RY")).toBe(200);
+    expect(find(events, "ABS_RZ")).toBe(255);
+    expect(events.at(-1)).toEqual({
+      type: "EV_SYN",
+      code: "SYN_REPORT",
+      value: 0,
+    });
   });
 });
 

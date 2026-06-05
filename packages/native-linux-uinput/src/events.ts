@@ -6,10 +6,12 @@ import {
 import {
   type HidGamepadReport,
   type HidPlayStationExtendedReport,
+  type HidSwitchExtendedReport,
   type XInputGamepadReport,
   createHidGamepadReport,
   decodeHidGamepadReport,
   decodeHidPlayStationExtendedReport,
+  decodeHidSwitchExtendedReport,
   hidGamepadButtonBits,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
@@ -55,6 +57,11 @@ export function linuxEventsFromNativeBridgeMessage(
 
   const profileBytes = nativeBridgeMessageToProfileHidReportBytes(message);
   if (profileBytes) {
+    if (message.profileHidReportFormat === "hid-switch-extended") {
+      return linuxEventsFromHidSwitchExtendedReport(
+        decodeHidSwitchExtendedReport(profileBytes),
+      );
+    }
     return linuxEventsFromHidPlayStationExtendedReport(
       decodeHidPlayStationExtendedReport(profileBytes),
     );
@@ -159,6 +166,21 @@ export function linuxEventsFromHidPlayStationExtendedReport(
 
   events.push({ type: "EV_SYN", code: "SYN_REPORT", value: 0 });
   return events;
+}
+
+export function linuxEventsFromHidSwitchExtendedReport(
+  report: HidSwitchExtendedReport,
+): LinuxInputEventPlan[] {
+  return linuxEventsFromHidGamepadReport({
+    reportId: 1,
+    buttons: report.buttons,
+    leftTrigger: report.leftTrigger,
+    rightTrigger: report.rightTrigger,
+    leftStickX: report.leftStickX,
+    leftStickY: report.leftStickY,
+    rightStickX: report.rightStickX,
+    rightStickY: report.rightStickY,
+  });
 }
 
 export function linuxNeutralEvents(): LinuxInputEventPlan[] {

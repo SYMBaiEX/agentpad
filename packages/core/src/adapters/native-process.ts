@@ -171,6 +171,8 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         "controller-state",
         "xinput-report",
         "hid-gamepad-report",
+        "hid-playstation-extended-report",
+        "hid-switch-extended-report",
         "native-bridge-jsonl",
       ],
       reportFormats: supportsRumble
@@ -178,9 +180,15 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
             "xinput",
             "hid-gamepad",
             "hid-playstation-extended",
+            "hid-switch-extended",
             "hid-gamepad-rumble",
           ]
-        : ["xinput", "hid-gamepad", "hid-playstation-extended"],
+        : [
+            "xinput",
+            "hid-gamepad",
+            "hid-playstation-extended",
+            "hid-switch-extended",
+          ],
       feedbackTypes: supportsRumble ? ["rumble"] : [],
       transport: "native-process",
       virtualDeviceKind:
