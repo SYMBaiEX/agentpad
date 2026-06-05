@@ -242,11 +242,59 @@ Helpers can report host haptics back to the SDK by emitting an
 `"hid-gamepad-rumble"`; process adapters surface those messages through
 `controller.onFeedback(...)`.
 
+## Light Output Report
+
+OpenController also defines a compact vendor output report for lightbar,
+player LED, and player indicator feedback:
+
+```ts
+import {
+  decodeHidGamepadLightReport,
+  encodeHidGamepadLightReport
+} from "@opencontroller/core/hid";
+
+const bytes = encodeHidGamepadLightReport({
+  red: 0.1,
+  green: 0.4,
+  blue: 1,
+  brightness: 0.75,
+  playerIndex: 1,
+  playerLightMask: 0b0010
+});
+
+const report = decodeHidGamepadLightReport(bytes);
+```
+
+The light output report is 7 bytes:
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| `0` | 1 byte | report id `5` |
+| `1` | 1 byte | red channel |
+| `2` | 1 byte | green channel |
+| `3` | 1 byte | blue channel |
+| `4` | 1 byte | brightness |
+| `5` | 1 byte | player index |
+| `6` | 1 byte | player light mask |
+
+Color and brightness inputs are normalized from `0` to `1` and encoded as
+unsigned bytes. `playerIndex` and `playerLightMask` are byte fields so native
+bridges can represent common player-number LEDs without inventing another JSON
+shape.
+
+Helpers can report host light changes back to the SDK by emitting an
+`opencontroller.bridge.feedback` JSONL message whose `reportFormat` is
+`"hid-gamepad-lights"`; process adapters surface those messages through
+`controller.onFeedback(...)` as `type: "lights"`.
+
 In-process HID report adapters can surface the same output report without JSONL:
 
 ```ts
 import { HidGamepadReportAdapter, createController } from "@opencontroller/core";
-import { encodeHidGamepadRumbleReport } from "@opencontroller/core/hid";
+import {
+  encodeHidGamepadLightReport,
+  encodeHidGamepadRumbleReport
+} from "@opencontroller/core/hid";
 
 const adapter = new HidGamepadReportAdapter();
 const controller = await createController({
@@ -256,13 +304,29 @@ const controller = await createController({
 });
 
 controller.onFeedback((event) => {
-  console.log(event.type, event.weakMotor, event.strongMotor);
+  if (event.type === "rumble") {
+    console.log(event.type, event.weakMotor, event.strongMotor);
+  }
+  if (event.type === "lights") {
+    console.log(event.type, event.red, event.green, event.blue);
+  }
 });
 
 adapter.receiveOutputReport(
   encodeHidGamepadRumbleReport({
     weakMotor: 0.25,
     strongMotor: 0.8
+  })
+);
+
+adapter.receiveOutputReport(
+  encodeHidGamepadLightReport({
+    red: 0.1,
+    green: 0.4,
+    blue: 1,
+    brightness: 0.75,
+    playerIndex: 1,
+    playerLightMask: 0b0010
   })
 );
 ```

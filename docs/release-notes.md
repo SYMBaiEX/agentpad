@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added HID light/player-indicator output reports and native bridge light
+  feedback messages so hosts can surface lightbar and player LED state through
+  `controller.onFeedback(...)`.
 - README, docs, and demo-facing labels now consistently present the project as
   OpenController, including OpenController Agent Fighter startup guidance.
 - Added direct `HidGamepadReportAdapter` and
@@ -32,7 +35,7 @@
   encoded as combined cardinal D-pad state and report bits.
 - D-pad helper commands now honor disabled-button, disabled-combo, and
   max-button-hold safety policies through their underlying `DPAD_*` buttons.
-- Prepared workspace package manifests for the next `0.1.7` npm patch release.
+- Prepared workspace package manifests for the next `0.1.8` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.

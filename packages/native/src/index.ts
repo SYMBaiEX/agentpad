@@ -48,6 +48,7 @@ type CommonNativeProcessBridgeOptions = Pick<
   | "spawn"
   | "supportsVirtualDevice"
   | "supportsRumble"
+  | "supportsLights"
   | "virtualDeviceKind"
   | "requiresNativeInstall"
   | "requiresElevatedPermissions"
@@ -235,6 +236,9 @@ function commonNativeProcessBridgeOptions(
   }
   if (options.supportsRumble !== undefined) {
     common.supportsRumble = options.supportsRumble;
+  }
+  if (options.supportsLights !== undefined) {
+    common.supportsLights = options.supportsLights;
   }
   if (options.virtualDeviceKind !== undefined) {
     common.virtualDeviceKind = options.virtualDeviceKind;

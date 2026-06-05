@@ -9,6 +9,8 @@ export const hidGamepadInputReportByteLength = 13;
 export const hidGamepadReportByteLength = hidGamepadInputReportByteLength;
 export const hidGamepadRumbleReportId = 2;
 export const hidGamepadRumbleReportByteLength = 5;
+export const hidGamepadLightReportId = 5;
+export const hidGamepadLightReportByteLength = 7;
 
 export type HidGamepadReport = {
   reportId: typeof hidGamepadInputReportId;
@@ -34,6 +36,25 @@ export type HidGamepadRumbleEffect = {
   strongMotor?: number;
   leftTriggerMotor?: number;
   rightTriggerMotor?: number;
+};
+
+export type HidGamepadLightReport = {
+  reportId: typeof hidGamepadLightReportId;
+  red: number;
+  green: number;
+  blue: number;
+  brightness: number;
+  playerIndex: number;
+  playerLightMask: number;
+};
+
+export type HidGamepadLightEffect = {
+  red?: number;
+  green?: number;
+  blue?: number;
+  brightness?: number;
+  playerIndex?: number;
+  playerLightMask?: number;
 };
 
 export const hidGamepadReportDescriptor = Uint8Array.from([
@@ -124,9 +145,39 @@ export const hidGamepadRumbleOutputReportDescriptor = Uint8Array.from([
   0x02, // Output (Data, Variable, Absolute)
 ]);
 
+export const hidGamepadLightOutputReportDescriptor = Uint8Array.from([
+  0x85,
+  hidGamepadLightReportId, // Report ID
+  0x06,
+  0x00,
+  0xff, // Usage Page (Vendor Defined)
+  0x19,
+  0x01, // Usage Minimum (Red channel)
+  0x29,
+  0x06, // Usage Maximum (Player light mask)
+  0x15,
+  0x00, // Logical Minimum (0)
+  0x26,
+  0xff,
+  0x00, // Logical Maximum (255)
+  0x75,
+  0x08, // Report Size (8)
+  0x95,
+  0x06, // Report Count (6)
+  0x91,
+  0x02, // Output (Data, Variable, Absolute)
+]);
+
 export const hidGamepadReportDescriptorWithRumble = Uint8Array.from([
   ...hidGamepadReportDescriptor.slice(0, -1),
   ...hidGamepadRumbleOutputReportDescriptor,
+  0xc0, // End Collection
+]);
+
+export const hidGamepadReportDescriptorWithFeedback = Uint8Array.from([
+  ...hidGamepadReportDescriptor.slice(0, -1),
+  ...hidGamepadRumbleOutputReportDescriptor,
+  ...hidGamepadLightOutputReportDescriptor,
   0xc0, // End Collection
 ]);
 
@@ -162,6 +213,20 @@ export function createHidGamepadRumbleReport(
     strongMotor: toU8(effect.strongMotor ?? 0),
     leftTriggerMotor: toU8(effect.leftTriggerMotor ?? 0),
     rightTriggerMotor: toU8(effect.rightTriggerMotor ?? 0),
+  };
+}
+
+export function createHidGamepadLightReport(
+  effect: HidGamepadLightEffect = {},
+): HidGamepadLightReport {
+  return {
+    reportId: hidGamepadLightReportId,
+    red: toU8(effect.red ?? 0),
+    green: toU8(effect.green ?? 0),
+    blue: toU8(effect.blue ?? 0),
+    brightness: toU8(effect.brightness ?? 1),
+    playerIndex: toByte(effect.playerIndex ?? 0),
+    playerLightMask: toByte(effect.playerLightMask ?? 0),
   };
 }
 
@@ -214,6 +279,27 @@ export function encodeHidGamepadRumbleReport(
   view.setUint8(2, clampByte(report.strongMotor));
   view.setUint8(3, clampByte(report.leftTriggerMotor));
   view.setUint8(4, clampByte(report.rightTriggerMotor));
+
+  return bytes;
+}
+
+export function encodeHidGamepadLightReport(
+  effectOrReport: HidGamepadLightEffect | HidGamepadLightReport,
+): Uint8Array {
+  const report =
+    "reportId" in effectOrReport
+      ? effectOrReport
+      : createHidGamepadLightReport(effectOrReport);
+  const bytes = new Uint8Array(hidGamepadLightReportByteLength);
+  const view = new DataView(bytes.buffer);
+
+  view.setUint8(0, report.reportId);
+  view.setUint8(1, clampByte(report.red));
+  view.setUint8(2, clampByte(report.green));
+  view.setUint8(3, clampByte(report.blue));
+  view.setUint8(4, clampByte(report.brightness));
+  view.setUint8(5, clampByte(report.playerIndex));
+  view.setUint8(6, clampByte(report.playerLightMask));
 
   return bytes;
 }
@@ -271,11 +357,46 @@ export function decodeHidGamepadRumbleReport(
   };
 }
 
+export function decodeHidGamepadLightReport(
+  bytes: Uint8Array,
+): HidGamepadLightReport {
+  if (bytes.byteLength < hidGamepadLightReportByteLength) {
+    throw new RangeError(
+      `HID gamepad light reports must be at least ${hidGamepadLightReportByteLength} bytes`,
+    );
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const reportId = view.getUint8(0);
+  if (reportId !== hidGamepadLightReportId) {
+    throw new RangeError(
+      `Unexpected HID gamepad light report id ${reportId}; expected ${hidGamepadLightReportId}`,
+    );
+  }
+
+  return {
+    reportId: hidGamepadLightReportId,
+    red: view.getUint8(1),
+    green: view.getUint8(2),
+    blue: view.getUint8(3),
+    brightness: view.getUint8(4),
+    playerIndex: view.getUint8(5),
+    playerLightMask: view.getUint8(6),
+  };
+}
+
 function toU8(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
   }
   return Math.round(Math.min(1, Math.max(0, value)) * 255);
+}
+
+function toByte(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(255, Math.max(0, value)));
 }
 
 function base64ToBytes(base64: string): Uint8Array {

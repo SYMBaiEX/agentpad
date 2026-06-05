@@ -229,7 +229,25 @@ export type ControllerRumbleFeedbackEvent = {
   reportBase64?: string;
 };
 
-export type ControllerFeedbackEvent = ControllerRumbleFeedbackEvent;
+export type ControllerLightFeedbackEvent = {
+  type: "lights";
+  controllerId: string;
+  timestamp: number;
+  red: number;
+  green: number;
+  blue: number;
+  brightness: number;
+  playerIndex: number;
+  playerLightMask: number;
+  source?: string;
+  reportFormat?: "hid-gamepad-lights";
+  reportId?: number;
+  reportBase64?: string;
+};
+
+export type ControllerFeedbackEvent =
+  | ControllerRumbleFeedbackEvent
+  | ControllerLightFeedbackEvent;
 
 export type FeedbackListener = (event: ControllerFeedbackEvent) => void;
 
@@ -248,7 +266,8 @@ export type ControllerAdapterReportFormat =
   | "hid-gamepad"
   | "hid-playstation-extended"
   | "hid-switch-extended"
-  | "hid-gamepad-rumble";
+  | "hid-gamepad-rumble"
+  | "hid-gamepad-lights";
 
 export type ControllerAdapterFeedbackType = ControllerFeedbackEvent["type"];
 
@@ -269,6 +288,7 @@ export type ControllerAdapterCapabilities = {
   supportsSticks: boolean;
   supportsDpad: boolean;
   supportsRumble: boolean;
+  supportsLights: boolean;
   supportsTouchpad: boolean;
   supportsGyro: boolean;
   supportsStateSync: boolean;

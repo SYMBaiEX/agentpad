@@ -1,13 +1,20 @@
 import { EventEmitter, type Unsubscribe } from "../events";
 import {
+  type HidGamepadLightEffect,
+  type HidGamepadLightReport,
   type HidGamepadReport,
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
+  createHidGamepadLightReport,
   createHidGamepadReport,
   createHidGamepadRumbleReport,
+  decodeHidGamepadLightReport,
   decodeHidGamepadRumbleReport,
+  encodeHidGamepadLightReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
+  hidGamepadLightReportId,
+  hidGamepadRumbleReportId,
 } from "../hid/hid-gamepad";
 import {
   type HidPlayStationExtendedReport,
@@ -54,6 +61,11 @@ export type HidRumbleFeedbackOptions = {
   durationMs?: number;
   source?: string;
 };
+
+export type HidLightFeedbackOptions = Omit<
+  HidRumbleFeedbackOptions,
+  "durationMs"
+>;
 
 export type HidGamepadReportAdapterOptions = {
   onReport?: HidGamepadReportSink;
@@ -118,9 +130,20 @@ export class HidGamepadReportAdapter implements ControllerAdapter {
     options: HidRumbleFeedbackOptions = {},
   ): ControllerFeedbackEvent {
     this.assertConnected();
-    const report = decodeHidGamepadRumbleReport(bytes);
-    const canonicalBytes = encodeHidGamepadRumbleReport(report);
-    return this.emitRumbleFeedback(report, canonicalBytes, options);
+    const reportId = bytes[0];
+    if (reportId === hidGamepadRumbleReportId) {
+      const report = decodeHidGamepadRumbleReport(bytes);
+      const canonicalBytes = encodeHidGamepadRumbleReport(report);
+      return this.emitRumbleFeedback(report, canonicalBytes, options);
+    }
+    if (reportId === hidGamepadLightReportId) {
+      const report = decodeHidGamepadLightReport(bytes);
+      const canonicalBytes = encodeHidGamepadLightReport(report);
+      return this.emitLightFeedback(report, canonicalBytes, options);
+    }
+    throw new RangeError(
+      `Unsupported HID gamepad output report id ${reportId}`,
+    );
   }
 
   receiveRumbleReport(
@@ -135,6 +158,20 @@ export class HidGamepadReportAdapter implements ControllerAdapter {
     const bytes = encodeHidGamepadRumbleReport(report);
     const decoded = decodeHidGamepadRumbleReport(bytes);
     return this.emitRumbleFeedback(decoded, bytes, options);
+  }
+
+  receiveLightReport(
+    effectOrReport: HidGamepadLightEffect | HidGamepadLightReport,
+    options: HidLightFeedbackOptions = {},
+  ): ControllerFeedbackEvent {
+    this.assertConnected();
+    const report =
+      "reportId" in effectOrReport
+        ? effectOrReport
+        : createHidGamepadLightReport(effectOrReport);
+    const bytes = encodeHidGamepadLightReport(report);
+    const decoded = decodeHidGamepadLightReport(bytes);
+    return this.emitLightFeedback(decoded, bytes, options);
   }
 
   async neutral(): Promise<void> {
@@ -153,9 +190,14 @@ export class HidGamepadReportAdapter implements ControllerAdapter {
     return createAdapterCapabilities({
       supportsStateSync: true,
       supportsRumble: true,
+      supportsLights: true,
       outputFormats: ["controller-state", "hid-gamepad-report"],
-      reportFormats: ["hid-gamepad", "hid-gamepad-rumble"],
-      feedbackTypes: ["rumble"],
+      reportFormats: [
+        "hid-gamepad",
+        "hid-gamepad-rumble",
+        "hid-gamepad-lights",
+      ],
+      feedbackTypes: ["rumble", "lights"],
       transport: "callback",
     });
   }
@@ -187,6 +229,38 @@ export class HidGamepadReportAdapter implements ControllerAdapter {
       ...(options.durationMs !== undefined
         ? { durationMs: options.durationMs }
         : {}),
+    };
+    this.options.onFeedback?.(event);
+    this.feedbackEvents.emit("feedback", event);
+    return event;
+  }
+
+  private emitLightFeedback(
+    report: HidGamepadLightReport,
+    bytes: Uint8Array,
+    options: HidLightFeedbackOptions,
+  ): ControllerFeedbackEvent {
+    const controllerId = options.controllerId ?? this.controllerId;
+    if (!controllerId) {
+      throw new Error(
+        "HidGamepadReportAdapter has not synced a controller state; pass controllerId to receiveOutputReport",
+      );
+    }
+
+    const event: ControllerFeedbackEvent = {
+      type: "lights",
+      controllerId,
+      timestamp: options.timestamp ?? Date.now(),
+      red: fromU8(report.red),
+      green: fromU8(report.green),
+      blue: fromU8(report.blue),
+      brightness: fromU8(report.brightness),
+      playerIndex: report.playerIndex,
+      playerLightMask: report.playerLightMask,
+      source: options.source ?? this.name,
+      reportFormat: "hid-gamepad-lights",
+      reportId: report.reportId,
+      reportBase64: bytesToBase64(bytes),
     };
     this.options.onFeedback?.(event);
     this.feedbackEvents.emit("feedback", event);
@@ -250,9 +324,20 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
     options: HidRumbleFeedbackOptions = {},
   ): ControllerFeedbackEvent {
     this.assertConnected();
-    const report = decodeHidGamepadRumbleReport(bytes);
-    const canonicalBytes = encodeHidGamepadRumbleReport(report);
-    return this.emitRumbleFeedback(report, canonicalBytes, options);
+    const reportId = bytes[0];
+    if (reportId === hidGamepadRumbleReportId) {
+      const report = decodeHidGamepadRumbleReport(bytes);
+      const canonicalBytes = encodeHidGamepadRumbleReport(report);
+      return this.emitRumbleFeedback(report, canonicalBytes, options);
+    }
+    if (reportId === hidGamepadLightReportId) {
+      const report = decodeHidGamepadLightReport(bytes);
+      const canonicalBytes = encodeHidGamepadLightReport(report);
+      return this.emitLightFeedback(report, canonicalBytes, options);
+    }
+    throw new RangeError(
+      `Unsupported HID gamepad output report id ${reportId}`,
+    );
   }
 
   receiveRumbleReport(
@@ -267,6 +352,20 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
     const bytes = encodeHidGamepadRumbleReport(report);
     const decoded = decodeHidGamepadRumbleReport(bytes);
     return this.emitRumbleFeedback(decoded, bytes, options);
+  }
+
+  receiveLightReport(
+    effectOrReport: HidGamepadLightEffect | HidGamepadLightReport,
+    options: HidLightFeedbackOptions = {},
+  ): ControllerFeedbackEvent {
+    this.assertConnected();
+    const report =
+      "reportId" in effectOrReport
+        ? effectOrReport
+        : createHidGamepadLightReport(effectOrReport);
+    const bytes = encodeHidGamepadLightReport(report);
+    const decoded = decodeHidGamepadLightReport(bytes);
+    return this.emitLightFeedback(decoded, bytes, options);
   }
 
   async neutral(): Promise<void> {
@@ -285,12 +384,17 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
     return createAdapterCapabilities({
       supportsStateSync: true,
       supportsRumble: true,
+      supportsLights: true,
       supportsTouchpad: true,
       supportsGyro: true,
       supportedProfiles: ["playstation"],
       outputFormats: ["controller-state", "hid-playstation-extended-report"],
-      reportFormats: ["hid-playstation-extended", "hid-gamepad-rumble"],
-      feedbackTypes: ["rumble"],
+      reportFormats: [
+        "hid-playstation-extended",
+        "hid-gamepad-rumble",
+        "hid-gamepad-lights",
+      ],
+      feedbackTypes: ["rumble", "lights"],
       transport: "callback",
     });
   }
@@ -322,6 +426,38 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
       ...(options.durationMs !== undefined
         ? { durationMs: options.durationMs }
         : {}),
+    };
+    this.options.onFeedback?.(event);
+    this.feedbackEvents.emit("feedback", event);
+    return event;
+  }
+
+  private emitLightFeedback(
+    report: HidGamepadLightReport,
+    bytes: Uint8Array,
+    options: HidLightFeedbackOptions,
+  ): ControllerFeedbackEvent {
+    const controllerId = options.controllerId ?? this.controllerId;
+    if (!controllerId) {
+      throw new Error(
+        "HidPlayStationExtendedReportAdapter has not synced a controller state; pass controllerId to receiveOutputReport",
+      );
+    }
+
+    const event: ControllerFeedbackEvent = {
+      type: "lights",
+      controllerId,
+      timestamp: options.timestamp ?? Date.now(),
+      red: fromU8(report.red),
+      green: fromU8(report.green),
+      blue: fromU8(report.blue),
+      brightness: fromU8(report.brightness),
+      playerIndex: report.playerIndex,
+      playerLightMask: report.playerLightMask,
+      source: options.source ?? this.name,
+      reportFormat: "hid-gamepad-lights",
+      reportId: report.reportId,
+      reportBase64: bytesToBase64(bytes),
     };
     this.options.onFeedback?.(event);
     this.feedbackEvents.emit("feedback", event);
@@ -385,9 +521,20 @@ export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
     options: HidRumbleFeedbackOptions = {},
   ): ControllerFeedbackEvent {
     this.assertConnected();
-    const report = decodeHidGamepadRumbleReport(bytes);
-    const canonicalBytes = encodeHidGamepadRumbleReport(report);
-    return this.emitRumbleFeedback(report, canonicalBytes, options);
+    const reportId = bytes[0];
+    if (reportId === hidGamepadRumbleReportId) {
+      const report = decodeHidGamepadRumbleReport(bytes);
+      const canonicalBytes = encodeHidGamepadRumbleReport(report);
+      return this.emitRumbleFeedback(report, canonicalBytes, options);
+    }
+    if (reportId === hidGamepadLightReportId) {
+      const report = decodeHidGamepadLightReport(bytes);
+      const canonicalBytes = encodeHidGamepadLightReport(report);
+      return this.emitLightFeedback(report, canonicalBytes, options);
+    }
+    throw new RangeError(
+      `Unsupported HID gamepad output report id ${reportId}`,
+    );
   }
 
   receiveRumbleReport(
@@ -402,6 +549,20 @@ export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
     const bytes = encodeHidGamepadRumbleReport(report);
     const decoded = decodeHidGamepadRumbleReport(bytes);
     return this.emitRumbleFeedback(decoded, bytes, options);
+  }
+
+  receiveLightReport(
+    effectOrReport: HidGamepadLightEffect | HidGamepadLightReport,
+    options: HidLightFeedbackOptions = {},
+  ): ControllerFeedbackEvent {
+    this.assertConnected();
+    const report =
+      "reportId" in effectOrReport
+        ? effectOrReport
+        : createHidGamepadLightReport(effectOrReport);
+    const bytes = encodeHidGamepadLightReport(report);
+    const decoded = decodeHidGamepadLightReport(bytes);
+    return this.emitLightFeedback(decoded, bytes, options);
   }
 
   async neutral(): Promise<void> {
@@ -420,11 +581,16 @@ export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
     return createAdapterCapabilities({
       supportsStateSync: true,
       supportsRumble: true,
+      supportsLights: true,
       supportsGyro: true,
       supportedProfiles: ["switch"],
       outputFormats: ["controller-state", "hid-switch-extended-report"],
-      reportFormats: ["hid-switch-extended", "hid-gamepad-rumble"],
-      feedbackTypes: ["rumble"],
+      reportFormats: [
+        "hid-switch-extended",
+        "hid-gamepad-rumble",
+        "hid-gamepad-lights",
+      ],
+      feedbackTypes: ["rumble", "lights"],
       transport: "callback",
     });
   }
@@ -456,6 +622,38 @@ export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
       ...(options.durationMs !== undefined
         ? { durationMs: options.durationMs }
         : {}),
+    };
+    this.options.onFeedback?.(event);
+    this.feedbackEvents.emit("feedback", event);
+    return event;
+  }
+
+  private emitLightFeedback(
+    report: HidGamepadLightReport,
+    bytes: Uint8Array,
+    options: HidLightFeedbackOptions,
+  ): ControllerFeedbackEvent {
+    const controllerId = options.controllerId ?? this.controllerId;
+    if (!controllerId) {
+      throw new Error(
+        "HidSwitchExtendedReportAdapter has not synced a controller state; pass controllerId to receiveOutputReport",
+      );
+    }
+
+    const event: ControllerFeedbackEvent = {
+      type: "lights",
+      controllerId,
+      timestamp: options.timestamp ?? Date.now(),
+      red: fromU8(report.red),
+      green: fromU8(report.green),
+      blue: fromU8(report.blue),
+      brightness: fromU8(report.brightness),
+      playerIndex: report.playerIndex,
+      playerLightMask: report.playerLightMask,
+      source: options.source ?? this.name,
+      reportFormat: "hid-gamepad-lights",
+      reportId: report.reportId,
+      reportBase64: bytesToBase64(bytes),
     };
     this.options.onFeedback?.(event);
     this.feedbackEvents.emit("feedback", event);

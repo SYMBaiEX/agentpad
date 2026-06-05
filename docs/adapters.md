@@ -30,17 +30,25 @@ new metadata fields make backend selection easier for agents and host apps:
 - `supportedProfiles`: profiles accepted by the adapter
 - `supportedCommands`: command types accepted by the runtime/adapter path
 - `outputFormats`: normalized command, state, WebSocket, XInput, HID, or JSONL outputs
-- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, `hid-playstation-extended`, `hid-switch-extended`, and `hid-gamepad-rumble`
-- `feedbackTypes`: host feedback channels such as `rumble`
+- `reportFormats`: packed report formats such as `xinput`, `hid-gamepad`, `hid-playstation-extended`, `hid-switch-extended`, `hid-gamepad-rumble`, and `hid-gamepad-lights`
+- `feedbackTypes`: host feedback channels such as `rumble` and `lights`
 - `transport`: memory, callback, WebSocket, or native process
 - `virtualDeviceKind`: none, native helper, or OS virtual gamepad
 
 ```ts
 const capabilities = controller.capabilities();
 
-if (capabilities.feedbackTypes.includes("rumble")) {
+if (
+  capabilities.feedbackTypes.includes("rumble") ||
+  capabilities.feedbackTypes.includes("lights")
+) {
   controller.onFeedback((event) => {
-    console.log(event.type, event.weakMotor, event.strongMotor);
+    if (event.type === "rumble") {
+      console.log(event.type, event.weakMotor, event.strongMotor);
+    }
+    if (event.type === "lights") {
+      console.log(event.type, event.red, event.green, event.blue);
+    }
   });
 }
 ```

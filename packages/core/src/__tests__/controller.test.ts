@@ -15,21 +15,28 @@ import {
   createActionMap,
   createController,
   createControllerHub,
+  createNativeBridgeLightFeedbackMessage,
   createNativeBridgeRumbleFeedbackMessage,
   createNativeBridgeStateMessage,
+  decodeHidGamepadLightReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
   decodeHidSwitchExtendedReport,
   decodeXInputReport,
+  encodeHidGamepadLightReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
   encodeHidSwitchExtendedReport,
   encodeXInputReport,
   hidGamepadButtonBits,
+  hidGamepadLightOutputReportDescriptor,
+  hidGamepadLightReportByteLength,
+  hidGamepadLightReportId,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithFeedback,
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
   hidGamepadRumbleOutputReportDescriptor,
@@ -44,6 +51,7 @@ import {
   hidSwitchExtendedReportDescriptorWithRumble,
   hidSwitchExtendedReportId,
   nativeBridgeFeedbackMessageToControllerFeedback,
+  nativeBridgeFeedbackMessageToLightReportBytes,
   nativeBridgeFeedbackMessageToRumbleReportBytes,
   nativeBridgeMessageToHidGamepadReportBytes,
   nativeBridgeMessageToProfileHidReportBytes,
@@ -553,6 +561,7 @@ describe("controller runtime", () => {
     const nativeProcess = new NativeProcessBridgeAdapter({
       command: "/bin/cat",
       supportsRumble: true,
+      supportsLights: true,
       virtualDeviceKind: "os-virtual-gamepad",
     }).capabilities();
 
@@ -591,14 +600,17 @@ describe("controller runtime", () => {
     expect(hidGamepad.reportFormats).toEqual([
       "hid-gamepad",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
     expect(hidGamepad.outputFormats).toContain("hid-gamepad-report");
     expect(hidGamepad.supportsStateSync).toBe(true);
     expect(hidGamepad.supportsRumble).toBe(true);
-    expect(hidGamepad.feedbackTypes).toEqual(["rumble"]);
+    expect(hidGamepad.supportsLights).toBe(true);
+    expect(hidGamepad.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(hidPlayStation.reportFormats).toEqual([
       "hid-playstation-extended",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
     expect(hidPlayStation.outputFormats).toContain(
       "hid-playstation-extended-report",
@@ -607,16 +619,19 @@ describe("controller runtime", () => {
     expect(hidPlayStation.supportsTouchpad).toBe(true);
     expect(hidPlayStation.supportsGyro).toBe(true);
     expect(hidPlayStation.supportsRumble).toBe(true);
-    expect(hidPlayStation.feedbackTypes).toEqual(["rumble"]);
+    expect(hidPlayStation.supportsLights).toBe(true);
+    expect(hidPlayStation.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(hidSwitch.reportFormats).toEqual([
       "hid-switch-extended",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
     expect(hidSwitch.outputFormats).toContain("hid-switch-extended-report");
     expect(hidSwitch.supportedProfiles).toEqual(["switch"]);
     expect(hidSwitch.supportsGyro).toBe(true);
     expect(hidSwitch.supportsRumble).toBe(true);
-    expect(hidSwitch.feedbackTypes).toEqual(["rumble"]);
+    expect(hidSwitch.supportsLights).toBe(true);
+    expect(hidSwitch.feedbackTypes).toEqual(["rumble", "lights"]);
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
     expect(nativeBridge.outputFormats).toContain(
@@ -638,8 +653,10 @@ describe("controller runtime", () => {
     expect(nativeProcess.supportsRumble).toBe(true);
     expect(nativeProcess.reportFormats).toContain("hid-playstation-extended");
     expect(nativeProcess.reportFormats).toContain("hid-switch-extended");
-    expect(nativeProcess.feedbackTypes).toEqual(["rumble"]);
+    expect(nativeProcess.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
+    expect(nativeProcess.reportFormats).toContain("hid-gamepad-lights");
+    expect(nativeProcess.supportsLights).toBe(true);
     expect(nativeProcess.transport).toBe("native-process");
     expect(nativeProcess.virtualDeviceKind).toBe("os-virtual-gamepad");
   });
@@ -814,14 +831,17 @@ describe("controller runtime", () => {
     expect(hidGamepad.capabilities().reportFormats).toEqual([
       "hid-gamepad",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
     expect(playstation.capabilities().reportFormats).toEqual([
       "hid-playstation-extended",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
     expect(switchController.capabilities().reportFormats).toEqual([
       "hid-switch-extended",
       "hid-gamepad-rumble",
+      "hid-gamepad-lights",
     ]);
 
     await hidGamepad.disconnect();
@@ -934,6 +954,84 @@ describe("controller runtime", () => {
     );
     expect(hidGamepadReportDescriptorWithRumble.byteLength).toBeGreaterThan(
       hidGamepadReportDescriptor.byteLength,
+    );
+  });
+
+  test("surfaces HID gamepad light output reports as feedback", async () => {
+    const optionFeedbackEvents: ControllerFeedbackEvent[] = [];
+    const listenerFeedbackEvents: ControllerFeedbackEvent[] = [];
+    const adapter = new HidGamepadReportAdapter({
+      onFeedback(event) {
+        optionFeedbackEvents.push(event);
+      },
+    });
+    const controller = await createController({
+      id: "hid-player",
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+    const unsubscribe = controller.onFeedback((event) => {
+      listenerFeedbackEvents.push(event);
+    });
+
+    const bytes = encodeHidGamepadLightReport({
+      red: 1,
+      green: 0.5,
+      blue: 0.25,
+      brightness: 0.75,
+      playerIndex: 2,
+      playerLightMask: 0b0101,
+    });
+    const event = adapter.receiveOutputReport(bytes, {
+      timestamp: 124,
+      source: "host-lightbar",
+    });
+
+    expect(event).toMatchObject({
+      type: "lights",
+      controllerId: "hid-player",
+      timestamp: 124,
+      red: 1,
+      green: 128 / 255,
+      blue: 64 / 255,
+      brightness: 191 / 255,
+      playerIndex: 2,
+      playerLightMask: 0b0101,
+      source: "host-lightbar",
+      reportFormat: "hid-gamepad-lights",
+      reportId: hidGamepadLightReportId,
+    });
+    expect(optionFeedbackEvents).toEqual([event]);
+    expect(listenerFeedbackEvents).toEqual([event]);
+    expect(decodeHidGamepadLightReport(bytes).playerLightMask).toBe(0b0101);
+
+    unsubscribe();
+    await controller.disconnect();
+  });
+
+  test("encodes HID gamepad light output reports", () => {
+    const bytes = encodeHidGamepadLightReport({
+      red: 1,
+      green: 0.5,
+      blue: -1,
+      brightness: 2,
+      playerIndex: 3.4,
+      playerLightMask: 300,
+    });
+    const report = decodeHidGamepadLightReport(bytes);
+
+    expect(bytes.byteLength).toBe(hidGamepadLightReportByteLength);
+    expect(report.reportId).toBe(hidGamepadLightReportId);
+    expect(report.red).toBe(255);
+    expect(report.green).toBe(128);
+    expect(report.blue).toBe(0);
+    expect(report.brightness).toBe(255);
+    expect(report.playerIndex).toBe(3);
+    expect(report.playerLightMask).toBe(255);
+    expect(hidGamepadLightOutputReportDescriptor.byteLength).toBeGreaterThan(0);
+    expect(hidGamepadReportDescriptorWithFeedback.byteLength).toBeGreaterThan(
+      hidGamepadReportDescriptorWithRumble.byteLength,
     );
   });
 
@@ -1196,6 +1294,10 @@ describe("controller runtime", () => {
     if (parsed.type !== "opencontroller.bridge.feedback") {
       throw new Error("Expected a native bridge feedback message");
     }
+    expect(parsed.feedbackType).toBe("rumble");
+    if (parsed.feedbackType !== "rumble") {
+      throw new Error("Expected a native bridge rumble feedback message");
+    }
 
     const bytes = nativeBridgeFeedbackMessageToRumbleReportBytes(parsed);
     const report = decodeHidGamepadRumbleReport(bytes);
@@ -1219,6 +1321,59 @@ describe("controller runtime", () => {
       source: "native-bridge",
       reportFormat: "hid-gamepad-rumble",
       reportId: hidGamepadRumbleReportId,
+      reportBase64: message.reportBase64,
+    });
+  });
+
+  test("round-trips native bridge light feedback messages", () => {
+    const message = createNativeBridgeLightFeedbackMessage({
+      controllerId: "player-1",
+      timestamp: 124,
+      red: 1,
+      green: 0.5,
+      blue: 0.25,
+      brightness: 0.75,
+      playerIndex: 3,
+      playerLightMask: 0b1010,
+    });
+
+    const parsed = parseNativeBridgeMessage(
+      serializeNativeBridgeMessage(message),
+    );
+    expect(parsed.type).toBe("opencontroller.bridge.feedback");
+    if (parsed.type !== "opencontroller.bridge.feedback") {
+      throw new Error("Expected a native bridge feedback message");
+    }
+    expect(parsed.feedbackType).toBe("lights");
+    if (parsed.feedbackType !== "lights") {
+      throw new Error("Expected a native bridge light feedback message");
+    }
+
+    const bytes = nativeBridgeFeedbackMessageToLightReportBytes(parsed);
+    const report = decodeHidGamepadLightReport(bytes);
+    const feedback = nativeBridgeFeedbackMessageToControllerFeedback(parsed);
+
+    expect(bytes.byteLength).toBe(hidGamepadLightReportByteLength);
+    expect(report.reportId).toBe(hidGamepadLightReportId);
+    expect(report.red).toBe(255);
+    expect(report.green).toBe(128);
+    expect(report.blue).toBe(64);
+    expect(report.brightness).toBe(191);
+    expect(report.playerIndex).toBe(3);
+    expect(report.playerLightMask).toBe(0b1010);
+    expect(feedback).toEqual({
+      type: "lights",
+      controllerId: "player-1",
+      timestamp: 124,
+      red: 1,
+      green: 0.5,
+      blue: 0.25,
+      brightness: 0.75,
+      playerIndex: 3,
+      playerLightMask: 0b1010,
+      source: "native-bridge",
+      reportFormat: "hid-gamepad-lights",
+      reportId: hidGamepadLightReportId,
       reportBase64: message.reportBase64,
     });
   });
@@ -1606,7 +1761,7 @@ describe("controller runtime", () => {
     expect(killed).toBe(false);
   });
 
-  test("surfaces native process rumble feedback from helper stdout", async () => {
+  test("surfaces native process feedback from helper stdout", async () => {
     const lines: string[] = [];
     const stdoutChunks: string[] = [];
     const feedbackEvents: ControllerFeedbackEvent[] = [];
@@ -1628,6 +1783,7 @@ describe("controller runtime", () => {
       includeState: false,
       waitForExitMs: 50,
       supportsRumble: true,
+      supportsLights: true,
       onStdout(chunk) {
         stdoutChunks.push(chunk);
       },
@@ -1682,17 +1838,30 @@ describe("controller runtime", () => {
       rightTriggerMotor: 1,
       durationMs: 50,
     });
+    const acceptedLights = createNativeBridgeLightFeedbackMessage({
+      controllerId: "player-1",
+      timestamp: 124,
+      red: 0.1,
+      green: 0.2,
+      blue: 0.3,
+      brightness: 0.4,
+      playerIndex: 1,
+      playerLightMask: 0b0010,
+    });
     const acceptedLine = serializeNativeBridgeMessage(accepted);
+    const acceptedLightsLine = serializeNativeBridgeMessage(acceptedLights);
 
     stdoutController.enqueue(
       encoder.encode(`helper ready\n${serializeNativeBridgeMessage(ignored)}`),
     );
     stdoutController.enqueue(encoder.encode(acceptedLine.slice(0, 8)));
     stdoutController.enqueue(encoder.encode(acceptedLine.slice(8)));
+    stdoutController.enqueue(encoder.encode(acceptedLightsLine));
 
-    await waitFor(() => feedbackEvents.length === 1);
+    await waitFor(() => feedbackEvents.length === 2);
 
     expect(controller.capabilities().supportsRumble).toBe(true);
+    expect(controller.capabilities().supportsLights).toBe(true);
     expect(stdoutChunks.join("")).toContain("helper ready");
     expect(feedbackEvents[0]).toMatchObject({
       type: "rumble",
@@ -1703,6 +1872,18 @@ describe("controller runtime", () => {
       leftTriggerMotor: 0,
       rightTriggerMotor: 1,
       durationMs: 50,
+      source: "native-bridge",
+    });
+    expect(feedbackEvents[1]).toMatchObject({
+      type: "lights",
+      controllerId: "player-1",
+      timestamp: 124,
+      red: 0.1,
+      green: 0.2,
+      blue: 0.3,
+      brightness: 0.4,
+      playerIndex: 1,
+      playerLightMask: 0b0010,
       source: "native-bridge",
     });
 

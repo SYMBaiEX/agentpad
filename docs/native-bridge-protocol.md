@@ -267,6 +267,32 @@ shape and surfaces them through `controller.onFeedback(...)`.
 [HID Gamepad Reports](hid-gamepad-reports.md). The normalized motor fields make
 the same event easy for agents to consume without decoding bytes.
 
+Helpers can also emit lightbar or player-indicator feedback:
+
+```json
+{
+  "type": "opencontroller.bridge.feedback",
+  "version": 1,
+  "controllerId": "player-1",
+  "timestamp": 1770000000000,
+  "feedbackType": "lights",
+  "reportFormat": "hid-gamepad-lights",
+  "reportId": 5,
+  "reportBase64": "BRpm/78BAg==",
+  "red": 0.1,
+  "green": 0.4,
+  "blue": 1,
+  "brightness": 0.75,
+  "playerIndex": 1,
+  "playerLightMask": 2
+}
+```
+
+For light feedback, `reportBase64` is the 7-byte HID light output report. RGB
+and brightness fields are normalized from `0` to `1`; `playerIndex` and
+`playerLightMask` are unsigned byte fields for player LEDs and related host
+indicators.
+
 ## Parse Messages
 
 ```ts
@@ -287,7 +313,7 @@ if (message.type === "opencontroller.bridge.state") {
 
 if (message.type === "opencontroller.bridge.feedback") {
   const feedback = nativeBridgeFeedbackMessageToControllerFeedback(message);
-  // Forward haptics back to the agent, telemetry, or replay pipeline.
+  // Forward host feedback back to the agent, telemetry, or replay pipeline.
 }
 ```
 

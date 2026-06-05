@@ -104,6 +104,7 @@ export type MacosDriverKitHostBridgeAdapterOptions = Pick<
   | "spawn"
   | "supportsVirtualDevice"
   | "supportsRumble"
+  | "supportsLights"
   | "virtualDeviceKind"
   | "requiresNativeInstall"
   | "requiresElevatedPermissions"
@@ -381,6 +382,7 @@ export function createMacosDriverKitHostBridgeAdapter(
     ...(options.spawn ? { spawn: options.spawn } : {}),
     supportsVirtualDevice: options.supportsVirtualDevice ?? true,
     supportsRumble: options.supportsRumble ?? true,
+    supportsLights: options.supportsLights ?? false,
     virtualDeviceKind: options.virtualDeviceKind ?? "os-virtual-gamepad",
     requiresNativeInstall: options.requiresNativeInstall ?? true,
     requiresElevatedPermissions: options.requiresElevatedPermissions ?? false,

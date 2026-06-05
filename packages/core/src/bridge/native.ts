@@ -1,5 +1,12 @@
 import { createHidGamepadButtonMask } from "../hid/hid-buttons";
 import {
+  type HidGamepadLightReport,
+  decodeHidGamepadLightReport,
+  encodeHidGamepadLightReport,
+  hidGamepadLightReportByteLength,
+  hidGamepadLightReportId,
+} from "../hid/hid-gamepad";
+import {
   type HidPlayStationExtendedReport,
   createHidPlayStationExtendedReport,
   decodeHidPlayStationExtendedReport,
@@ -32,14 +39,19 @@ import type {
 export const nativeBridgeProtocolVersion = 1;
 export const nativeBridgeHidGamepadRumbleReportId = 2;
 export const nativeBridgeHidGamepadRumbleReportByteLength = 5;
+export const nativeBridgeHidGamepadLightReportId = hidGamepadLightReportId;
+export const nativeBridgeHidGamepadLightReportByteLength =
+  hidGamepadLightReportByteLength;
 
 export type NativeBridgeReportFormat = "xinput";
 export type NativeBridgeHidReportFormat = "hid-gamepad";
 export type NativeBridgeProfileHidReportFormat =
   | "hid-playstation-extended"
   | "hid-switch-extended";
-export type NativeBridgeFeedbackType = "rumble";
-export type NativeBridgeFeedbackReportFormat = "hid-gamepad-rumble";
+export type NativeBridgeFeedbackType = "rumble" | "lights";
+export type NativeBridgeFeedbackReportFormat =
+  | "hid-gamepad-rumble"
+  | "hid-gamepad-lights";
 
 export type NativeBridgeHidGamepadReport = {
   reportId: 1;
@@ -116,7 +128,26 @@ export type NativeBridgeRumbleFeedbackMessage = {
   durationMs?: number;
 };
 
-export type NativeBridgeFeedbackMessage = NativeBridgeRumbleFeedbackMessage;
+export type NativeBridgeLightFeedbackMessage = {
+  type: "opencontroller.bridge.feedback";
+  version: typeof nativeBridgeProtocolVersion;
+  controllerId: string;
+  timestamp: number;
+  feedbackType: "lights";
+  reportFormat: "hid-gamepad-lights";
+  reportId: typeof nativeBridgeHidGamepadLightReportId;
+  reportBase64: string;
+  red: number;
+  green: number;
+  blue: number;
+  brightness: number;
+  playerIndex: number;
+  playerLightMask: number;
+};
+
+export type NativeBridgeFeedbackMessage =
+  | NativeBridgeRumbleFeedbackMessage
+  | NativeBridgeLightFeedbackMessage;
 
 export type NativeBridgeMessage =
   | NativeBridgeStateMessage
@@ -138,6 +169,17 @@ export type CreateNativeBridgeRumbleFeedbackMessageOptions = {
   leftTriggerMotor?: number;
   rightTriggerMotor?: number;
   durationMs?: number;
+};
+
+export type CreateNativeBridgeLightFeedbackMessageOptions = {
+  controllerId: string;
+  timestamp?: number;
+  red?: number;
+  green?: number;
+  blue?: number;
+  brightness?: number;
+  playerIndex?: number;
+  playerLightMask?: number;
 };
 
 export function createNativeBridgeStateMessage(
@@ -264,6 +306,42 @@ export function createNativeBridgeRumbleFeedbackMessage(
     ...(options.durationMs !== undefined
       ? { durationMs: options.durationMs }
       : {}),
+  };
+}
+
+export function createNativeBridgeLightFeedbackMessage(
+  options: CreateNativeBridgeLightFeedbackMessageOptions,
+): NativeBridgeLightFeedbackMessage {
+  const red = clampNormalized(options.red ?? 0);
+  const green = clampNormalized(options.green ?? 0);
+  const blue = clampNormalized(options.blue ?? 0);
+  const brightness = clampNormalized(options.brightness ?? 1);
+  const playerIndex = clampByte(options.playerIndex ?? 0);
+  const playerLightMask = clampByte(options.playerLightMask ?? 0);
+  const bytes = encodeHidGamepadLightReport({
+    red,
+    green,
+    blue,
+    brightness,
+    playerIndex,
+    playerLightMask,
+  });
+
+  return {
+    type: "opencontroller.bridge.feedback",
+    version: nativeBridgeProtocolVersion,
+    controllerId: options.controllerId,
+    timestamp: options.timestamp ?? Date.now(),
+    feedbackType: "lights",
+    reportFormat: "hid-gamepad-lights",
+    reportId: nativeBridgeHidGamepadLightReportId,
+    reportBase64: bytesToBase64(bytes),
+    red,
+    green,
+    blue,
+    brightness,
+    playerIndex,
+    playerLightMask,
   };
 }
 
@@ -395,9 +473,44 @@ export function nativeBridgeFeedbackMessageToRumbleReportBytes(
   return bytes;
 }
 
+export function nativeBridgeFeedbackMessageToLightReportBytes(
+  message: NativeBridgeLightFeedbackMessage,
+): Uint8Array {
+  const bytes = base64ToBytes(message.reportBase64);
+  const decoded = decodeHidGamepadLightReport(bytes);
+
+  if (!lightReportsEqual(decoded, message)) {
+    throw new TypeError(
+      "Native bridge light report bytes do not match feedback JSON",
+    );
+  }
+
+  return bytes;
+}
+
 export function nativeBridgeFeedbackMessageToControllerFeedback(
   message: NativeBridgeFeedbackMessage,
 ): ControllerFeedbackEvent {
+  if (message.feedbackType === "lights") {
+    nativeBridgeFeedbackMessageToLightReportBytes(message);
+
+    return {
+      type: "lights",
+      controllerId: message.controllerId,
+      timestamp: message.timestamp,
+      red: message.red,
+      green: message.green,
+      blue: message.blue,
+      brightness: message.brightness,
+      playerIndex: message.playerIndex,
+      playerLightMask: message.playerLightMask,
+      source: "native-bridge",
+      reportFormat: message.reportFormat,
+      reportId: message.reportId,
+      reportBase64: message.reportBase64,
+    };
+  }
+
   nativeBridgeFeedbackMessageToRumbleReportBytes(message);
 
   return {
@@ -457,21 +570,39 @@ export function isNativeBridgeMessage(
 export function isNativeBridgeFeedbackMessage(
   value: unknown,
 ): value is NativeBridgeFeedbackMessage {
+  if (
+    !isRecord(value) ||
+    value.version !== nativeBridgeProtocolVersion ||
+    typeof value.controllerId !== "string" ||
+    typeof value.timestamp !== "number" ||
+    value.type !== "opencontroller.bridge.feedback" ||
+    typeof value.reportBase64 !== "string"
+  ) {
+    return false;
+  }
+
+  if (value.feedbackType === "rumble") {
+    return (
+      value.reportFormat === "hid-gamepad-rumble" &&
+      value.reportId === nativeBridgeHidGamepadRumbleReportId &&
+      isNormalizedNumber(value.weakMotor) &&
+      isNormalizedNumber(value.strongMotor) &&
+      isNormalizedNumber(value.leftTriggerMotor) &&
+      isNormalizedNumber(value.rightTriggerMotor) &&
+      hasValidOptionalDuration(value)
+    );
+  }
+
   return (
-    isRecord(value) &&
-    value.version === nativeBridgeProtocolVersion &&
-    typeof value.controllerId === "string" &&
-    typeof value.timestamp === "number" &&
-    value.type === "opencontroller.bridge.feedback" &&
-    value.feedbackType === "rumble" &&
-    value.reportFormat === "hid-gamepad-rumble" &&
-    value.reportId === nativeBridgeHidGamepadRumbleReportId &&
-    typeof value.reportBase64 === "string" &&
-    isNormalizedNumber(value.weakMotor) &&
-    isNormalizedNumber(value.strongMotor) &&
-    isNormalizedNumber(value.leftTriggerMotor) &&
-    isNormalizedNumber(value.rightTriggerMotor) &&
-    hasValidOptionalDuration(value)
+    value.feedbackType === "lights" &&
+    value.reportFormat === "hid-gamepad-lights" &&
+    value.reportId === nativeBridgeHidGamepadLightReportId &&
+    isNormalizedNumber(value.red) &&
+    isNormalizedNumber(value.green) &&
+    isNormalizedNumber(value.blue) &&
+    isNormalizedNumber(value.brightness) &&
+    isByteNumber(value.playerIndex) &&
+    isByteNumber(value.playerLightMask)
   );
 }
 
@@ -761,6 +892,21 @@ function rumbleReportsEqual(
   );
 }
 
+function lightReportsEqual(
+  report: HidGamepadLightReport,
+  message: NativeBridgeLightFeedbackMessage,
+): boolean {
+  return (
+    report.reportId === message.reportId &&
+    report.red === normalizedToByte(message.red) &&
+    report.green === normalizedToByte(message.green) &&
+    report.blue === normalizedToByte(message.blue) &&
+    report.brightness === normalizedToByte(message.brightness) &&
+    report.playerIndex === message.playerIndex &&
+    report.playerLightMask === message.playerLightMask
+  );
+}
+
 function hasValidOptionalDuration(value: Record<string, unknown>): boolean {
   return (
     value.durationMs === undefined ||
@@ -779,11 +925,28 @@ function isNormalizedNumber(value: unknown): value is number {
   );
 }
 
+function isByteNumber(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= 255
+  );
+}
+
 function clampNormalized(value: number): number {
   if (!Number.isFinite(value)) {
     return 0;
   }
   return Math.min(1, Math.max(0, value));
+}
+
+function clampByte(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(255, Math.max(0, value)));
 }
 
 function normalizedToByte(value: number): number {

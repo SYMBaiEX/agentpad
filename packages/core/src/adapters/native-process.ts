@@ -62,6 +62,7 @@ export type NativeProcessBridgeAdapterOptions = {
   spawn?: NativeProcessBridgeSpawner;
   supportsVirtualDevice?: boolean;
   supportsRumble?: boolean;
+  supportsLights?: boolean;
   virtualDeviceKind?: ControllerAdapterVirtualDeviceKind;
   requiresNativeInstall?: boolean;
   requiresElevatedPermissions?: boolean;
@@ -154,12 +155,18 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
 
   capabilities() {
     const supportsRumble = this.options.supportsRumble ?? false;
+    const supportsLights = this.options.supportsLights ?? false;
     const supportsVirtualDevice = this.options.supportsVirtualDevice ?? true;
+    const feedbackReportFormats = [
+      ...(supportsRumble ? (["hid-gamepad-rumble"] as const) : []),
+      ...(supportsLights ? (["hid-gamepad-lights"] as const) : []),
+    ];
     return createAdapterCapabilities({
       supportsStateSync: true,
       supportsXInputReports: true,
       supportsNativeBridge: true,
       supportsRumble,
+      supportsLights,
       supportsTouchpad: true,
       supportsGyro: true,
       supportsVirtualDevice,
@@ -175,21 +182,17 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
         "hid-switch-extended-report",
         "native-bridge-jsonl",
       ],
-      reportFormats: supportsRumble
-        ? [
-            "xinput",
-            "hid-gamepad",
-            "hid-playstation-extended",
-            "hid-switch-extended",
-            "hid-gamepad-rumble",
-          ]
-        : [
-            "xinput",
-            "hid-gamepad",
-            "hid-playstation-extended",
-            "hid-switch-extended",
-          ],
-      feedbackTypes: supportsRumble ? ["rumble"] : [],
+      reportFormats: [
+        "xinput",
+        "hid-gamepad",
+        "hid-playstation-extended",
+        "hid-switch-extended",
+        ...feedbackReportFormats,
+      ],
+      feedbackTypes: [
+        ...(supportsRumble ? (["rumble"] as const) : []),
+        ...(supportsLights ? (["lights"] as const) : []),
+      ],
       transport: "native-process",
       virtualDeviceKind:
         this.options.virtualDeviceKind ??

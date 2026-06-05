@@ -125,8 +125,8 @@ manifests are in place.
 
 The SDK surface is complete enough for local builds, demos, browser games,
 WebSocket integrations, overlays, replay capture, touchpad/motion state, HID
-report streams, host rumble feedback, and native bridge prototyping. It is not
-yet a full cross-platform native virtual controller driver stack.
+report streams, host rumble/light feedback, and native bridge prototyping. It is
+not yet a full cross-platform native virtual controller driver stack.
 
 The current emulation boundary is the adapter layer, XInput-compatible binary
 report encoding, descriptor-backed HID gamepad reports, PlayStation extended HID
@@ -135,11 +135,12 @@ JSONL protocol for native bridge processes, the first Linux `uinput` bridge
 package, Windows VHF host bridge helpers, and macOS DriverKit host bridge
 helpers. Touchpad and motion commands flow through the runtime, replay logs,
 dry-run, WebSocket state stream, native bridge extensions, and profile HID
-payloads today. Host rumble feedback flows back through HID adapters, native
-bridge feedback JSONL, and `controller.onFeedback(...)`.
+payloads today. Host rumble and light feedback flows back through HID adapters,
+native bridge feedback JSONL, and `controller.onFeedback(...)`.
 
 The next milestone is turning those host bridge surfaces into signed,
-installable native device flows and expanding host feedback beyond rumble.
+installable native device flows and mapping more host feedback into physical
+platform APIs.
 
 If you are evaluating it for another project, use it now for controller-state
 or command-stream integrations. Linux users can start testing the `uinput`
@@ -408,6 +409,7 @@ local bridge needs.
 import { HidGamepadReportAdapter } from "@opencontroller/core";
 import {
   encodeHidGamepadReport,
+  encodeHidGamepadLightReport,
   encodeHidGamepadRumbleReport,
   hidGamepadReportDescriptor
 } from "@opencontroller/core/hid";
@@ -418,6 +420,14 @@ const rumble = encodeHidGamepadRumbleReport({
   weakMotor: 0.25,
   strongMotor: 0.8
 });
+const lights = encodeHidGamepadLightReport({
+  red: 0.1,
+  green: 0.4,
+  blue: 1,
+  brightness: 0.75,
+  playerIndex: 1,
+  playerLightMask: 0b0010
+});
 
 const adapter = new HidGamepadReportAdapter({
   onReport({ bytes }) {
@@ -425,16 +435,22 @@ const adapter = new HidGamepadReportAdapter({
     console.log(bytes);
   },
   onFeedback(event) {
-    console.log("host rumble", event.weakMotor, event.strongMotor);
+    if (event.type === "rumble") {
+      console.log("host rumble", event.weakMotor, event.strongMotor);
+    }
+    if (event.type === "lights") {
+      console.log("host lights", event.red, event.green, event.blue);
+    }
   }
 });
 ```
 
 HID reports are the handoff point for descriptor-backed virtual device APIs.
 The report shape includes 16 buttons, four signed stick axes, and two trigger
-axes. OpenController also defines a compact vendor output report for rumble
-channels so native drivers have a shared haptics contract to implement. Native
-helpers can also send rumble feedback back to agents through
+axes. OpenController also defines compact vendor output reports for rumble
+channels and light/player indicators so native drivers have shared feedback
+contracts to implement. Native helpers can also send rumble and light feedback
+back to agents through
 `controller.onFeedback(...)`; in-process HID adapters can surface the same
 events through `adapter.receiveOutputReport(bytes)`. See
 [HID Gamepad Reports](docs/hid-gamepad-reports.md).
@@ -490,6 +506,9 @@ controller.onFeedback((event) => {
   if (event.type === "rumble") {
     console.log("rumble", event.weakMotor, event.strongMotor);
   }
+  if (event.type === "lights") {
+    console.log("lights", event.red, event.green, event.blue);
+  }
 });
 
 await controller.press("A", 80);
@@ -515,7 +534,8 @@ const controller = await createController({
 
 This adapter spawns a helper process, streams native bridge JSONL to stdin,
 sends a disconnect message, closes stdin, surfaces non-zero helper exits, and
-can parse helper stdout feedback JSONL for host-side rumble events.
+can parse helper stdout feedback JSONL for host-side rumble and opt-in light
+events.
 
 macOS DriverKit projects can use the same native process pattern once a signed
 host app/bridge is available:

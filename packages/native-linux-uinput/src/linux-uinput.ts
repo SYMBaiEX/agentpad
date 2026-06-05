@@ -56,6 +56,7 @@ export type LinuxUinputBridgeAdapterOptions = Pick<
   | "spawn"
   | "supportsVirtualDevice"
   | "supportsRumble"
+  | "supportsLights"
   | "virtualDeviceKind"
   | "requiresNativeInstall"
   | "requiresElevatedPermissions"
@@ -224,6 +225,7 @@ export function createLinuxUinputBridgeAdapter(
     ...(options.spawn ? { spawn: options.spawn } : {}),
     supportsVirtualDevice: options.supportsVirtualDevice ?? !options.dryRun,
     supportsRumble: options.supportsRumble ?? true,
+    supportsLights: options.supportsLights ?? false,
     virtualDeviceKind:
       options.virtualDeviceKind ??
       (options.dryRun ? "native-helper" : "os-virtual-gamepad"),

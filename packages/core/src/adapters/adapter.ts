@@ -70,6 +70,7 @@ export const baseCapabilities: ControllerAdapterCapabilities = {
   supportsSticks: true,
   supportsDpad: true,
   supportsRumble: false,
+  supportsLights: false,
   supportsTouchpad: false,
   supportsGyro: false,
   supportsStateSync: false,
