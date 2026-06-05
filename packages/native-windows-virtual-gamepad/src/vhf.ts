@@ -14,12 +14,15 @@ import {
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
   type HidPlayStationExtendedReport,
+  type HidSwitchExtendedReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
+  decodeHidSwitchExtendedReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
+  encodeHidSwitchExtendedReport,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
   hidGamepadReportDescriptorWithRumble,
@@ -31,11 +34,16 @@ import {
   hidPlayStationExtendedReportDescriptor,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
+  hidSwitchExtendedReportByteLength,
+  hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithRumble,
+  hidSwitchExtendedReportId,
 } from "@opencontroller/core/hid";
 
-export type WindowsVhfReportProfile = "generic" | "playstation";
+export type WindowsVhfReportProfile = "generic" | "playstation" | "switch";
 export type WindowsVhfInputReport = HidGamepadReport;
 export type WindowsVhfPlayStationInputReport = HidPlayStationExtendedReport;
+export type WindowsVhfSwitchInputReport = HidSwitchExtendedReport;
 export type WindowsVhfRumbleReport = HidGamepadRumbleReport;
 
 export const windowsVhfHidReportDescriptor = hidGamepadReportDescriptor;
@@ -50,6 +58,13 @@ export const windowsVhfPlayStationInputReportByteLength =
   hidPlayStationExtendedReportByteLength;
 export const windowsVhfPlayStationInputReportId =
   hidPlayStationExtendedReportId;
+export const windowsVhfSwitchHidReportDescriptor =
+  hidSwitchExtendedReportDescriptor;
+export const windowsVhfSwitchHidReportDescriptorWithRumble =
+  hidSwitchExtendedReportDescriptorWithRumble;
+export const windowsVhfSwitchInputReportByteLength =
+  hidSwitchExtendedReportByteLength;
+export const windowsVhfSwitchInputReportId = hidSwitchExtendedReportId;
 export const windowsVhfRumbleReportId = hidGamepadRumbleReportId;
 export const windowsVhfRumbleReportByteLength =
   hidGamepadRumbleReportByteLength;
@@ -180,6 +195,7 @@ type WindowsVhfReportSpec = {
   inputReportByteLength: number;
   inputReportId: number;
   prefersProfileHidReport: boolean;
+  profileHidReportFormat: string | undefined;
 };
 
 function windowsVhfReportSpec(
@@ -192,6 +208,18 @@ function windowsVhfReportSpec(
       inputReportByteLength: windowsVhfPlayStationInputReportByteLength,
       inputReportId: windowsVhfPlayStationInputReportId,
       prefersProfileHidReport: true,
+      profileHidReportFormat: "hid-playstation-extended",
+    };
+  }
+
+  if (profile === "switch") {
+    return {
+      profile,
+      descriptorWithRumble: windowsVhfSwitchHidReportDescriptorWithRumble,
+      inputReportByteLength: windowsVhfSwitchInputReportByteLength,
+      inputReportId: windowsVhfSwitchInputReportId,
+      prefersProfileHidReport: true,
+      profileHidReportFormat: "hid-switch-extended",
     };
   }
 
@@ -201,6 +229,7 @@ function windowsVhfReportSpec(
     inputReportByteLength: windowsVhfInputReportByteLength,
     inputReportId: hidGamepadReportId,
     prefersProfileHidReport: false,
+    profileHidReportFormat: undefined,
   };
 }
 
@@ -435,6 +464,43 @@ export function windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(
   );
 }
 
+export function windowsVhfSwitchInputReportFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): WindowsVhfSwitchInputReport {
+  if (message.profileHidReportFormat !== "hid-switch-extended") {
+    throw new TypeError(
+      "Native bridge message does not include a Switch profile HID report",
+    );
+  }
+  const bytes = nativeBridgeMessageToProfileHidReportBytes(message);
+  if (!bytes) {
+    throw new TypeError(
+      "Native bridge message does not include a Switch profile HID report",
+    );
+  }
+  return decodeHidSwitchExtendedReport(bytes);
+}
+
+export function encodeWindowsVhfSwitchInputReport(
+  report: WindowsVhfSwitchInputReport,
+): Uint8Array {
+  return encodeHidSwitchExtendedReport(report);
+}
+
+export function decodeWindowsVhfSwitchInputReport(
+  bytes: Uint8Array,
+): WindowsVhfSwitchInputReport {
+  return decodeHidSwitchExtendedReport(bytes);
+}
+
+export function windowsVhfSwitchInputReportBytesFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): Uint8Array {
+  return encodeWindowsVhfSwitchInputReport(
+    windowsVhfSwitchInputReportFromNativeBridgeMessage(message),
+  );
+}
+
 export function formatWindowsVhfHidDescriptorForC(
   symbolName = "OpenControllerHidReportDescriptor",
 ): string {
@@ -450,6 +516,19 @@ export function formatWindowsVhfPlayStationHidDescriptorForC(
   return formatCByteArray(
     symbolName,
     windowsVhfPlayStationHidReportDescriptorWithRumble,
+    {
+      storageClass: "static const UCHAR",
+      columns: 12,
+    },
+  );
+}
+
+export function formatWindowsVhfSwitchHidDescriptorForC(
+  symbolName = "OpenControllerSwitchHidReportDescriptor",
+): string {
+  return formatCByteArray(
+    symbolName,
+    windowsVhfSwitchHidReportDescriptorWithRumble,
     {
       storageClass: "static const UCHAR",
       columns: 12,
@@ -474,6 +553,20 @@ export function formatWindowsVhfPlayStationInputReportForC(
   return formatCByteArray(
     symbolName,
     encodeWindowsVhfPlayStationInputReport(report),
+    {
+      storageClass: "static const UCHAR",
+      columns: 13,
+    },
+  );
+}
+
+export function formatWindowsVhfSwitchInputReportForC(
+  report: WindowsVhfSwitchInputReport,
+  symbolName = "OpenControllerSwitchSampleInputReport",
+): string {
+  return formatCByteArray(
+    symbolName,
+    encodeWindowsVhfSwitchInputReport(report),
     {
       storageClass: "static const UCHAR",
       columns: 13,
@@ -954,9 +1047,13 @@ export function createWindowsVhfHostBridgeSource(
   };
   const prefix = toCIdentifier(merged.bridgeName).toUpperCase();
   const reportSpec = windowsVhfReportSpec(merged.reportProfile);
+  const profileHidReportFormat = reportSpec.profileHidReportFormat ?? "";
   const profileExtractionLines = reportSpec.prefersProfileHidReport
     ? [
-        "    if (opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
+        `    if (!opencontroller_line_has_profile_hid_report_format(line, "${escapeCString(
+          profileHidReportFormat,
+        )}") ||`,
+        "        opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
         "      if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
         "        if (opencontroller_extract_xinput_report_base64(line, xinputBytes) != 0) {",
         "          continue;",
@@ -1003,6 +1100,10 @@ export function createWindowsVhfHostBridgeSource(
     "static int opencontroller_extract_xinput_report_base64(",
     "  const char *line,",
     "  uint8_t output[OPENCONTROLLER_XINPUT_REPORT_BYTES]",
+    ");",
+    "static int opencontroller_line_has_profile_hid_report_format(",
+    "  const char *line,",
+    "  const char *format",
     ");",
     "static void opencontroller_decode_xinput_report(",
     "  const uint8_t bytes[OPENCONTROLLER_XINPUT_REPORT_BYTES],",
@@ -1263,6 +1364,30 @@ export function createWindowsVhfHostBridgeSource(
     ")",
     "{",
     '  return opencontroller_extract_base64_field(line, "\\"reportBase64\\":\\"", output, OPENCONTROLLER_XINPUT_REPORT_BYTES);',
+    "}",
+    "",
+    "static int opencontroller_line_has_profile_hid_report_format(",
+    "  const char *line,",
+    "  const char *format",
+    ")",
+    "{",
+    '  const char *key = "\\"profileHidReportFormat\\":\\"";',
+    "  const char *start = strstr(line, key);",
+    "  const char *end;",
+    "  size_t formatLength;",
+    "",
+    "  if (start == NULL || format == NULL) {",
+    "    return 0;",
+    "  }",
+    "  start += strlen(key);",
+    "  end = strchr(start, '\"');",
+    "  if (end == NULL) {",
+    "    return 0;",
+    "  }",
+    "",
+    "  formatLength = (size_t)(end - start);",
+    "  return strlen(format) == formatLength &&",
+    "    strncmp(start, format, formatLength) == 0;",
     "}",
     "",
     "static int opencontroller_is_disconnect(const char *line)",

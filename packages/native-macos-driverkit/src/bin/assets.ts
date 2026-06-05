@@ -9,6 +9,7 @@ import {
   createMacosHostAppEntitlements,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitPlayStationHidDescriptorForCpp,
+  formatMacosDriverKitSwitchHidDescriptorForCpp,
 } from "../driverkit";
 
 const args = new Set(process.argv.slice(2));
@@ -28,7 +29,7 @@ Usage:
   opencontroller-macos-driverkit-assets --manifest
 
 Options:
-  --report-profile <generic|playstation>
+  --report-profile <generic|playstation|switch>
 
 These assets are DriverKit authoring inputs. They do not install a dext.`);
   process.exit(0);
@@ -54,6 +55,8 @@ if (args.has("--info-plist")) {
   );
 } else if (reportProfile === "playstation") {
   console.log(formatMacosDriverKitPlayStationHidDescriptorForCpp());
+} else if (reportProfile === "switch") {
+  console.log(formatMacosDriverKitSwitchHidDescriptorForCpp());
 } else {
   console.log(formatMacosDriverKitHidDescriptorForCpp());
 }
@@ -92,10 +95,10 @@ function parseReportProfile(
   if (value === undefined || value === false) {
     return "generic";
   }
-  if (value === "generic" || value === "playstation") {
+  if (value === "generic" || value === "playstation" || value === "switch") {
     return value;
   }
   throw new Error(
-    "opencontroller-macos-driverkit-assets: --report-profile must be generic or playstation",
+    "opencontroller-macos-driverkit-assets: --report-profile must be generic, playstation, or switch",
   );
 }

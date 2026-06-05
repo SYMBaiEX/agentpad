@@ -11,8 +11,8 @@ This package provides:
 
 - DriverKit-ready HID report descriptor, input report helpers, and rumble
   output report codecs
-- opt-in PlayStation extended HID report generation for touchpad contacts and
-  motion vectors
+- opt-in PlayStation and Switch extended HID report generation for profile
+  touchpad and motion payloads
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation, including rumble output
   report capture hooks for a signed host bridge
@@ -32,6 +32,7 @@ Upstream context:
 ```bash
 opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
 opencontroller-macos-driverkit-setup --report-profile playstation
+opencontroller-macos-driverkit-setup --report-profile switch
 opencontroller-macos-driverkit-setup --json
 ```
 
@@ -62,6 +63,7 @@ opencontroller-macos-driverkit-assets --dext-entitlements
 opencontroller-macos-driverkit-assets --host-entitlements
 opencontroller-macos-driverkit-assets --manifest
 opencontroller-macos-driverkit-assets --driver-cpp --report-profile playstation
+opencontroller-macos-driverkit-assets --driver-cpp --report-profile switch
 ```
 
 ```ts
@@ -70,6 +72,7 @@ import {
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage,
+  macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-macos-driverkit/driverkit";
 
 const bytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
@@ -80,6 +83,11 @@ const playstationSourceFiles = createMacosDriverKitDriverSourceFiles({
 });
 const playstationBytes =
   macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage(message);
+const switchSourceFiles = createMacosDriverKitDriverSourceFiles({
+  reportProfile: "switch"
+});
+const switchBytes =
+  macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage(message);
 ```
 
 The generated assets are source material for a DriverKit project. Review the
@@ -92,7 +100,8 @@ input report sized to the chosen profile, accepts host output reports through
 `setReport`, and leaves the host app/user-client update path explicit through
 `updateInputReport` and `copyRumbleReport`. The default profile is the generic
 13-byte HID gamepad report; `reportProfile: "playstation"` emits the 47-byte
-`hid-playstation-extended` descriptor/report.
+`hid-playstation-extended` descriptor/report, and `reportProfile: "switch"`
+emits the 31-byte `hid-switch-extended` descriptor/report.
 
 ## Host Bridge Adapter
 
@@ -123,9 +132,9 @@ await controller.press("A", 80);
 await controller.disconnect();
 ```
 
-The adapter streams descriptor-backed `hidReportBase64` payloads and, for
-PlayStation controllers, `profileHidReportBase64` payloads to the host bridge
-process. It exports the driver identity through
+The adapter streams descriptor-backed `hidReportBase64` payloads plus
+PlayStation/Switch `profileHidReportBase64` payloads to the host bridge process.
+It exports the driver identity through
 `OPENCONTROLLER_DRIVERKIT_*` environment variables. It also sets
 `OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is provided so host bridges
 can ignore other controllers in a shared multi-agent stream. It does not bypass

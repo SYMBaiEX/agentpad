@@ -48,6 +48,7 @@ entitlements, manifest, README, and reviewed commands in one folder:
 ```bash
 opencontroller-macos-driverkit-setup --output ./opencontroller-macos-driverkit
 opencontroller-macos-driverkit-setup --report-profile playstation
+opencontroller-macos-driverkit-setup --report-profile switch
 opencontroller-macos-driverkit-setup --json
 ```
 
@@ -77,6 +78,7 @@ opencontroller-macos-driverkit-assets --dext-entitlements
 opencontroller-macos-driverkit-assets --host-entitlements
 opencontroller-macos-driverkit-assets --manifest
 opencontroller-macos-driverkit-assets --driver-cpp --report-profile playstation
+opencontroller-macos-driverkit-assets --driver-cpp --report-profile switch
 ```
 
 ```ts
@@ -86,6 +88,7 @@ import {
   createMacosDriverKitInfoPlist,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage,
+  macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-macos-driverkit/driverkit";
 
 const reportBytes = macosDriverKitInputReportBytesFromNativeBridgeMessage(message);
@@ -96,6 +99,11 @@ const playstationSourceFiles = createMacosDriverKitDriverSourceFiles({
 });
 const playstationBytes =
   macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage(message);
+const switchSourceFiles = createMacosDriverKitDriverSourceFiles({
+  reportProfile: "switch"
+});
+const switchBytes =
+  macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage(message);
 const adapter = createMacosDriverKitHostBridgeAdapter({
   controllerId: "player-1",
   hostBridgePath:
@@ -109,7 +117,9 @@ The descriptor and input report bytes come from the shared
 The default generated DriverKit device uses the generic 13-byte HID gamepad
 report. Use `reportProfile: "playstation"` or `--report-profile playstation` to
 emit the 47-byte `hid-playstation-extended` descriptor/report for touchpad
-contacts and motion vectors.
+contacts and motion vectors. Use `reportProfile: "switch"` or
+`--report-profile switch` to emit the 31-byte `hid-switch-extended`
+descriptor/report for Switch motion vectors.
 
 The generated C++ source is a DriverKit starting point for an `IOUserHIDDevice`
 subclass. It returns the selected OpenController report descriptor with rumble

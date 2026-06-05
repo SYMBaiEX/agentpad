@@ -17,6 +17,10 @@ import {
   hidPlayStationExtendedReportDescriptor,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
+  hidSwitchExtendedReportByteLength,
+  hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithRumble,
+  hidSwitchExtendedReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -31,15 +35,19 @@ import {
   decodeMacosDriverKitInputReport,
   decodeMacosDriverKitPlayStationInputReport,
   decodeMacosDriverKitRumbleReport,
+  decodeMacosDriverKitSwitchInputReport,
   defaultMacosDriverKitHostBridgePath,
   encodeMacosDriverKitInputReport,
   encodeMacosDriverKitPlayStationInputReport,
   encodeMacosDriverKitRumbleReport,
+  encodeMacosDriverKitSwitchInputReport,
   formatMacosDriverKitHidDescriptorForCpp,
   formatMacosDriverKitInputReportForCpp,
   formatMacosDriverKitPlayStationHidDescriptorForCpp,
   formatMacosDriverKitPlayStationInputReportForCpp,
   formatMacosDriverKitSetupPlan,
+  formatMacosDriverKitSwitchHidDescriptorForCpp,
+  formatMacosDriverKitSwitchInputReportForCpp,
   macosDriverKitHidReportDescriptor,
   macosDriverKitHidReportDescriptorWithRumble,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
@@ -51,6 +59,12 @@ import {
   macosDriverKitPlayStationInputReportFromNativeBridgeMessage,
   macosDriverKitPlayStationInputReportId,
   macosDriverKitRumbleReportByteLength,
+  macosDriverKitSwitchHidReportDescriptor,
+  macosDriverKitSwitchHidReportDescriptorWithRumble,
+  macosDriverKitSwitchInputReportByteLength,
+  macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage,
+  macosDriverKitSwitchInputReportFromNativeBridgeMessage,
+  macosDriverKitSwitchInputReportId,
   prepareMacosDriverKitSetup,
 } from "../driverkit";
 
@@ -68,6 +82,12 @@ describe("macOS DriverKit helpers", () => {
     expect(
       Array.from(macosDriverKitPlayStationHidReportDescriptorWithRumble),
     ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
+    expect(Array.from(macosDriverKitSwitchHidReportDescriptor)).toEqual(
+      Array.from(hidSwitchExtendedReportDescriptor),
+    );
+    expect(
+      Array.from(macosDriverKitSwitchHidReportDescriptorWithRumble),
+    ).toEqual(Array.from(hidSwitchExtendedReportDescriptorWithRumble));
   });
 
   test("creates DriverKit rumble output report bytes", () => {
@@ -224,6 +244,79 @@ describe("macOS DriverKit helpers", () => {
     expect(decoded).toEqual(report);
   });
 
+  test("creates Switch DriverKit input report bytes from native bridge messages", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "switch",
+      connected: true,
+      buttons: {
+        A: true,
+        B: false,
+        X: false,
+        Y: false,
+        L: false,
+        R: false,
+        ZL: false,
+        ZR: true,
+        MINUS: false,
+        PLUS: true,
+        HOME: false,
+        CAPTURE: false,
+        LS: false,
+        RS: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        ZL: 0,
+        ZR: 0.5,
+      },
+      sticks: {
+        left: { x: -1, y: 1 },
+        right: { x: 0.5, y: -0.5 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: false,
+        contacts: [],
+      },
+      motion: {
+        acceleration: { x: 0.25, y: -0.25, z: 0.5 },
+        gyroscope: { x: -0.5, y: 0.5, z: 1 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const report =
+      macosDriverKitSwitchInputReportFromNativeBridgeMessage(message);
+    const bytes =
+      macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage(message);
+    const decoded = decodeMacosDriverKitSwitchInputReport(bytes);
+
+    expect(bytes.byteLength).toBe(macosDriverKitSwitchInputReportByteLength);
+    expect(macosDriverKitSwitchInputReportByteLength).toBe(
+      hidSwitchExtendedReportByteLength,
+    );
+    expect(report.reportId).toBe(macosDriverKitSwitchInputReportId);
+    expect(macosDriverKitSwitchInputReportId).toBe(hidSwitchExtendedReportId);
+    expect(report.buttons & xInputButtonBits.B).toBe(xInputButtonBits.B);
+    expect(report.rightTrigger).toBe(128);
+    expect(report.accelerationX).toBe(8192);
+    expect(report.gyroscopeZ).toBe(32767);
+    expect(decoded).toEqual(report);
+  });
+
   test("formats descriptor and report arrays for DriverKit source", () => {
     const report = {
       reportId: hidGamepadReportId,
@@ -293,6 +386,40 @@ describe("macOS DriverKit helpers", () => {
     expect(encodeMacosDriverKitPlayStationInputReport(report).byteLength).toBe(
       47,
     );
+  });
+
+  test("formats Switch descriptor and report arrays for DriverKit source", () => {
+    const report = {
+      reportId: hidSwitchExtendedReportId,
+      buttons: xInputButtonBits.B,
+      leftTrigger: 0,
+      rightTrigger: 128,
+      leftStickX: 0,
+      leftStickY: 0,
+      rightStickX: 0,
+      rightStickY: 0,
+      accelerationX: 8192,
+      accelerationY: -8192,
+      accelerationZ: 16384,
+      gyroscopeX: -16384,
+      gyroscopeY: 16384,
+      gyroscopeZ: 32767,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    } as const;
+
+    const descriptor = formatMacosDriverKitSwitchHidDescriptorForCpp();
+    const inputReport = formatMacosDriverKitSwitchInputReportForCpp(report);
+
+    expect(descriptor).toContain(
+      "static const uint8_t openControllerSwitchHidReportDescriptor[]",
+    );
+    expect(descriptor).toContain("0x85, 0x04");
+    expect(inputReport).toContain(
+      "static const uint8_t openControllerSwitchSampleInputReport[]",
+    );
+    expect(encodeMacosDriverKitSwitchInputReport(report).byteLength).toBe(31);
   });
 
   test("creates DriverKit plist and entitlement templates", () => {
@@ -384,6 +511,27 @@ describe("macOS DriverKit helpers", () => {
     expect(manifest.inputReportId).toBe(3);
   });
 
+  test("creates Switch DriverKit C++ source templates", () => {
+    const header = createMacosDriverKitDriverHeader({
+      reportProfile: "switch",
+    });
+    const source = createMacosDriverKitDriverSource({
+      reportProfile: "switch",
+    });
+    const manifest = createMacosDriverKitAssetManifest({
+      reportProfile: "switch",
+    });
+
+    expect(header).toContain("inputReport[31]");
+    expect(source).toContain("openControllerNeutralInputReport[31]");
+    expect(source).toContain("openControllerInputReportId = 4");
+    expect(source).toContain("0x85, 0x04");
+    expect(source).toContain("0x95, 0x09");
+    expect(manifest.reportProfile).toBe("switch");
+    expect(manifest.inputReportByteLength).toBe(31);
+    expect(manifest.inputReportId).toBe(4);
+  });
+
   test("prepares a reviewed macOS DriverKit setup kit", async () => {
     const outputDirectory = await mkdtemp(
       join(tmpdir(), "opencontroller-driverkit-"),
@@ -468,6 +616,39 @@ describe("macOS DriverKit helpers", () => {
       expect(manifest).toContain('"inputReportByteLength": 47');
       expect(manifest).toContain('"inputReportId": 3');
       expect(readme).toContain("playstation HID report profile");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("prepares a Switch macOS DriverKit setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-driverkit-switch-"),
+    );
+
+    try {
+      const plan = await prepareMacosDriverKitSetup({
+        outputDirectory,
+        platform: "linux",
+        driver: {
+          reportProfile: "switch",
+        },
+      });
+      const readme = await readFile(plan.readmePath, "utf8");
+      const header = await readFile(plan.driverHeaderPath, "utf8");
+      const source = await readFile(plan.driverSourcePath, "utf8");
+      const manifest = await readFile(plan.manifestPath, "utf8");
+
+      expect(plan.reportProfile).toBe("switch");
+      expect(header).toContain("inputReport[31]");
+      expect(source).toContain("openControllerNeutralInputReport[31]");
+      expect(source).toContain("openControllerInputReportId = 4");
+      expect(source).toContain("0x85, 0x04");
+      expect(source).toContain("0x95, 0x09");
+      expect(manifest).toContain('"reportProfile": "switch"');
+      expect(manifest).toContain('"inputReportByteLength": 31');
+      expect(manifest).toContain('"inputReportId": 4');
+      expect(readme).toContain("switch HID report profile");
     } finally {
       await rm(outputDirectory, { recursive: true, force: true });
     }

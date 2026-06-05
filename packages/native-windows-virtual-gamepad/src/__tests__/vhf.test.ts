@@ -17,6 +17,10 @@ import {
   hidPlayStationExtendedReportDescriptor,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
+  hidSwitchExtendedReportByteLength,
+  hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithRumble,
+  hidSwitchExtendedReportId,
   xInputButtonBits,
 } from "@opencontroller/core/hid";
 import {
@@ -30,15 +34,19 @@ import {
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
   decodeWindowsVhfRumbleReport,
+  decodeWindowsVhfSwitchInputReport,
   defaultWindowsVhfHostBridgePath,
   encodeWindowsVhfInputReport,
   encodeWindowsVhfPlayStationInputReport,
   encodeWindowsVhfRumbleReport,
+  encodeWindowsVhfSwitchInputReport,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfInputReportForC,
   formatWindowsVhfPlayStationHidDescriptorForC,
   formatWindowsVhfPlayStationInputReportForC,
   formatWindowsVhfSetupPlan,
+  formatWindowsVhfSwitchHidDescriptorForC,
+  formatWindowsVhfSwitchInputReportForC,
   prepareWindowsVhfSetup,
   windowsVhfHidReportDescriptor,
   windowsVhfHidReportDescriptorWithRumble,
@@ -51,6 +59,12 @@ import {
   windowsVhfPlayStationInputReportFromNativeBridgeMessage,
   windowsVhfPlayStationInputReportId,
   windowsVhfRumbleReportByteLength,
+  windowsVhfSwitchHidReportDescriptor,
+  windowsVhfSwitchHidReportDescriptorWithRumble,
+  windowsVhfSwitchInputReportByteLength,
+  windowsVhfSwitchInputReportBytesFromNativeBridgeMessage,
+  windowsVhfSwitchInputReportFromNativeBridgeMessage,
+  windowsVhfSwitchInputReportId,
 } from "../vhf";
 
 describe("windows VHF helpers", () => {
@@ -67,6 +81,12 @@ describe("windows VHF helpers", () => {
     expect(
       Array.from(windowsVhfPlayStationHidReportDescriptorWithRumble),
     ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
+    expect(Array.from(windowsVhfSwitchHidReportDescriptor)).toEqual(
+      Array.from(hidSwitchExtendedReportDescriptor),
+    );
+    expect(Array.from(windowsVhfSwitchHidReportDescriptorWithRumble)).toEqual(
+      Array.from(hidSwitchExtendedReportDescriptorWithRumble),
+    );
   });
 
   test("creates VHF rumble output report bytes", () => {
@@ -217,6 +237,77 @@ describe("windows VHF helpers", () => {
     });
   });
 
+  test("creates Switch VHF input report bytes from native bridge messages", () => {
+    const state: ControllerState = {
+      id: "player-1",
+      profile: "switch",
+      connected: true,
+      buttons: {
+        A: true,
+        B: false,
+        X: false,
+        Y: false,
+        L: false,
+        R: false,
+        ZL: false,
+        ZR: true,
+        MINUS: false,
+        PLUS: true,
+        HOME: false,
+        CAPTURE: false,
+        LS: false,
+        RS: false,
+        DPAD_UP: false,
+        DPAD_DOWN: false,
+        DPAD_LEFT: false,
+        DPAD_RIGHT: false,
+      },
+      analogButtons: {
+        ZL: 0,
+        ZR: 0.5,
+      },
+      sticks: {
+        left: { x: -1, y: 1 },
+        right: { x: 0.5, y: -0.5 },
+      },
+      dpad: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+      },
+      touchpad: {
+        pressed: false,
+        contacts: [],
+      },
+      motion: {
+        acceleration: { x: 0.25, y: -0.25, z: 0.5 },
+        gyroscope: { x: -0.5, y: 0.5, z: 1 },
+        orientation: { x: 0, y: 0, z: 0 },
+      },
+      updatedAt: 1,
+    };
+    const message = createNativeBridgeStateMessage(state, {
+      includeState: false,
+    });
+    const report = windowsVhfSwitchInputReportFromNativeBridgeMessage(message);
+    const bytes =
+      windowsVhfSwitchInputReportBytesFromNativeBridgeMessage(message);
+    const decoded = decodeWindowsVhfSwitchInputReport(bytes);
+
+    expect(bytes.byteLength).toBe(windowsVhfSwitchInputReportByteLength);
+    expect(windowsVhfSwitchInputReportByteLength).toBe(
+      hidSwitchExtendedReportByteLength,
+    );
+    expect(report.reportId).toBe(windowsVhfSwitchInputReportId);
+    expect(windowsVhfSwitchInputReportId).toBe(hidSwitchExtendedReportId);
+    expect(report.buttons & xInputButtonBits.B).toBe(xInputButtonBits.B);
+    expect(report.rightTrigger).toBe(128);
+    expect(report.accelerationX).toBe(8192);
+    expect(report.gyroscopeZ).toBe(32767);
+    expect(decoded).toEqual(report);
+  });
+
   test("formats descriptor and report arrays for WDK driver source", () => {
     const report = {
       reportId: hidGamepadReportId,
@@ -285,6 +376,40 @@ describe("windows VHF helpers", () => {
     expect(encodeWindowsVhfPlayStationInputReport(report).byteLength).toBe(47);
   });
 
+  test("formats Switch descriptor and report arrays for WDK driver source", () => {
+    const report = {
+      reportId: hidSwitchExtendedReportId,
+      buttons: xInputButtonBits.B,
+      leftTrigger: 0,
+      rightTrigger: 128,
+      leftStickX: 0,
+      leftStickY: 0,
+      rightStickX: 0,
+      rightStickY: 0,
+      accelerationX: 8192,
+      accelerationY: -8192,
+      accelerationZ: 16384,
+      gyroscopeX: -16384,
+      gyroscopeY: 16384,
+      gyroscopeZ: 32767,
+      orientationX: 0,
+      orientationY: 0,
+      orientationZ: 0,
+    } as const;
+
+    const descriptor = formatWindowsVhfSwitchHidDescriptorForC();
+    const inputReport = formatWindowsVhfSwitchInputReportForC(report);
+
+    expect(descriptor).toContain(
+      "static const UCHAR OpenControllerSwitchHidReportDescriptor[]",
+    );
+    expect(descriptor).toContain("0x85, 0x04");
+    expect(inputReport).toContain(
+      "static const UCHAR OpenControllerSwitchSampleInputReport[]",
+    );
+    expect(encodeWindowsVhfSwitchInputReport(report).byteLength).toBe(31);
+  });
+
   test("creates an INF template that loads VHF as a lower filter", () => {
     const inf = createWindowsVhfInf();
 
@@ -346,6 +471,21 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("0x95, 0x22");
   });
 
+  test("creates Switch WDK VHF driver source templates", () => {
+    const header = createWindowsVhfDriverHeader({
+      reportProfile: "switch",
+    });
+    const source = createWindowsVhfDriverSource({
+      reportProfile: "switch",
+    });
+
+    expect(header).toContain("InputReport[31]");
+    expect(source).toContain("OpenControllerInputReportLength = 31");
+    expect(source).toContain("OpenControllerInputReportId = 4");
+    expect(source).toContain("0x85, 0x04");
+    expect(source).toContain("0x95, 0x09");
+  });
+
   test("creates Windows host bridge source templates for VHF IOCTL writes", () => {
     const header = createWindowsVhfHostBridgeHeader();
     const source = createWindowsVhfHostBridgeSource();
@@ -400,14 +540,39 @@ describe("windows VHF helpers", () => {
     expect(header).toContain("OPENCONTROLLER_HID_REPORT_ID 3");
     expect(header).toContain("OPENCONTROLLER_PROFILE_HID_REPORT 1");
     expect(source).toContain("profileHidReportBase64");
+    expect(source).toContain("hid-playstation-extended");
     expect(source).toContain(
       [
-        "if (opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
-        "      if (opencontroller_extract_hid_report_base64(line, hidReport) != 0) {",
+        'if (!opencontroller_line_has_profile_hid_report_format(line, "hid-playstation-extended") ||',
+        "        opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
       ].join("\n"),
     );
     expect(source).toContain(
       "memset(output, 0, OPENCONTROLLER_HID_REPORT_BYTES)",
+    );
+  });
+
+  test("creates Switch Windows host bridge source templates", () => {
+    const header = createWindowsVhfHostBridgeHeader({
+      reportProfile: "switch",
+    });
+    const source = createWindowsVhfHostBridgeSource({
+      reportProfile: "switch",
+    });
+
+    expect(header).toContain("OPENCONTROLLER_HID_REPORT_BYTES 31");
+    expect(header).toContain("OPENCONTROLLER_HID_REPORT_ID 4");
+    expect(header).toContain("OPENCONTROLLER_PROFILE_HID_REPORT 1");
+    expect(source).toContain("profileHidReportBase64");
+    expect(source).toContain("hid-switch-extended");
+    expect(source).toContain(
+      [
+        'if (!opencontroller_line_has_profile_hid_report_format(line, "hid-switch-extended") ||',
+        "        opencontroller_extract_profile_hid_report_base64(line, hidReport) != 0) {",
+      ].join("\n"),
+    );
+    expect(source).toContain(
+      "opencontroller_line_has_profile_hid_report_format",
     );
   });
 
@@ -482,6 +647,41 @@ describe("windows VHF helpers", () => {
       expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_BYTES 47");
       expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_ID 3");
       expect(hostBridgeSource).toContain("profileHidReportBase64");
+    } finally {
+      await rm(outputDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test("prepares a Switch Windows VHF setup kit", async () => {
+    const outputDirectory = await mkdtemp(
+      join(tmpdir(), "opencontroller-vhf-switch-"),
+    );
+
+    try {
+      const plan = await prepareWindowsVhfSetup({
+        outputDirectory,
+        platform: "linux",
+        driver: {
+          reportProfile: "switch",
+        },
+        hostBridge: {
+          reportProfile: "switch",
+        },
+      });
+      const driverHeader = await readFile(plan.driverHeaderPath, "utf8");
+      const hostBridgeHeader = await readFile(
+        plan.hostBridgeHeaderPath,
+        "utf8",
+      );
+      const hostBridgeSource = await readFile(
+        plan.hostBridgeSourcePath,
+        "utf8",
+      );
+
+      expect(driverHeader).toContain("InputReport[31]");
+      expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_BYTES 31");
+      expect(hostBridgeHeader).toContain("OPENCONTROLLER_HID_REPORT_ID 4");
+      expect(hostBridgeSource).toContain("hid-switch-extended");
     } finally {
       await rm(outputDirectory, { recursive: true, force: true });
     }

@@ -241,12 +241,15 @@ The Linux native package adds:
 - host diagnostics for `/dev/uinput`, module, and permission readiness
 - C helper source for `/dev/uinput`
 - build helper for producing `opencontroller-uinput-bridge`
+- profile HID parsing for PlayStation touchpad reports and Switch motion
+  reports before falling back to generic HID/XInput payloads
 - Linux `FF_RUMBLE` feedback handling with native bridge feedback JSONL
 - setup helper for compiling the bridge and printing reviewed udev-rule commands
 
 The Windows native package adds:
 
-- VHF-ready HID descriptor, input report helpers, and rumble feedback contract
+- VHF-ready HID descriptor, input report helpers, Switch/PlayStation report
+  profiles, and rumble feedback contract
 - INF, WDK C source, host bridge C source, C-array asset generators, and a host bridge adapter factory for a maintained Windows VHF driver path
 - generated VHF source templates that capture HID output reports and emit native bridge feedback JSONL
 - setup helper for staging reviewed VHF driver/host source files and install/test commands without privileged changes
@@ -256,8 +259,8 @@ The Windows native package adds:
 
 The macOS native package adds:
 
-- DriverKit-ready HID descriptor, input report helpers, and rumble output
-  report codecs
+- DriverKit-ready HID descriptor, input report helpers, Switch/PlayStation
+  report profiles, and rumble output report codecs
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation, including `setReport`
   rumble capture and a `copyRumbleReport` hook for signed host bridges
@@ -564,6 +567,8 @@ opencontroller native setup --backend current
 opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
 opencontroller native setup --backend windows-vhf --report-profile playstation
 opencontroller native setup --backend macos-driverkit --report-profile playstation
+opencontroller native setup --backend windows-vhf --report-profile switch
+opencontroller native setup --backend macos-driverkit --report-profile switch
 opencontroller native test --backend linux-uinput --dry-run --id player-1
 opencontroller native test --backend current
 opencontroller-windows-vhf-setup --output ./opencontroller-windows-vhf
@@ -751,13 +756,12 @@ Not included yet:
 
 - signed Windows/macOS native virtual HID drivers
 - game-specific perception
-- npm publication
 - broad cross-platform installation testing
 - production hardening for long-running agent tournaments
 
 ## Roadmap
 
-- Publish npm packages under a confirmed scope
+- Keep npm packages current under the `@opencontroller` scope
 - Verify Linux `FF_RUMBLE` across more game launchers and distributions
 - Add signed Windows virtual HID and macOS DriverKit bridge drivers
 - Add native bridge daemon templates with install and permission diagnostics

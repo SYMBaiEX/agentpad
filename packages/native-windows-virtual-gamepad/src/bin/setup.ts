@@ -99,10 +99,10 @@ function reportProfileFlag(
   if (value === undefined || value === false) {
     return undefined;
   }
-  if (value === "generic" || value === "playstation") {
+  if (value === "generic" || value === "playstation" || value === "switch") {
     return value;
   }
-  throw new Error(`--${key} must be generic or playstation`);
+  throw new Error(`--${key} must be generic, playstation, or switch`);
 }
 
 function printHelp(): void {
@@ -117,7 +117,7 @@ Options:
   --output <dir>              Directory for generated driver and host files
   --host-bridge-path <path>   Final reviewed host bridge executable path
   --device-path <path>        Windows device path exposed by the driver
-  --report-profile <name>     generic or playstation HID report profile
+  --report-profile <name>     generic, playstation, or switch HID report profile
   --json                      Print the setup plan as JSON
 
 This command writes source templates and reviewed commands only. It does not

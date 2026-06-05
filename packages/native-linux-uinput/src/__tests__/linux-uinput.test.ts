@@ -122,6 +122,16 @@ describe("linux uinput adapter helpers", () => {
     expect(source).toContain("BTN_TOUCH");
   });
 
+  test("helper source consumes Switch profile HID reports", async () => {
+    const source = await readFile(linuxUinputHelperSourcePath, "utf8");
+
+    expect(source).toContain("OC_SWITCH_REPORT_BYTES 31");
+    expect(source).toContain("OC_SWITCH_REPORT_ID 4");
+    expect(source).toContain("hid-switch-extended");
+    expect(source).toContain("decode_switch_report");
+    expect(source).toContain("line_has_profile_hid_report_format");
+  });
+
   test("prepares a safe Linux helper setup plan", async () => {
     const buildOptions: unknown[] = [];
     const plan = await prepareLinuxUinputSetup({

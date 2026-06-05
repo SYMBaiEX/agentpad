@@ -8,6 +8,7 @@ import {
   createWindowsVhfInf,
   formatWindowsVhfHidDescriptorForC,
   formatWindowsVhfPlayStationHidDescriptorForC,
+  formatWindowsVhfSwitchHidDescriptorForC,
 } from "../vhf";
 
 const args = new Set(process.argv.slice(2));
@@ -26,7 +27,7 @@ Usage:
   opencontroller-windows-vhf-assets --inf
 
 Options:
-  --report-profile <generic|playstation>
+  --report-profile <generic|playstation|switch>
 
 These assets are driver-authoring inputs. They do not install a driver.`);
   process.exit(0);
@@ -44,6 +45,8 @@ if (args.has("--inf")) {
   console.log(createWindowsVhfHostBridgeHeader({ reportProfile }));
 } else if (reportProfile === "playstation") {
   console.log(formatWindowsVhfPlayStationHidDescriptorForC());
+} else if (reportProfile === "switch") {
+  console.log(formatWindowsVhfSwitchHidDescriptorForC());
 } else {
   console.log(formatWindowsVhfHidDescriptorForC());
 }
@@ -82,10 +85,10 @@ function parseReportProfile(
   if (value === undefined || value === false) {
     return "generic";
   }
-  if (value === "generic" || value === "playstation") {
+  if (value === "generic" || value === "playstation" || value === "switch") {
     return value;
   }
   throw new Error(
-    "opencontroller-windows-vhf-assets: --report-profile must be generic or playstation",
+    "opencontroller-windows-vhf-assets: --report-profile must be generic, playstation, or switch",
   );
 }

@@ -81,13 +81,17 @@ opencontroller native setup --backend windows-vhf --output ./opencontroller-wind
 opencontroller native setup --backend macos-driverkit --output ./opencontroller-macos-driverkit
 opencontroller native setup --backend windows-vhf --report-profile playstation
 opencontroller native setup --backend macos-driverkit --report-profile playstation
+opencontroller native setup --backend windows-vhf --report-profile switch
+opencontroller native setup --backend macos-driverkit --report-profile switch
 ```
 
 Use `--report-profile playstation` when generating Windows VHF or macOS
 DriverKit kits that should expose OpenController's 47-byte
 `hid-playstation-extended` report for touchpad contacts and motion vectors.
-Switch-aware host bridges can consume the 31-byte `hid-switch-extended` profile
-report for motion vectors.
+Use `--report-profile switch` when generating kits that should expose the
+31-byte `hid-switch-extended` profile report for Switch motion vectors. The
+generated Windows host bridge verifies the native bridge
+`profileHidReportFormat` before accepting profile bytes.
 
 ## Smoke Test A Native Bridge
 

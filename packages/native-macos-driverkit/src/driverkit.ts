@@ -14,12 +14,15 @@ import {
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
   type HidPlayStationExtendedReport,
+  type HidSwitchExtendedReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
+  decodeHidSwitchExtendedReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
+  encodeHidSwitchExtendedReport,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
   hidGamepadReportDescriptorWithRumble,
@@ -31,11 +34,16 @@ import {
   hidPlayStationExtendedReportDescriptor,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
+  hidSwitchExtendedReportByteLength,
+  hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithRumble,
+  hidSwitchExtendedReportId,
 } from "@opencontroller/core/hid";
 
-export type MacosDriverKitReportProfile = "generic" | "playstation";
+export type MacosDriverKitReportProfile = "generic" | "playstation" | "switch";
 export type MacosDriverKitInputReport = HidGamepadReport;
 export type MacosDriverKitPlayStationInputReport = HidPlayStationExtendedReport;
+export type MacosDriverKitSwitchInputReport = HidSwitchExtendedReport;
 export type MacosDriverKitRumbleReport = HidGamepadRumbleReport;
 
 export const macosDriverKitHidReportDescriptor = hidGamepadReportDescriptor;
@@ -50,6 +58,13 @@ export const macosDriverKitPlayStationInputReportByteLength =
   hidPlayStationExtendedReportByteLength;
 export const macosDriverKitPlayStationInputReportId =
   hidPlayStationExtendedReportId;
+export const macosDriverKitSwitchHidReportDescriptor =
+  hidSwitchExtendedReportDescriptor;
+export const macosDriverKitSwitchHidReportDescriptorWithRumble =
+  hidSwitchExtendedReportDescriptorWithRumble;
+export const macosDriverKitSwitchInputReportByteLength =
+  hidSwitchExtendedReportByteLength;
+export const macosDriverKitSwitchInputReportId = hidSwitchExtendedReportId;
 export const macosDriverKitRumbleReportId = hidGamepadRumbleReportId;
 export const macosDriverKitRumbleReportByteLength =
   hidGamepadRumbleReportByteLength;
@@ -175,6 +190,16 @@ function macosDriverKitReportSpec(
         macosDriverKitPlayStationHidReportDescriptorWithRumble,
       inputReportByteLength: macosDriverKitPlayStationInputReportByteLength,
       inputReportId: macosDriverKitPlayStationInputReportId,
+    };
+  }
+
+  if (profile === "switch") {
+    return {
+      profile,
+      descriptor: macosDriverKitSwitchHidReportDescriptor,
+      descriptorWithRumble: macosDriverKitSwitchHidReportDescriptorWithRumble,
+      inputReportByteLength: macosDriverKitSwitchInputReportByteLength,
+      inputReportId: macosDriverKitSwitchInputReportId,
     };
   }
 
@@ -441,6 +466,43 @@ export function macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage
   );
 }
 
+export function macosDriverKitSwitchInputReportFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): MacosDriverKitSwitchInputReport {
+  if (message.profileHidReportFormat !== "hid-switch-extended") {
+    throw new TypeError(
+      "Native bridge message does not include a Switch profile HID report",
+    );
+  }
+  const bytes = nativeBridgeMessageToProfileHidReportBytes(message);
+  if (!bytes) {
+    throw new TypeError(
+      "Native bridge message does not include a Switch profile HID report",
+    );
+  }
+  return decodeHidSwitchExtendedReport(bytes);
+}
+
+export function encodeMacosDriverKitSwitchInputReport(
+  report: MacosDriverKitSwitchInputReport,
+): Uint8Array {
+  return encodeHidSwitchExtendedReport(report);
+}
+
+export function decodeMacosDriverKitSwitchInputReport(
+  bytes: Uint8Array,
+): MacosDriverKitSwitchInputReport {
+  return decodeHidSwitchExtendedReport(bytes);
+}
+
+export function macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage(
+  message: NativeBridgeStateMessage,
+): Uint8Array {
+  return encodeMacosDriverKitSwitchInputReport(
+    macosDriverKitSwitchInputReportFromNativeBridgeMessage(message),
+  );
+}
+
 export function formatMacosDriverKitHidDescriptorForCpp(
   symbolName = "openControllerHidReportDescriptor",
 ): string {
@@ -457,6 +519,16 @@ export function formatMacosDriverKitPlayStationHidDescriptorForCpp(
   return formatCppByteArray(
     symbolName,
     macosDriverKitPlayStationHidReportDescriptorWithRumble,
+    12,
+  );
+}
+
+export function formatMacosDriverKitSwitchHidDescriptorForCpp(
+  symbolName = "openControllerSwitchHidReportDescriptor",
+): string {
+  return formatCppByteArray(
+    symbolName,
+    macosDriverKitSwitchHidReportDescriptorWithRumble,
     12,
   );
 }
@@ -479,6 +551,17 @@ export function formatMacosDriverKitPlayStationInputReportForCpp(
   return formatCppByteArray(
     symbolName,
     encodeMacosDriverKitPlayStationInputReport(report),
+    13,
+  );
+}
+
+export function formatMacosDriverKitSwitchInputReportForCpp(
+  report: MacosDriverKitSwitchInputReport,
+  symbolName = "openControllerSwitchSampleInputReport",
+): string {
+  return formatCppByteArray(
+    symbolName,
+    encodeMacosDriverKitSwitchInputReport(report),
     13,
   );
 }

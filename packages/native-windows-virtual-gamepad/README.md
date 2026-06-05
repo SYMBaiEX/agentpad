@@ -17,6 +17,8 @@ This package provides:
 
 - VHF-ready HID report descriptor, input report helpers, and rumble output
   report codecs
+- generic, PlayStation, and Switch VHF report profiles for matching host
+  bridge/driver source generation
 - INF, WDK C source, and C-array asset generators for a maintained Windows VHF
   driver path
 - `createWindowsVhfHostBridgeAdapter` for SDK-owned user-mode host bridge
@@ -79,6 +81,7 @@ opencontroller-windows-vhf-assets --host-c
 opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
 opencontroller-windows-vhf-assets --driver-c --report-profile playstation
+opencontroller-windows-vhf-assets --driver-c --report-profile switch
 ```
 
 ```ts
@@ -88,6 +91,7 @@ import {
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
+  windowsVhfSwitchInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const bytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
@@ -113,10 +117,27 @@ const bytes =
   windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage(message);
 ```
 
+Generate a matching Switch driver and host bridge with
+`reportProfile: "switch"` when the virtual device should expose
+OpenController's 31-byte `hid-switch-extended` report:
+
+```ts
+const driverSourceFiles = createWindowsVhfDriverSourceFiles({
+  reportProfile: "switch"
+});
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles({
+  reportProfile: "switch"
+});
+
+const bytes =
+  windowsVhfSwitchInputReportBytesFromNativeBridgeMessage(message);
+```
+
 The setup command accepts the same profile flag:
 
 ```bash
 opencontroller-windows-vhf-setup --report-profile playstation
+opencontroller-windows-vhf-setup --report-profile switch
 ```
 
 The generated INF template includes the VHF lower filter declaration required
@@ -142,6 +163,9 @@ multi-agent stream.
 When generated with `reportProfile: "playstation"`, the host bridge prefers
 `profileHidReportBase64` so PlayStation touchpad and motion bytes reach the VHF
 driver instead of being reduced to the common gamepad subset.
+When generated with `reportProfile: "switch"`, it verifies
+`profileHidReportFormat: "hid-switch-extended"` before accepting the 31-byte
+Switch profile payload.
 
 After building and reviewing that host bridge, SDK code can own the process:
 

@@ -7,6 +7,10 @@
   report byte streams.
 - Added `hid-switch-extended` reports and
   `HidSwitchExtendedReportAdapter` for Switch profile motion payloads.
+- Windows VHF, macOS DriverKit, and the Linux `uinput` helper now consume
+  Switch profile HID reports for native host bridge paths.
+- `--report-profile switch` is now accepted by native setup and asset commands
+  for Windows VHF and macOS DriverKit generated sources.
 - HID report adapters now accept 5-byte rumble output reports through
   `receiveOutputReport(...)` / `receiveRumbleReport(...)` and surface haptics
   through `controller.onFeedback(...)`.
@@ -26,7 +30,7 @@
   encoded as combined cardinal D-pad state and report bits.
 - D-pad helper commands now honor disabled-button, disabled-combo, and
   max-button-hold safety policies through their underlying `DPAD_*` buttons.
-- Prepared workspace package manifests for the next `0.1.6` npm patch release.
+- Prepared workspace package manifests for the next `0.1.7` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.

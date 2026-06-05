@@ -33,7 +33,7 @@ import {
 
 export type NativeCommandFlags = Record<string, string | boolean | undefined>;
 
-type NativeReportProfile = "generic" | "playstation";
+type NativeReportProfile = "generic" | "playstation" | "switch";
 
 export type NativeBackendId =
   | "linux-uinput"
@@ -510,10 +510,10 @@ function reportProfileFlag(
   if (value === undefined || value === false) {
     return undefined;
   }
-  if (value === "generic" || value === "playstation") {
+  if (value === "generic" || value === "playstation" || value === "switch") {
     return value;
   }
-  throw new Error(`--${key} must be generic or playstation`);
+  throw new Error(`--${key} must be generic, playstation, or switch`);
 }
 
 function numberFlag(
@@ -770,6 +770,8 @@ Usage:
   opencontroller native setup --backend windows-vhf --output ./opencontroller-windows-vhf
   opencontroller native setup --backend windows-vhf --report-profile playstation
   opencontroller native setup --backend macos-driverkit --report-profile playstation
+  opencontroller native setup --backend windows-vhf --report-profile switch
+  opencontroller native setup --backend macos-driverkit --report-profile switch
   opencontroller native test --backend linux-uinput --dry-run --id player-1
   opencontroller native test --backend current
   opencontroller native test --backend windows-vhf --id player-1 --host-bridge-path ./OpenControllerVhfHostBridge.exe

@@ -80,6 +80,7 @@ opencontroller-windows-vhf-assets --host-c
 opencontroller-windows-vhf-assets --host-h
 opencontroller-windows-vhf-assets --inf
 opencontroller-windows-vhf-assets --driver-c --report-profile playstation
+opencontroller-windows-vhf-assets --driver-c --report-profile switch
 ```
 
 ```ts
@@ -89,6 +90,7 @@ import {
   createWindowsVhfInf,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
+  windowsVhfSwitchInputReportBytesFromNativeBridgeMessage,
 } from "@opencontroller/native-windows-virtual-gamepad/vhf";
 
 const reportBytes = windowsVhfInputReportBytesFromNativeBridgeMessage(message);
@@ -122,10 +124,30 @@ The PlayStation profile uses the 47-byte `hid-playstation-extended` report and
 the host bridge prefers `profileHidReportBase64` before falling back to generic
 HID or XInput payloads.
 
+For a Switch-oriented virtual device that carries motion vectors, use matching
+`switch` report profiles:
+
+```ts
+const driverSourceFiles = createWindowsVhfDriverSourceFiles({
+  reportProfile: "switch"
+});
+const hostBridgeFiles = createWindowsVhfHostBridgeSourceFiles({
+  reportProfile: "switch"
+});
+
+const switchBytes =
+  windowsVhfSwitchInputReportBytesFromNativeBridgeMessage(message);
+```
+
+The Switch profile uses the 31-byte `hid-switch-extended` report. Generated
+host bridges verify `profileHidReportFormat` before accepting profile bytes, so
+a PlayStation payload is not accidentally submitted to a Switch-shaped driver.
+
 The setup helper accepts the same profile flag:
 
 ```bash
 opencontroller-windows-vhf-setup --report-profile playstation
+opencontroller-windows-vhf-setup --report-profile switch
 ```
 
 The generated driver source is a WDK/KMDF starting point that wires the shared

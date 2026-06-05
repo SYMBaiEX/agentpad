@@ -112,10 +112,10 @@ function reportProfileFlag(
   if (value === undefined || value === false) {
     return undefined;
   }
-  if (value === "generic" || value === "playstation") {
+  if (value === "generic" || value === "playstation" || value === "switch") {
     return value;
   }
-  throw new Error(`--${key} must be generic or playstation`);
+  throw new Error(`--${key} must be generic, playstation, or switch`);
 }
 
 function printHelp(): void {
@@ -133,7 +133,7 @@ Options:
   --driver-bundle-id <id>     DriverKit extension bundle identifier
   --driver-class-name <name>  DriverKit IOUserHIDDevice class name
   --team-id <id>              Apple Developer Team ID used in entitlements
-  --report-profile <name>     generic or playstation HID report profile
+  --report-profile <name>     generic, playstation, or switch HID report profile
   --json                      Print the setup plan as JSON
 
 This command writes source templates and reviewed commands only. It does not

@@ -17,6 +17,8 @@
 #define OC_PLAYSTATION_REPORT_BYTES 47
 #define OC_PLAYSTATION_REPORT_ID 3
 #define OC_PLAYSTATION_TOUCH_CONTACTS 2
+#define OC_SWITCH_REPORT_BYTES 31
+#define OC_SWITCH_REPORT_ID 4
 #define OC_RUMBLE_REPORT_BYTES 5
 #define OC_RUMBLE_REPORT_ID 2
 #define OC_RUMBLE_REPORT_BASE64_BYTES 8
@@ -272,6 +274,22 @@ static int decode_playstation_report(
   return 0;
 }
 
+static int decode_switch_report(const uint8_t bytes[OC_SWITCH_REPORT_BYTES],
+                                struct oc_report *report) {
+  if (bytes[0] != OC_SWITCH_REPORT_ID) {
+    return -1;
+  }
+
+  report->buttons = read_u16_le(&bytes[1]);
+  report->left_x = read_i16_le(&bytes[3]);
+  report->left_y = read_i16_le(&bytes[5]);
+  report->right_x = read_i16_le(&bytes[7]);
+  report->right_y = read_i16_le(&bytes[9]);
+  report->left_trigger = bytes[11];
+  report->right_trigger = bytes[12];
+  return 0;
+}
+
 static int apply_report_events(int fd, const struct oc_report *report) {
   size_t index;
   for (index = 0; index < sizeof(button_map) / sizeof(button_map[0]);
@@ -425,10 +443,10 @@ static int extract_hid_report_base64(
                               OC_HID_REPORT_BYTES);
 }
 
-static int extract_profile_hid_report_base64(
-    const char *line, uint8_t output[OC_PLAYSTATION_REPORT_BYTES]) {
+static int extract_profile_hid_report_base64(const char *line, uint8_t *output,
+                                             size_t expected_bytes) {
   return extract_base64_field(line, "\"profileHidReportBase64\":\"", output,
-                              OC_PLAYSTATION_REPORT_BYTES);
+                              expected_bytes);
 }
 
 static int extract_xinput_report_base64(
@@ -468,15 +486,46 @@ static int line_matches_controller_id(const char *line,
          strncmp(start, controller_id, id_length) == 0;
 }
 
+static int line_has_profile_hid_report_format(const char *line,
+                                              const char *format) {
+  const char *key = "\"profileHidReportFormat\":\"";
+  const char *start = strstr(line, key);
+  const char *end;
+  size_t format_length;
+
+  if (start == NULL || format == NULL) {
+    return 0;
+  }
+
+  start += strlen(key);
+  end = strchr(start, '"');
+  if (end == NULL) {
+    return 0;
+  }
+
+  format_length = (size_t)(end - start);
+  return strlen(format) == format_length &&
+         strncmp(start, format, format_length) == 0;
+}
+
 static int parse_bridge_line(const char *line, struct oc_report *report) {
   uint8_t profile_bytes[OC_PLAYSTATION_REPORT_BYTES];
+  uint8_t switch_profile_bytes[OC_SWITCH_REPORT_BYTES];
   uint8_t hid_bytes[OC_HID_REPORT_BYTES];
   uint8_t xinput_bytes[OC_XINPUT_REPORT_BYTES];
   struct oc_playstation_report profile_report;
 
-  if (extract_profile_hid_report_base64(line, profile_bytes) == 0 &&
+  if (line_has_profile_hid_report_format(line, "hid-playstation-extended") &&
+      extract_profile_hid_report_base64(line, profile_bytes,
+                                        OC_PLAYSTATION_REPORT_BYTES) == 0 &&
       decode_playstation_report(profile_bytes, &profile_report) == 0) {
     *report = profile_report.gamepad;
+    return 0;
+  }
+  if (line_has_profile_hid_report_format(line, "hid-switch-extended") &&
+      extract_profile_hid_report_base64(line, switch_profile_bytes,
+                                        OC_SWITCH_REPORT_BYTES) == 0 &&
+      decode_switch_report(switch_profile_bytes, report) == 0) {
     return 0;
   }
   if (extract_hid_report_base64(line, hid_bytes) == 0) {
@@ -494,7 +543,9 @@ static int parse_playstation_bridge_line(
     const char *line, struct oc_playstation_report *report) {
   uint8_t profile_bytes[OC_PLAYSTATION_REPORT_BYTES];
 
-  if (extract_profile_hid_report_base64(line, profile_bytes) < 0) {
+  if (!line_has_profile_hid_report_format(line, "hid-playstation-extended") ||
+      extract_profile_hid_report_base64(line, profile_bytes,
+                                        OC_PLAYSTATION_REPORT_BYTES) < 0) {
     return -1;
   }
   return decode_playstation_report(profile_bytes, report);

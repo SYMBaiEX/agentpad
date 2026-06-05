@@ -187,6 +187,36 @@ describe("native backend setup plan", () => {
     ]);
   });
 
+  test("dispatches Windows Switch report profile setup flags", async () => {
+    const seen: unknown[] = [];
+    const result = await prepareNativeSetup(
+      {
+        backend: "windows-vhf",
+        "report-profile": "switch",
+      },
+      {
+        platform: "darwin",
+        prepareWindows: async (options) => {
+          seen.push(options);
+          return fakeWindowsSetupPlan;
+        },
+      },
+    );
+
+    expect(result.backend).toBe("windows-vhf");
+    expect(seen).toEqual([
+      {
+        platform: "darwin",
+        driver: {
+          reportProfile: "switch",
+        },
+        hostBridge: {
+          reportProfile: "switch",
+        },
+      },
+    ]);
+  });
+
   test("dispatches macOS setup flags to the DriverKit package", async () => {
     const seen: unknown[] = [];
     const result = await prepareNativeSetup(
@@ -224,6 +254,33 @@ describe("native backend setup plan", () => {
         },
         driver: {
           reportProfile: "playstation",
+        },
+      },
+    ]);
+  });
+
+  test("dispatches macOS Switch report profile setup flags", async () => {
+    const seen: unknown[] = [];
+    const result = await prepareNativeSetup(
+      {
+        backend: "macos-driverkit",
+        "report-profile": "switch",
+      },
+      {
+        platform: "linux",
+        prepareMacos: async (options) => {
+          seen.push(options);
+          return fakeMacosSetupPlan;
+        },
+      },
+    );
+
+    expect(result.backend).toBe("macos-driverkit");
+    expect(seen).toEqual([
+      {
+        platform: "linux",
+        driver: {
+          reportProfile: "switch",
         },
       },
     ]);
