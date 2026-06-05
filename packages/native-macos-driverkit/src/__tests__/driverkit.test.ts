@@ -9,16 +9,20 @@ import {
 } from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
+  hidGamepadLightReportId,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithFeedback,
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
   hidGamepadRumbleReportId,
   hidPlayStationExtendedReportByteLength,
   hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithFeedback,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
   hidSwitchExtendedReportByteLength,
   hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithFeedback,
   hidSwitchExtendedReportDescriptorWithRumble,
   hidSwitchExtendedReportId,
   xInputButtonBits,
@@ -33,11 +37,13 @@ import {
   createMacosDriverKitInfoPlist,
   createMacosHostAppEntitlements,
   decodeMacosDriverKitInputReport,
+  decodeMacosDriverKitLightReport,
   decodeMacosDriverKitPlayStationInputReport,
   decodeMacosDriverKitRumbleReport,
   decodeMacosDriverKitSwitchInputReport,
   defaultMacosDriverKitHostBridgePath,
   encodeMacosDriverKitInputReport,
+  encodeMacosDriverKitLightReport,
   encodeMacosDriverKitPlayStationInputReport,
   encodeMacosDriverKitRumbleReport,
   encodeMacosDriverKitSwitchInputReport,
@@ -49,10 +55,13 @@ import {
   formatMacosDriverKitSwitchHidDescriptorForCpp,
   formatMacosDriverKitSwitchInputReportForCpp,
   macosDriverKitHidReportDescriptor,
+  macosDriverKitHidReportDescriptorWithFeedback,
   macosDriverKitHidReportDescriptorWithRumble,
   macosDriverKitInputReportBytesFromNativeBridgeMessage,
   macosDriverKitInputReportFromNativeBridgeMessage,
+  macosDriverKitLightReportByteLength,
   macosDriverKitPlayStationHidReportDescriptor,
+  macosDriverKitPlayStationHidReportDescriptorWithFeedback,
   macosDriverKitPlayStationHidReportDescriptorWithRumble,
   macosDriverKitPlayStationInputReportByteLength,
   macosDriverKitPlayStationInputReportBytesFromNativeBridgeMessage,
@@ -60,6 +69,7 @@ import {
   macosDriverKitPlayStationInputReportId,
   macosDriverKitRumbleReportByteLength,
   macosDriverKitSwitchHidReportDescriptor,
+  macosDriverKitSwitchHidReportDescriptorWithFeedback,
   macosDriverKitSwitchHidReportDescriptorWithRumble,
   macosDriverKitSwitchInputReportByteLength,
   macosDriverKitSwitchInputReportBytesFromNativeBridgeMessage,
@@ -76,18 +86,27 @@ describe("macOS DriverKit helpers", () => {
     expect(Array.from(macosDriverKitHidReportDescriptorWithRumble)).toEqual(
       Array.from(hidGamepadReportDescriptorWithRumble),
     );
+    expect(Array.from(macosDriverKitHidReportDescriptorWithFeedback)).toEqual(
+      Array.from(hidGamepadReportDescriptorWithFeedback),
+    );
     expect(Array.from(macosDriverKitPlayStationHidReportDescriptor)).toEqual(
       Array.from(hidPlayStationExtendedReportDescriptor),
     );
     expect(
       Array.from(macosDriverKitPlayStationHidReportDescriptorWithRumble),
     ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
+    expect(
+      Array.from(macosDriverKitPlayStationHidReportDescriptorWithFeedback),
+    ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithFeedback));
     expect(Array.from(macosDriverKitSwitchHidReportDescriptor)).toEqual(
       Array.from(hidSwitchExtendedReportDescriptor),
     );
     expect(
       Array.from(macosDriverKitSwitchHidReportDescriptorWithRumble),
     ).toEqual(Array.from(hidSwitchExtendedReportDescriptorWithRumble));
+    expect(
+      Array.from(macosDriverKitSwitchHidReportDescriptorWithFeedback),
+    ).toEqual(Array.from(hidSwitchExtendedReportDescriptorWithFeedback));
   });
 
   test("creates DriverKit rumble output report bytes", () => {
@@ -104,6 +123,26 @@ describe("macOS DriverKit helpers", () => {
     expect(report.weakMotor).toBe(128);
     expect(report.strongMotor).toBe(255);
     expect(report.rightTriggerMotor).toBe(64);
+  });
+
+  test("creates DriverKit light output report bytes", () => {
+    const bytes = encodeMacosDriverKitLightReport({
+      red: 0.25,
+      green: 0.5,
+      blue: 1,
+      brightness: 0.75,
+      playerIndex: 2,
+      playerLightMask: 0b0010,
+    });
+    const report = decodeMacosDriverKitLightReport(bytes);
+
+    expect(bytes.byteLength).toBe(macosDriverKitLightReportByteLength);
+    expect(report.reportId).toBe(hidGamepadLightReportId);
+    expect(report.red).toBe(64);
+    expect(report.green).toBe(128);
+    expect(report.blue).toBe(255);
+    expect(report.brightness).toBe(191);
+    expect(report.playerLightMask).toBe(0b0010);
   });
 
   test("creates DriverKit input report bytes from native bridge messages", () => {
@@ -450,9 +489,16 @@ describe("macOS DriverKit helpers", () => {
     expect(manifest.hidReportDescriptorWithRumbleBytes.length).toBeGreaterThan(
       manifest.hidReportDescriptorBytes.length,
     );
+    expect(
+      manifest.hidReportDescriptorWithFeedbackBytes.length,
+    ).toBeGreaterThan(manifest.hidReportDescriptorWithRumbleBytes.length);
     expect(manifest.rumbleReportByteLength).toBe(
       macosDriverKitRumbleReportByteLength,
     );
+    expect(manifest.lightReportByteLength).toBe(
+      macosDriverKitLightReportByteLength,
+    );
+    expect(manifest.lightReportId).toBe(hidGamepadLightReportId);
     expect(manifest.requiredEntitlements).toContain(
       "com.apple.developer.driverkit.userclient-access",
     );
@@ -468,8 +514,11 @@ describe("macOS DriverKit helpers", () => {
     expect(header).toContain("setReport");
     expect(header).toContain("updateInputReport");
     expect(header).toContain("copyRumbleReport");
+    expect(header).toContain("copyLightReport");
     expect(header).toContain("rumbleReport[5]");
+    expect(header).toContain("lightReport[7]");
     expect(header).toContain("bool hasRumbleReport");
+    expect(header).toContain("bool hasLightReport");
     expect(source).toContain(
       "OSDefineMetaClassAndStructors(OpenControllerVirtualGamepadDriver",
     );
@@ -479,10 +528,14 @@ describe("macOS DriverKit helpers", () => {
     expect(source).toContain("openControllerInputReportId = 1");
     expect(source).toContain("openControllerRumbleReportId = 2");
     expect(source).toContain("openControllerRumbleReportLength = 5");
+    expect(source).toContain("openControllerLightReportId = 5");
+    expect(source).toContain("openControllerLightReportLength = 7");
     expect(source).toContain("kIOHIDReportTypeOutput");
     expect(source).toContain("report->readBytes");
     expect(source).toContain("hasRumbleReport = true");
+    expect(source).toContain("hasLightReport = true");
     expect(source).toContain("copyRumbleReport");
+    expect(source).toContain("copyLightReport");
     expect(source).toContain("CompleteReport");
     expect(Object.keys(files)).toEqual([
       "OpenControllerVirtualGamepadDriver.h",
@@ -576,7 +629,7 @@ describe("macOS DriverKit helpers", () => {
       );
       expect(readme).toContain("No privileged system changes were made");
       expect(readme).toContain("System Extension activation");
-      expect(readme).toContain("rumble report");
+      expect(readme).toContain("rumble and light output support");
       expect(infoPlist).toContain("com.example.opencontroller.driver");
       expect(hostEntitlements).toContain("TEAM42");
       expect(manifest).toContain("com.example.opencontroller.host");
@@ -710,8 +763,10 @@ describe("macOS DriverKit helpers", () => {
     expect(capabilities.supportsVirtualDevice).toBe(true);
     expect(capabilities.virtualDeviceKind).toBe("os-virtual-gamepad");
     expect(capabilities.supportsRumble).toBe(true);
-    expect(capabilities.feedbackTypes).toEqual(["rumble"]);
+    expect(capabilities.supportsLights).toBe(true);
+    expect(capabilities.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(capabilities.reportFormats).toContain("hid-gamepad-rumble");
+    expect(capabilities.reportFormats).toContain("hid-gamepad-lights");
     expect(
       defaultMacosDriverKitHostBridgePath(
         "/Users/agent/Library/Application Support",

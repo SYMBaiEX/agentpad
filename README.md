@@ -295,7 +295,7 @@ The Linux native package adds:
 The Windows native package adds:
 
 - VHF-ready HID descriptor, input report helpers, Switch/PlayStation report
-  profiles, and rumble feedback contract
+  profiles, and rumble/light feedback contract
 - INF, WDK C source, host bridge C source, C-array asset generators, and a host bridge adapter factory for a maintained Windows VHF driver path
 - generated VHF source templates that capture HID output reports and emit native bridge feedback JSONL
 - setup helper for staging reviewed VHF driver/host source files and install/test commands without privileged changes
@@ -306,10 +306,11 @@ The Windows native package adds:
 The macOS native package adds:
 
 - DriverKit-ready HID descriptor, input report helpers, Switch/PlayStation
-  report profiles, and rumble output report codecs
+  report profiles, and rumble/light output report codecs
 - Info.plist and entitlement templates for a virtual HID gamepad dext
 - C++ DriverKit source and byte-array asset generation, including `setReport`
-  rumble capture and a `copyRumbleReport` hook for signed host bridges
+  rumble/light capture plus `copyRumbleReport` and `copyLightReport` hooks for
+  signed host bridges
 - host bridge adapter factory for a signed DriverKit host process
 - setup helper for staging reviewed DriverKit/host source files and activation/test commands without privileged changes
 - `opencontroller-macos-driverkit-doctor`
@@ -560,8 +561,8 @@ const controller = await createController({
 
 The default macOS bridge path is
 `~/Library/Application Support/OpenController/bin/OpenControllerDriverKitHostBridge`.
-The generated DriverKit source stores HID rumble output reports so a signed host
-bridge can publish `opencontroller.bridge.feedback` JSONL back to
+The generated DriverKit source stores HID rumble and light output reports so a
+signed host bridge can publish `opencontroller.bridge.feedback` JSONL back to
 `controller.onFeedback(...)`.
 
 For application code that should run on whichever native backend is installed

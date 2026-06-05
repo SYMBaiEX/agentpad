@@ -9,13 +9,13 @@ Extension activation.
 
 This package provides:
 
-- DriverKit-ready HID report descriptor, input report helpers, and rumble
+- DriverKit-ready HID report descriptor, input report helpers, and rumble/light
   output report codecs
 - opt-in PlayStation and Switch extended HID report generation for profile
   touchpad and motion payloads
 - Info.plist and entitlement templates for a virtual HID gamepad dext
-- C++ DriverKit source and byte-array asset generation, including rumble output
-  report capture hooks for a signed host bridge
+- C++ DriverKit source and byte-array asset generation, including rumble/light
+  output report capture hooks for a signed host bridge
 - `createMacosDriverKitHostBridgeAdapter` for SDK-owned host bridge processes
 - `opencontroller-macos-driverkit-setup` for staging reviewed DriverKit/host
   source files and activation/test commands without privileged changes
@@ -95,13 +95,14 @@ bundle identifiers, team identifier, entitlements, and IOKit personality before
 building or signing a real dext.
 
 The generated C++ source subclasses `IOUserHIDDevice`, returns the selected
-OpenController report descriptor with rumble output support, exposes a neutral
-input report sized to the chosen profile, accepts host output reports through
-`setReport`, and leaves the host app/user-client update path explicit through
-`updateInputReport` and `copyRumbleReport`. The default profile is the generic
-13-byte HID gamepad report; `reportProfile: "playstation"` emits the 47-byte
-`hid-playstation-extended` descriptor/report, and `reportProfile: "switch"`
-emits the 31-byte `hid-switch-extended` descriptor/report.
+OpenController report descriptor with rumble and light output support, exposes
+a neutral input report sized to the chosen profile, accepts host output reports
+through `setReport`, and leaves the host app/user-client update path explicit
+through `updateInputReport`, `copyRumbleReport`, and `copyLightReport`. The
+default profile is the generic 13-byte HID gamepad report;
+`reportProfile: "playstation"` emits the 47-byte `hid-playstation-extended`
+descriptor/report, and `reportProfile: "switch"` emits the 31-byte
+`hid-switch-extended` descriptor/report.
 
 ## Host Bridge Adapter
 
@@ -140,10 +141,11 @@ It exports the driver identity through
 can ignore other controllers in a shared multi-agent stream. It does not bypass
 Apple's signing, notarization, entitlement, or user-approval requirements.
 
-For rumble, the signed host bridge should poll the generated driver's
-`copyRumbleReport` hook and emit `opencontroller.bridge.feedback` JSONL with the
-shared `"hid-gamepad-rumble"` payload. The SDK process adapter will surface that
-event through `controller.onFeedback(...)`.
+For feedback, the signed host bridge should poll the generated driver's
+`copyRumbleReport` and `copyLightReport` hooks and emit
+`opencontroller.bridge.feedback` JSONL with the shared `"hid-gamepad-rumble"`
+and `"hid-gamepad-lights"` payloads. The SDK process adapter will surface those
+events through `controller.onFeedback(...)`.
 
 ## Diagnose
 

@@ -1,6 +1,7 @@
 import type { ControllerState, ControllerTouchpadContact } from "../types";
 import {
   createHidGamepadReport,
+  hidGamepadLightOutputReportDescriptor,
   hidGamepadRumbleOutputReportDescriptor,
 } from "./hid-gamepad";
 
@@ -132,6 +133,14 @@ export const hidPlayStationExtendedReportDescriptorWithRumble = Uint8Array.from(
     0xc0, // End Collection
   ],
 );
+
+export const hidPlayStationExtendedReportDescriptorWithFeedback =
+  Uint8Array.from([
+    ...hidPlayStationExtendedReportDescriptor.slice(0, -1),
+    ...hidGamepadRumbleOutputReportDescriptor,
+    ...hidGamepadLightOutputReportDescriptor,
+    0xc0, // End Collection
+  ]);
 
 export function createHidPlayStationExtendedReport(
   state: ControllerState,

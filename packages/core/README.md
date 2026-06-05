@@ -186,7 +186,7 @@ const hid = new HidGamepadReportAdapter({
     console.log("hid", bytes);
   },
   onFeedback(event) {
-    console.log("hid rumble", event.weakMotor, event.strongMotor);
+    console.log("hid feedback", event.type);
   },
 });
 
@@ -209,8 +209,8 @@ payload, and `hid-playstation-extended-report` for the 47-byte PlayStation
 profile payload that carries touchpad contacts and motion vectors.
 `hid-switch-extended-report` carries the common gamepad payload plus Switch
 motion vectors in a 31-byte profile report. The HID report adapters also accept
-the shared 5-byte rumble output report through
-`adapter.receiveOutputReport(bytes)` and surface it through
+the shared 5-byte rumble and 7-byte light/player-indicator output reports
+through `adapter.receiveOutputReport(bytes)` and surface it through
 `controller.onFeedback(...)`.
 
 ## Capability Metadata
@@ -222,9 +222,12 @@ console.log(capabilities.supportedProfiles);
 console.log(capabilities.outputFormats);
 console.log(capabilities.reportFormats);
 
-if (capabilities.feedbackTypes.includes("rumble")) {
+if (
+  capabilities.feedbackTypes.includes("rumble") ||
+  capabilities.feedbackTypes.includes("lights")
+) {
   controller.onFeedback((event) => {
-    console.log(event.weakMotor, event.strongMotor);
+    console.log(event.type, event.reportFormat);
   });
 }
 ```

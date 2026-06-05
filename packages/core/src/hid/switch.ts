@@ -1,6 +1,7 @@
 import type { ControllerState } from "../types";
 import {
   createHidGamepadReport,
+  hidGamepadLightOutputReportDescriptor,
   hidGamepadRumbleOutputReportDescriptor,
 } from "./hid-gamepad";
 
@@ -115,6 +116,13 @@ export const hidSwitchExtendedReportDescriptor = Uint8Array.from([
 export const hidSwitchExtendedReportDescriptorWithRumble = Uint8Array.from([
   ...hidSwitchExtendedReportDescriptor.slice(0, -1),
   ...hidGamepadRumbleOutputReportDescriptor,
+  0xc0, // End Collection
+]);
+
+export const hidSwitchExtendedReportDescriptorWithFeedback = Uint8Array.from([
+  ...hidSwitchExtendedReportDescriptor.slice(0, -1),
+  ...hidGamepadRumbleOutputReportDescriptor,
+  ...hidGamepadLightOutputReportDescriptor,
   0xc0, // End Collection
 ]);
 

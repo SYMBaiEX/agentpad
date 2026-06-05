@@ -9,16 +9,20 @@ import {
 } from "@opencontroller/core";
 import { createNativeBridgeStateMessage } from "@opencontroller/core/bridge";
 import {
+  hidGamepadLightReportId,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithFeedback,
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportId,
   hidGamepadRumbleReportId,
   hidPlayStationExtendedReportByteLength,
   hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithFeedback,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
   hidSwitchExtendedReportByteLength,
   hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithFeedback,
   hidSwitchExtendedReportDescriptorWithRumble,
   hidSwitchExtendedReportId,
   xInputButtonBits,
@@ -33,10 +37,12 @@ import {
   createWindowsVhfHostBridgeSourceFiles,
   createWindowsVhfInf,
   decodeWindowsVhfInputReport,
+  decodeWindowsVhfLightReport,
   decodeWindowsVhfRumbleReport,
   decodeWindowsVhfSwitchInputReport,
   defaultWindowsVhfHostBridgePath,
   encodeWindowsVhfInputReport,
+  encodeWindowsVhfLightReport,
   encodeWindowsVhfPlayStationInputReport,
   encodeWindowsVhfRumbleReport,
   encodeWindowsVhfSwitchInputReport,
@@ -49,10 +55,13 @@ import {
   formatWindowsVhfSwitchInputReportForC,
   prepareWindowsVhfSetup,
   windowsVhfHidReportDescriptor,
+  windowsVhfHidReportDescriptorWithFeedback,
   windowsVhfHidReportDescriptorWithRumble,
   windowsVhfInputReportBytesFromNativeBridgeMessage,
   windowsVhfInputReportFromNativeBridgeMessage,
+  windowsVhfLightReportByteLength,
   windowsVhfPlayStationHidReportDescriptor,
+  windowsVhfPlayStationHidReportDescriptorWithFeedback,
   windowsVhfPlayStationHidReportDescriptorWithRumble,
   windowsVhfPlayStationInputReportByteLength,
   windowsVhfPlayStationInputReportBytesFromNativeBridgeMessage,
@@ -60,6 +69,7 @@ import {
   windowsVhfPlayStationInputReportId,
   windowsVhfRumbleReportByteLength,
   windowsVhfSwitchHidReportDescriptor,
+  windowsVhfSwitchHidReportDescriptorWithFeedback,
   windowsVhfSwitchHidReportDescriptorWithRumble,
   windowsVhfSwitchInputReportByteLength,
   windowsVhfSwitchInputReportBytesFromNativeBridgeMessage,
@@ -75,17 +85,26 @@ describe("windows VHF helpers", () => {
     expect(Array.from(windowsVhfHidReportDescriptorWithRumble)).toEqual(
       Array.from(hidGamepadReportDescriptorWithRumble),
     );
+    expect(Array.from(windowsVhfHidReportDescriptorWithFeedback)).toEqual(
+      Array.from(hidGamepadReportDescriptorWithFeedback),
+    );
     expect(Array.from(windowsVhfPlayStationHidReportDescriptor)).toEqual(
       Array.from(hidPlayStationExtendedReportDescriptor),
     );
     expect(
       Array.from(windowsVhfPlayStationHidReportDescriptorWithRumble),
     ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithRumble));
+    expect(
+      Array.from(windowsVhfPlayStationHidReportDescriptorWithFeedback),
+    ).toEqual(Array.from(hidPlayStationExtendedReportDescriptorWithFeedback));
     expect(Array.from(windowsVhfSwitchHidReportDescriptor)).toEqual(
       Array.from(hidSwitchExtendedReportDescriptor),
     );
     expect(Array.from(windowsVhfSwitchHidReportDescriptorWithRumble)).toEqual(
       Array.from(hidSwitchExtendedReportDescriptorWithRumble),
+    );
+    expect(Array.from(windowsVhfSwitchHidReportDescriptorWithFeedback)).toEqual(
+      Array.from(hidSwitchExtendedReportDescriptorWithFeedback),
     );
   });
 
@@ -103,6 +122,26 @@ describe("windows VHF helpers", () => {
     expect(report.weakMotor).toBe(128);
     expect(report.strongMotor).toBe(255);
     expect(report.rightTriggerMotor).toBe(64);
+  });
+
+  test("creates VHF light output report bytes", () => {
+    const bytes = encodeWindowsVhfLightReport({
+      red: 0.25,
+      green: 0.5,
+      blue: 1,
+      brightness: 0.75,
+      playerIndex: 2,
+      playerLightMask: 0b0010,
+    });
+    const report = decodeWindowsVhfLightReport(bytes);
+
+    expect(bytes.byteLength).toBe(windowsVhfLightReportByteLength);
+    expect(report.reportId).toBe(hidGamepadLightReportId);
+    expect(report.red).toBe(64);
+    expect(report.green).toBe(128);
+    expect(report.blue).toBe(255);
+    expect(report.brightness).toBe(191);
+    expect(report.playerLightMask).toBe(0b0010);
   });
 
   test("creates VHF input report bytes from native bridge messages", () => {
@@ -430,9 +469,12 @@ describe("windows VHF helpers", () => {
     expect(header).toContain(
       "IOCTL_OPENCONTROLLERVHFGAMEPAD_POP_RUMBLE_REPORT",
     );
+    expect(header).toContain("IOCTL_OPENCONTROLLERVHFGAMEPAD_POP_LIGHT_REPORT");
     expect(header).toContain("VHFHANDLE VhfHandle");
     expect(header).toContain("RumbleReport[5]");
+    expect(header).toContain("LightReport[7]");
     expect(header).toContain("WDFSPINLOCK RumbleLock");
+    expect(header).toContain("WDFSPINLOCK LightLock");
     expect(header).toContain("EVT_VHF_ASYNC_OPERATION");
     expect(source).toContain("VHF_CONFIG_INIT");
     expect(source).toContain("VhfCreate(&vhfConfig");
@@ -445,11 +487,14 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("OpenControllerInputReportLength = 13");
     expect(source).toContain("OpenControllerRumbleReportLength = 5");
     expect(source).toContain("OpenControllerRumbleReportId = 2");
+    expect(source).toContain("OpenControllerLightReportLength = 7");
+    expect(source).toContain("OpenControllerLightReportId = 5");
     expect(source).toContain("EvtVhfAsyncOperationWriteReport");
     expect(source).toContain("OpenControllerEvtVhfWriteReport");
     expect(source).toContain("VhfAsyncOperationComplete");
     expect(source).toContain("WdfSpinLockCreate");
     expect(source).toContain("STATUS_NO_MORE_ENTRIES");
+    expect(source).toContain("HasLightReport = TRUE");
     expect(Object.keys(files)).toEqual([
       "OpenControllerVhfGamepad.h",
       "OpenControllerVhfGamepad.c",
@@ -495,9 +540,14 @@ describe("windows VHF helpers", () => {
     expect(header).toContain("OPENCONTROLLER_HID_REPORT_BYTES 13");
     expect(header).toContain("OPENCONTROLLER_RUMBLE_REPORT_BYTES 5");
     expect(header).toContain("OPENCONTROLLER_RUMBLE_REPORT_ID 2");
+    expect(header).toContain("OPENCONTROLLER_LIGHT_REPORT_BYTES 7");
+    expect(header).toContain("OPENCONTROLLER_LIGHT_REPORT_ID 5");
     expect(header).toContain("IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_SUBMIT_REPORT");
     expect(header).toContain(
       "IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_POP_RUMBLE_REPORT",
+    );
+    expect(header).toContain(
+      "IOCTL_OPENCONTROLLERVHFHOSTBRIDGE_POP_LIGHT_REPORT",
     );
     expect(header).toContain("OPENCONTROLLERVHFHOSTBRIDGE_DEFAULT_DEVICE_PATH");
     expect(header).toContain("OpenControllerVhfGamepad");
@@ -509,9 +559,13 @@ describe("windows VHF helpers", () => {
     expect(source).toContain("hidReportBase64");
     expect(source).toContain("reportBase64");
     expect(source).toContain("opencontroller_pop_rumble_report");
+    expect(source).toContain("opencontroller_pop_light_report");
     expect(source).toContain("opencontroller_print_rumble_feedback");
+    expect(source).toContain("opencontroller_print_light_feedback");
     expect(source).toContain("opencontroller.bridge.feedback");
     expect(source).toContain("hid-gamepad-rumble");
+    expect(source).toContain("hid-gamepad-lights");
+    expect(source).toContain("playerLightMask");
     expect(source).toContain("opencontroller_timestamp_ms");
     expect(source).toContain("GetSystemTimeAsFileTime");
     expect(source).toContain("OPENCONTROLLER_CONTROLLER_ID");
@@ -607,7 +661,7 @@ describe("windows VHF helpers", () => {
       expect(plan.nativeTestCommand).toContain("--id player-1");
       expect(plan.nativeTestCommand).toContain("OpenControllerTestGamepad");
       expect(readme).toContain("No privileged system changes were made");
-      expect(readme).toContain("captures HID rumble output reports");
+      expect(readme).toContain("captures HID rumble and light output reports");
       expect(readme).toContain("Do not install");
       expect(hostBridgeHeader).toContain("OpenControllerTestGamepad");
       expect(formatted).toContain("OpenController Windows VHF Setup");
@@ -740,8 +794,10 @@ describe("windows VHF helpers", () => {
     expect(capabilities.supportsVirtualDevice).toBe(true);
     expect(capabilities.virtualDeviceKind).toBe("os-virtual-gamepad");
     expect(capabilities.supportsRumble).toBe(true);
-    expect(capabilities.feedbackTypes).toEqual(["rumble"]);
+    expect(capabilities.supportsLights).toBe(true);
+    expect(capabilities.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(capabilities.reportFormats).toContain("hid-gamepad-rumble");
+    expect(capabilities.reportFormats).toContain("hid-gamepad-lights");
     expect(
       defaultWindowsVhfHostBridgePath("C:\\Users\\agent\\AppData\\Local"),
     ).toBe(

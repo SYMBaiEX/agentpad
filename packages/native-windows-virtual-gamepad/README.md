@@ -15,7 +15,7 @@ Upstream context:
 
 This package provides:
 
-- VHF-ready HID report descriptor, input report helpers, and rumble output
+- VHF-ready HID report descriptor, input report helpers, and rumble/light output
   report codecs
 - generic, PlayStation, and Switch VHF report profiles for matching host
   bridge/driver source generation
@@ -144,8 +144,8 @@ The generated INF template includes the VHF lower filter declaration required
 for a HID source driver. Treat it as source material for a real signed driver
 package, not as an installer.
 
-The generated C source wires the OpenController HID descriptor with rumble
-output into VHF, submits input reports through `VhfReadReportSubmit`,
+The generated C source wires the OpenController HID descriptor with rumble and
+light output into VHF, submits input reports through `VhfReadReportSubmit`,
 and captures HID output reports through `EvtVhfAsyncOperationWriteReport`. Treat
 it as the WDK project starting point, then add signing, installation, and the
 generated user-mode host bridge.
@@ -154,8 +154,8 @@ The generated host bridge C source is the user-mode side of that handoff. It
 reads OpenController native bridge JSONL from stdin, prefers direct
 `hidReportBase64` payloads, falls back to converting legacy `reportBase64`
 XInput bytes, opens the driver device path, and sends reports with
-`DeviceIoControl`. It also polls the driver's rumble IOCTL from a feedback
-thread and prints `opencontroller.bridge.feedback` JSONL on stdout for
+`DeviceIoControl`. It also polls the driver's rumble and light IOCTLs from a
+feedback thread and prints `opencontroller.bridge.feedback` JSONL on stdout for
 `controller.onFeedback(...)`. Set `OPENCONTROLLER_CONTROLLER_ID` or pass
 `--controller-id` to bind a host bridge process to one controller from a shared
 multi-agent stream.
@@ -181,6 +181,7 @@ const controller = await createController({
   adapter: createWindowsVhfHostBridgeAdapter({
     controllerId: "player-1",
     supportsRumble: true,
+    supportsLights: true,
     hostBridgePath: "C:\\OpenController\\OpenControllerVhfHostBridge.exe",
     devicePath: "\\\\.\\OpenControllerVhfGamepad"
   }),
@@ -190,6 +191,9 @@ const controller = await createController({
 controller.onFeedback((event) => {
   if (event.type === "rumble") {
     console.log(event.weakMotor, event.strongMotor);
+  }
+  if (event.type === "lights") {
+    console.log(event.red, event.green, event.blue, event.playerLightMask);
   }
 });
 ```

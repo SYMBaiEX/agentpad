@@ -123,10 +123,10 @@ descriptor/report for Switch motion vectors.
 
 The generated C++ source is a DriverKit starting point for an `IOUserHIDDevice`
 subclass. It returns the selected OpenController report descriptor with rumble
-output support, publishes the virtual gamepad description, keeps a neutral input
-report sized to the chosen profile, accepts host output reports through `setReport`, and
-exposes `updateInputReport` plus `copyRumbleReport` entry points for a signed
-host app/user-client bridge.
+and light output support, publishes the virtual gamepad description, keeps a
+neutral input report sized to the chosen profile, accepts host output reports
+through `setReport`, and exposes `updateInputReport`, `copyRumbleReport`, and
+`copyLightReport` entry points for a signed host app/user-client bridge.
 
 ## Host Bridge Adapter
 
@@ -164,11 +164,12 @@ to the intended DriverKit service. It also passes
 `OPENCONTROLLER_CONTROLLER_ID` when `controllerId` is provided so the host bridge
 can ignore other controllers in a shared multi-agent stream.
 
-For haptics, the generated DriverKit source stores the latest 5-byte HID rumble
-output report. A signed host bridge can poll `copyRumbleReport`, encode the
-bytes as the shared `"hid-gamepad-rumble"` feedback payload, and write
-`opencontroller.bridge.feedback` JSONL to stdout so `controller.onFeedback(...)`
-receives the event.
+For feedback, the generated DriverKit source stores the latest 5-byte HID rumble
+output report and 7-byte light/player-indicator output report. A signed host
+bridge can poll `copyRumbleReport` and `copyLightReport`, encode the bytes as
+the shared `"hid-gamepad-rumble"` and `"hid-gamepad-lights"` feedback payloads,
+and write `opencontroller.bridge.feedback` JSONL to stdout so
+`controller.onFeedback(...)` receives the events.
 
 ## Current Limitations
 

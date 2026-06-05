@@ -10,21 +10,28 @@ import {
   nativeBridgeMessageToProfileHidReportBytes,
 } from "@opencontroller/core/bridge";
 import {
+  type HidGamepadLightEffect,
+  type HidGamepadLightReport,
   type HidGamepadReport,
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
   type HidPlayStationExtendedReport,
   type HidSwitchExtendedReport,
+  decodeHidGamepadLightReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
   decodeHidSwitchExtendedReport,
+  encodeHidGamepadLightReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
   encodeHidSwitchExtendedReport,
+  hidGamepadLightReportByteLength,
+  hidGamepadLightReportId,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithFeedback,
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
   hidGamepadReportId,
@@ -32,10 +39,12 @@ import {
   hidGamepadRumbleReportId,
   hidPlayStationExtendedReportByteLength,
   hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithFeedback,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
   hidSwitchExtendedReportByteLength,
   hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithFeedback,
   hidSwitchExtendedReportDescriptorWithRumble,
   hidSwitchExtendedReportId,
 } from "@opencontroller/core/hid";
@@ -45,15 +54,20 @@ export type WindowsVhfInputReport = HidGamepadReport;
 export type WindowsVhfPlayStationInputReport = HidPlayStationExtendedReport;
 export type WindowsVhfSwitchInputReport = HidSwitchExtendedReport;
 export type WindowsVhfRumbleReport = HidGamepadRumbleReport;
+export type WindowsVhfLightReport = HidGamepadLightReport;
 
 export const windowsVhfHidReportDescriptor = hidGamepadReportDescriptor;
 export const windowsVhfHidReportDescriptorWithRumble =
   hidGamepadReportDescriptorWithRumble;
+export const windowsVhfHidReportDescriptorWithFeedback =
+  hidGamepadReportDescriptorWithFeedback;
 export const windowsVhfInputReportByteLength = hidGamepadReportByteLength;
 export const windowsVhfPlayStationHidReportDescriptor =
   hidPlayStationExtendedReportDescriptor;
 export const windowsVhfPlayStationHidReportDescriptorWithRumble =
   hidPlayStationExtendedReportDescriptorWithRumble;
+export const windowsVhfPlayStationHidReportDescriptorWithFeedback =
+  hidPlayStationExtendedReportDescriptorWithFeedback;
 export const windowsVhfPlayStationInputReportByteLength =
   hidPlayStationExtendedReportByteLength;
 export const windowsVhfPlayStationInputReportId =
@@ -62,12 +76,16 @@ export const windowsVhfSwitchHidReportDescriptor =
   hidSwitchExtendedReportDescriptor;
 export const windowsVhfSwitchHidReportDescriptorWithRumble =
   hidSwitchExtendedReportDescriptorWithRumble;
+export const windowsVhfSwitchHidReportDescriptorWithFeedback =
+  hidSwitchExtendedReportDescriptorWithFeedback;
 export const windowsVhfSwitchInputReportByteLength =
   hidSwitchExtendedReportByteLength;
 export const windowsVhfSwitchInputReportId = hidSwitchExtendedReportId;
 export const windowsVhfRumbleReportId = hidGamepadRumbleReportId;
 export const windowsVhfRumbleReportByteLength =
   hidGamepadRumbleReportByteLength;
+export const windowsVhfLightReportId = hidGamepadLightReportId;
+export const windowsVhfLightReportByteLength = hidGamepadLightReportByteLength;
 
 export type WindowsVhfInfOptions = {
   deviceName?: string;
@@ -192,6 +210,7 @@ export const defaultWindowsVhfHostBridgeSourceOptions = {
 
 type WindowsVhfReportSpec = {
   profile: WindowsVhfReportProfile;
+  descriptorWithFeedback: Uint8Array;
   descriptorWithRumble: Uint8Array;
   inputReportByteLength: number;
   inputReportId: number;
@@ -205,6 +224,8 @@ function windowsVhfReportSpec(
   if (profile === "playstation") {
     return {
       profile,
+      descriptorWithFeedback:
+        windowsVhfPlayStationHidReportDescriptorWithFeedback,
       descriptorWithRumble: windowsVhfPlayStationHidReportDescriptorWithRumble,
       inputReportByteLength: windowsVhfPlayStationInputReportByteLength,
       inputReportId: windowsVhfPlayStationInputReportId,
@@ -216,6 +237,7 @@ function windowsVhfReportSpec(
   if (profile === "switch") {
     return {
       profile,
+      descriptorWithFeedback: windowsVhfSwitchHidReportDescriptorWithFeedback,
       descriptorWithRumble: windowsVhfSwitchHidReportDescriptorWithRumble,
       inputReportByteLength: windowsVhfSwitchInputReportByteLength,
       inputReportId: windowsVhfSwitchInputReportId,
@@ -226,6 +248,7 @@ function windowsVhfReportSpec(
 
   return {
     profile: "generic",
+    descriptorWithFeedback: windowsVhfHidReportDescriptorWithFeedback,
     descriptorWithRumble: windowsVhfHidReportDescriptorWithRumble,
     inputReportByteLength: windowsVhfInputReportByteLength,
     inputReportId: hidGamepadReportId,
@@ -380,7 +403,7 @@ export function createWindowsVhfHostBridgeAdapter(
     ...(options.spawn ? { spawn: options.spawn } : {}),
     supportsVirtualDevice: options.supportsVirtualDevice ?? true,
     supportsRumble: options.supportsRumble ?? true,
-    supportsLights: options.supportsLights ?? false,
+    supportsLights: options.supportsLights ?? true,
     virtualDeviceKind: options.virtualDeviceKind ?? "os-virtual-gamepad",
     requiresNativeInstall: options.requiresNativeInstall ?? true,
     requiresElevatedPermissions: options.requiresElevatedPermissions ?? false,
@@ -419,6 +442,18 @@ export function decodeWindowsVhfRumbleReport(
   bytes: Uint8Array,
 ): WindowsVhfRumbleReport {
   return decodeHidGamepadRumbleReport(bytes);
+}
+
+export function encodeWindowsVhfLightReport(
+  effectOrReport: HidGamepadLightEffect | WindowsVhfLightReport,
+): Uint8Array {
+  return encodeHidGamepadLightReport(effectOrReport);
+}
+
+export function decodeWindowsVhfLightReport(
+  bytes: Uint8Array,
+): WindowsVhfLightReport {
+  return decodeHidGamepadLightReport(bytes);
 }
 
 export function windowsVhfInputReportBytesFromNativeBridgeMessage(
@@ -506,10 +541,14 @@ export function windowsVhfSwitchInputReportBytesFromNativeBridgeMessage(
 export function formatWindowsVhfHidDescriptorForC(
   symbolName = "OpenControllerHidReportDescriptor",
 ): string {
-  return formatCByteArray(symbolName, windowsVhfHidReportDescriptorWithRumble, {
-    storageClass: "static const UCHAR",
-    columns: 12,
-  });
+  return formatCByteArray(
+    symbolName,
+    windowsVhfHidReportDescriptorWithFeedback,
+    {
+      storageClass: "static const UCHAR",
+      columns: 12,
+    },
+  );
 }
 
 export function formatWindowsVhfPlayStationHidDescriptorForC(
@@ -517,7 +556,7 @@ export function formatWindowsVhfPlayStationHidDescriptorForC(
 ): string {
   return formatCByteArray(
     symbolName,
-    windowsVhfPlayStationHidReportDescriptorWithRumble,
+    windowsVhfPlayStationHidReportDescriptorWithFeedback,
     {
       storageClass: "static const UCHAR",
       columns: 12,
@@ -530,7 +569,7 @@ export function formatWindowsVhfSwitchHidDescriptorForC(
 ): string {
   return formatCByteArray(
     symbolName,
-    windowsVhfSwitchHidReportDescriptorWithRumble,
+    windowsVhfSwitchHidReportDescriptorWithFeedback,
     {
       storageClass: "static const UCHAR",
       columns: 12,
@@ -666,15 +705,22 @@ export function createWindowsVhfDriverHeader(
     `#define IOCTL_${prefix}_POP_RUMBLE_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
       merged.ioctlFunctionCode + 1,
     )}, METHOD_BUFFERED, FILE_READ_DATA)`,
+    `#define IOCTL_${prefix}_POP_LIGHT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
+      merged.ioctlFunctionCode + 2,
+    )}, METHOD_BUFFERED, FILE_READ_DATA)`,
     `#define ${prefix}_USER_DEVICE_PATH "${escapeCString(merged.userDevicePath)}"`,
     "",
     "typedef struct _OPENCONTROLLER_DEVICE_CONTEXT {",
     "  VHFHANDLE VhfHandle;",
     `  UCHAR InputReport[${reportSpec.inputReportByteLength}];`,
     `  UCHAR RumbleReport[${windowsVhfRumbleReportByteLength}];`,
+    `  UCHAR LightReport[${windowsVhfLightReportByteLength}];`,
     "  BOOLEAN HasRumbleReport;",
+    "  BOOLEAN HasLightReport;",
     "  ULONG RumbleSequence;",
+    "  ULONG LightSequence;",
     "  WDFSPINLOCK RumbleLock;",
+    "  WDFSPINLOCK LightLock;",
     "} OPENCONTROLLER_DEVICE_CONTEXT, *POPENCONTROLLER_DEVICE_CONTEXT;",
     "",
     "WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(",
@@ -708,7 +754,7 @@ export function createWindowsVhfDriverSource(
     "",
     formatCByteArray(
       "OpenControllerHidReportDescriptor",
-      reportSpec.descriptorWithRumble,
+      reportSpec.descriptorWithFeedback,
       {
         storageClass: "static UCHAR",
         columns: 12,
@@ -719,6 +765,8 @@ export function createWindowsVhfDriverSource(
     `static const UCHAR OpenControllerInputReportId = ${reportSpec.inputReportId};`,
     `static const ULONG OpenControllerRumbleReportLength = ${windowsVhfRumbleReportByteLength};`,
     `static const UCHAR OpenControllerRumbleReportId = ${windowsVhfRumbleReportId};`,
+    `static const ULONG OpenControllerLightReportLength = ${windowsVhfLightReportByteLength};`,
+    `static const UCHAR OpenControllerLightReportId = ${windowsVhfLightReportId};`,
     "",
     "NTSTATUS",
     "DriverEntry(",
@@ -776,6 +824,11 @@ export function createWindowsVhfDriverSource(
     "  WDF_OBJECT_ATTRIBUTES_INIT(&spinLockAttributes);",
     "  spinLockAttributes.ParentObject = device;",
     "  status = WdfSpinLockCreate(&spinLockAttributes, &context->RumbleLock);",
+    "  if (!NT_SUCCESS(status)) {",
+    "    return status;",
+    "  }",
+    "",
+    "  status = WdfSpinLockCreate(&spinLockAttributes, &context->LightLock);",
     "  if (!NT_SUCCESS(status)) {",
     "    return status;",
     "  }",
@@ -925,6 +978,41 @@ export function createWindowsVhfDriverSource(
     "    WdfRequestComplete(Request, STATUS_SUCCESS);",
     "    return;",
     "",
+    `  case IOCTL_${prefix}_POP_LIGHT_REPORT:`,
+    "    if (OutputBufferLength < OpenControllerLightReportLength) {",
+    "      WdfRequestComplete(Request, STATUS_BUFFER_TOO_SMALL);",
+    "      return;",
+    "    }",
+    "",
+    "    status = WdfRequestRetrieveOutputBuffer(",
+    "      Request,",
+    "      OpenControllerLightReportLength,",
+    "      &outputBuffer,",
+    "      NULL",
+    "    );",
+    "    if (!NT_SUCCESS(status)) {",
+    "      WdfRequestComplete(Request, status);",
+    "      return;",
+    "    }",
+    "",
+    "    WdfSpinLockAcquire(context->LightLock);",
+    "    if (!context->HasLightReport) {",
+    "      WdfSpinLockRelease(context->LightLock);",
+    "      WdfRequestComplete(Request, STATUS_NO_MORE_ENTRIES);",
+    "      return;",
+    "    }",
+    "    RtlCopyMemory(",
+    "      outputBuffer,",
+    "      context->LightReport,",
+    "      OpenControllerLightReportLength",
+    "    );",
+    "    context->HasLightReport = FALSE;",
+    "    WdfSpinLockRelease(context->LightLock);",
+    "",
+    "    WdfRequestSetInformation(Request, OpenControllerLightReportLength);",
+    "    WdfRequestComplete(Request, STATUS_SUCCESS);",
+    "    return;",
+    "",
     "  default:",
     "    WdfRequestComplete(Request, STATUS_INVALID_DEVICE_REQUEST);",
     "    return;",
@@ -948,12 +1036,13 @@ export function createWindowsVhfDriverSource(
     "  if (",
     "    context == NULL ||",
     "    HidTransferPacket == NULL ||",
-    "    HidTransferPacket->reportBuffer == NULL ||",
-    "    HidTransferPacket->reportId != OpenControllerRumbleReportId ||",
-    "    HidTransferPacket->reportBufferLen != OpenControllerRumbleReportLength",
+    "    HidTransferPacket->reportBuffer == NULL",
     "  ) {",
     "    status = STATUS_INVALID_BUFFER_SIZE;",
-    "  } else {",
+    "  } else if (",
+    "    HidTransferPacket->reportId == OpenControllerRumbleReportId &&",
+    "    HidTransferPacket->reportBufferLen == OpenControllerRumbleReportLength",
+    "  ) {",
     "    WdfSpinLockAcquire(context->RumbleLock);",
     "    RtlCopyMemory(",
     "      context->RumbleReport,",
@@ -963,6 +1052,21 @@ export function createWindowsVhfDriverSource(
     "    context->HasRumbleReport = TRUE;",
     "    context->RumbleSequence++;",
     "    WdfSpinLockRelease(context->RumbleLock);",
+    "  } else if (",
+    "    HidTransferPacket->reportId == OpenControllerLightReportId &&",
+    "    HidTransferPacket->reportBufferLen == OpenControllerLightReportLength",
+    "  ) {",
+    "    WdfSpinLockAcquire(context->LightLock);",
+    "    RtlCopyMemory(",
+    "      context->LightReport,",
+    "      HidTransferPacket->reportBuffer,",
+    "      OpenControllerLightReportLength",
+    "    );",
+    "    context->HasLightReport = TRUE;",
+    "    context->LightSequence++;",
+    "    WdfSpinLockRelease(context->LightLock);",
+    "  } else {",
+    "    status = STATUS_INVALID_BUFFER_SIZE;",
     "  }",
     "",
     "  VhfAsyncOperationComplete(VhfOperationHandle, status);",
@@ -1011,12 +1115,18 @@ export function createWindowsVhfHostBridgeHeader(
     `#define OPENCONTROLLER_RUMBLE_REPORT_BYTES ${windowsVhfRumbleReportByteLength}`,
     `#define OPENCONTROLLER_RUMBLE_REPORT_ID ${windowsVhfRumbleReportId}`,
     "#define OPENCONTROLLER_RUMBLE_REPORT_BASE64_BYTES 8",
+    `#define OPENCONTROLLER_LIGHT_REPORT_BYTES ${windowsVhfLightReportByteLength}`,
+    `#define OPENCONTROLLER_LIGHT_REPORT_ID ${windowsVhfLightReportId}`,
+    "#define OPENCONTROLLER_LIGHT_REPORT_BASE64_BYTES 12",
     `#define ${prefix}_DEFAULT_DEVICE_PATH "${escapeCString(merged.userDevicePath)}"`,
     `#define IOCTL_${prefix}_SUBMIT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
       merged.ioctlFunctionCode,
     )}, METHOD_BUFFERED, FILE_WRITE_DATA)`,
     `#define IOCTL_${prefix}_POP_RUMBLE_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
       merged.ioctlFunctionCode + 1,
+    )}, METHOD_BUFFERED, FILE_READ_DATA)`,
+    `#define IOCTL_${prefix}_POP_LIGHT_REPORT CTL_CODE(FILE_DEVICE_UNKNOWN, 0x${formatHexWord(
+      merged.ioctlFunctionCode + 2,
     )}, METHOD_BUFFERED, FILE_READ_DATA)`,
     "",
     "typedef struct OPENCONTROLLER_XINPUT_REPORT {",
@@ -1123,9 +1233,17 @@ export function createWindowsVhfHostBridgeSource(
     "  HANDLE device,",
     "  uint8_t report[OPENCONTROLLER_RUMBLE_REPORT_BYTES]",
     ");",
+    "static int opencontroller_pop_light_report(",
+    "  HANDLE device,",
+    "  uint8_t report[OPENCONTROLLER_LIGHT_REPORT_BYTES]",
+    ");",
     "static void opencontroller_print_rumble_feedback(",
     "  const char *controllerId,",
     "  const uint8_t report[OPENCONTROLLER_RUMBLE_REPORT_BYTES]",
+    ");",
+    "static void opencontroller_print_light_feedback(",
+    "  const char *controllerId,",
+    "  const uint8_t report[OPENCONTROLLER_LIGHT_REPORT_BYTES]",
     ");",
     "static void opencontroller_encode_base64_bytes(",
     "  const uint8_t *input,",
@@ -1510,6 +1628,32 @@ export function createWindowsVhfHostBridgeSource(
     "  return 0;",
     "}",
     "",
+    "static int opencontroller_pop_light_report(",
+    "  HANDLE device,",
+    "  uint8_t report[OPENCONTROLLER_LIGHT_REPORT_BYTES]",
+    ")",
+    "{",
+    "  DWORD bytesReturned = 0;",
+    "  BOOL ok = DeviceIoControl(",
+    "    device,",
+    `    IOCTL_${prefix}_POP_LIGHT_REPORT,`,
+    "    NULL,",
+    "    0,",
+    "    report,",
+    "    OPENCONTROLLER_LIGHT_REPORT_BYTES,",
+    "    &bytesReturned,",
+    "    NULL",
+    "  );",
+    "",
+    "  if (!ok || bytesReturned != OPENCONTROLLER_LIGHT_REPORT_BYTES) {",
+    "    return -1;",
+    "  }",
+    "  if (report[0] != OPENCONTROLLER_LIGHT_REPORT_ID) {",
+    "    return -1;",
+    "  }",
+    "  return 0;",
+    "}",
+    "",
     "static void opencontroller_print_rumble_feedback(",
     "  const char *controllerId,",
     "  const uint8_t report[OPENCONTROLLER_RUMBLE_REPORT_BYTES]",
@@ -1537,6 +1681,39 @@ export function createWindowsVhfHostBridgeSource(
     "    (double)report[2] / 255.0,",
     "    (double)report[3] / 255.0,",
     "    (double)report[4] / 255.0",
+    "  );",
+    "  fflush(stdout);",
+    "}",
+    "",
+    "static void opencontroller_print_light_feedback(",
+    "  const char *controllerId,",
+    "  const uint8_t report[OPENCONTROLLER_LIGHT_REPORT_BYTES]",
+    ")",
+    "{",
+    "  char reportBase64[OPENCONTROLLER_LIGHT_REPORT_BASE64_BYTES + 1];",
+    "",
+    "  opencontroller_encode_base64_bytes(",
+    "    report,",
+    "    OPENCONTROLLER_LIGHT_REPORT_BYTES,",
+    "    reportBase64,",
+    "    sizeof(reportBase64)",
+    "  );",
+    "",
+    "  printf(",
+    '    "{\\"type\\":\\"opencontroller.bridge.feedback\\",\\"version\\":1,\\"controllerId\\":\\""',
+    "  );",
+    "  opencontroller_print_json_string(controllerId);",
+    "  printf(",
+    '    "\\",\\"timestamp\\":%llu,\\"feedbackType\\":\\"lights\\",\\"reportFormat\\":\\"hid-gamepad-lights\\",\\"reportId\\":%u,\\"reportBase64\\":\\"%s\\",\\"red\\":%.6f,\\"green\\":%.6f,\\"blue\\":%.6f,\\"brightness\\":%.6f,\\"playerIndex\\":%u,\\"playerLightMask\\":%u}\\n",',
+    "    opencontroller_timestamp_ms(),",
+    "    (unsigned int)OPENCONTROLLER_LIGHT_REPORT_ID,",
+    "    reportBase64,",
+    "    (double)report[1] / 255.0,",
+    "    (double)report[2] / 255.0,",
+    "    (double)report[3] / 255.0,",
+    "    (double)report[4] / 255.0,",
+    "    (unsigned int)report[5],",
+    "    (unsigned int)report[6]",
     "  );",
     "  fflush(stdout);",
     "}",
@@ -1636,10 +1813,17 @@ export function createWindowsVhfHostBridgeSource(
     "",
     "  while (InterlockedCompareExchange(context->running, 0, 0) != 0) {",
     "    uint8_t rumbleReport[OPENCONTROLLER_RUMBLE_REPORT_BYTES];",
+    "    uint8_t lightReport[OPENCONTROLLER_LIGHT_REPORT_BYTES];",
     "    if (opencontroller_pop_rumble_report(context->device, rumbleReport) == 0) {",
     "      opencontroller_print_rumble_feedback(",
     "        context->controllerId,",
     "        rumbleReport",
+    "      );",
+    "    }",
+    "    if (opencontroller_pop_light_report(context->device, lightReport) == 0) {",
+    "      opencontroller_print_light_feedback(",
+    "        context->controllerId,",
+    "        lightReport",
     "      );",
     "    }",
     "    Sleep(16);",
@@ -1735,9 +1919,10 @@ function formatWindowsVhfSetupReadme(plan: WindowsVhfSetupPlan): string {
     "4. Build the user-mode host bridge executable with the matching IOCTL header.",
     `5. Place the host bridge at ${plan.hostBridgePath}.`,
     "",
-    "The generated driver captures HID rumble output reports and the host bridge",
-    "prints OpenController feedback JSONL on stdout. Keep the generated driver",
-    "and host bridge sources paired so their submit and rumble IOCTLs match.",
+    "The generated driver captures HID rumble and light output reports, and the",
+    "host bridge prints OpenController feedback JSONL on stdout. Keep the",
+    "generated driver and host bridge sources paired so their submit, rumble,",
+    "and light IOCTLs match.",
     "",
     "## Reviewed Commands",
     "",

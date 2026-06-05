@@ -10,21 +10,28 @@ import {
   nativeBridgeMessageToProfileHidReportBytes,
 } from "@opencontroller/core/bridge";
 import {
+  type HidGamepadLightEffect,
+  type HidGamepadLightReport,
   type HidGamepadReport,
   type HidGamepadRumbleEffect,
   type HidGamepadRumbleReport,
   type HidPlayStationExtendedReport,
   type HidSwitchExtendedReport,
+  decodeHidGamepadLightReport,
   decodeHidGamepadReport,
   decodeHidGamepadRumbleReport,
   decodeHidPlayStationExtendedReport,
   decodeHidSwitchExtendedReport,
+  encodeHidGamepadLightReport,
   encodeHidGamepadReport,
   encodeHidGamepadRumbleReport,
   encodeHidPlayStationExtendedReport,
   encodeHidSwitchExtendedReport,
+  hidGamepadLightReportByteLength,
+  hidGamepadLightReportId,
   hidGamepadReportByteLength,
   hidGamepadReportDescriptor,
+  hidGamepadReportDescriptorWithFeedback,
   hidGamepadReportDescriptorWithRumble,
   hidGamepadReportFromNativeBridgeMessage,
   hidGamepadReportId,
@@ -32,10 +39,12 @@ import {
   hidGamepadRumbleReportId,
   hidPlayStationExtendedReportByteLength,
   hidPlayStationExtendedReportDescriptor,
+  hidPlayStationExtendedReportDescriptorWithFeedback,
   hidPlayStationExtendedReportDescriptorWithRumble,
   hidPlayStationExtendedReportId,
   hidSwitchExtendedReportByteLength,
   hidSwitchExtendedReportDescriptor,
+  hidSwitchExtendedReportDescriptorWithFeedback,
   hidSwitchExtendedReportDescriptorWithRumble,
   hidSwitchExtendedReportId,
 } from "@opencontroller/core/hid";
@@ -45,15 +54,20 @@ export type MacosDriverKitInputReport = HidGamepadReport;
 export type MacosDriverKitPlayStationInputReport = HidPlayStationExtendedReport;
 export type MacosDriverKitSwitchInputReport = HidSwitchExtendedReport;
 export type MacosDriverKitRumbleReport = HidGamepadRumbleReport;
+export type MacosDriverKitLightReport = HidGamepadLightReport;
 
 export const macosDriverKitHidReportDescriptor = hidGamepadReportDescriptor;
 export const macosDriverKitHidReportDescriptorWithRumble =
   hidGamepadReportDescriptorWithRumble;
+export const macosDriverKitHidReportDescriptorWithFeedback =
+  hidGamepadReportDescriptorWithFeedback;
 export const macosDriverKitInputReportByteLength = hidGamepadReportByteLength;
 export const macosDriverKitPlayStationHidReportDescriptor =
   hidPlayStationExtendedReportDescriptor;
 export const macosDriverKitPlayStationHidReportDescriptorWithRumble =
   hidPlayStationExtendedReportDescriptorWithRumble;
+export const macosDriverKitPlayStationHidReportDescriptorWithFeedback =
+  hidPlayStationExtendedReportDescriptorWithFeedback;
 export const macosDriverKitPlayStationInputReportByteLength =
   hidPlayStationExtendedReportByteLength;
 export const macosDriverKitPlayStationInputReportId =
@@ -62,12 +76,17 @@ export const macosDriverKitSwitchHidReportDescriptor =
   hidSwitchExtendedReportDescriptor;
 export const macosDriverKitSwitchHidReportDescriptorWithRumble =
   hidSwitchExtendedReportDescriptorWithRumble;
+export const macosDriverKitSwitchHidReportDescriptorWithFeedback =
+  hidSwitchExtendedReportDescriptorWithFeedback;
 export const macosDriverKitSwitchInputReportByteLength =
   hidSwitchExtendedReportByteLength;
 export const macosDriverKitSwitchInputReportId = hidSwitchExtendedReportId;
 export const macosDriverKitRumbleReportId = hidGamepadRumbleReportId;
 export const macosDriverKitRumbleReportByteLength =
   hidGamepadRumbleReportByteLength;
+export const macosDriverKitLightReportId = hidGamepadLightReportId;
+export const macosDriverKitLightReportByteLength =
+  hidGamepadLightReportByteLength;
 
 export type MacosDriverKitBundleOptions = {
   appBundleIdentifier?: string;
@@ -175,6 +194,7 @@ export const defaultMacosDriverKitDriverSourceOptions = {
 type MacosDriverKitReportSpec = {
   profile: MacosDriverKitReportProfile;
   descriptor: Uint8Array;
+  descriptorWithFeedback: Uint8Array;
   descriptorWithRumble: Uint8Array;
   inputReportByteLength: number;
   inputReportId: number;
@@ -187,6 +207,8 @@ function macosDriverKitReportSpec(
     return {
       profile,
       descriptor: macosDriverKitPlayStationHidReportDescriptor,
+      descriptorWithFeedback:
+        macosDriverKitPlayStationHidReportDescriptorWithFeedback,
       descriptorWithRumble:
         macosDriverKitPlayStationHidReportDescriptorWithRumble,
       inputReportByteLength: macosDriverKitPlayStationInputReportByteLength,
@@ -198,6 +220,8 @@ function macosDriverKitReportSpec(
     return {
       profile,
       descriptor: macosDriverKitSwitchHidReportDescriptor,
+      descriptorWithFeedback:
+        macosDriverKitSwitchHidReportDescriptorWithFeedback,
       descriptorWithRumble: macosDriverKitSwitchHidReportDescriptorWithRumble,
       inputReportByteLength: macosDriverKitSwitchInputReportByteLength,
       inputReportId: macosDriverKitSwitchInputReportId,
@@ -207,6 +231,7 @@ function macosDriverKitReportSpec(
   return {
     profile: "generic",
     descriptor: macosDriverKitHidReportDescriptor,
+    descriptorWithFeedback: macosDriverKitHidReportDescriptorWithFeedback,
     descriptorWithRumble: macosDriverKitHidReportDescriptorWithRumble,
     inputReportByteLength: macosDriverKitInputReportByteLength,
     inputReportId: hidGamepadReportId,
@@ -382,7 +407,7 @@ export function createMacosDriverKitHostBridgeAdapter(
     ...(options.spawn ? { spawn: options.spawn } : {}),
     supportsVirtualDevice: options.supportsVirtualDevice ?? true,
     supportsRumble: options.supportsRumble ?? true,
-    supportsLights: options.supportsLights ?? false,
+    supportsLights: options.supportsLights ?? true,
     virtualDeviceKind: options.virtualDeviceKind ?? "os-virtual-gamepad",
     requiresNativeInstall: options.requiresNativeInstall ?? true,
     requiresElevatedPermissions: options.requiresElevatedPermissions ?? false,
@@ -421,6 +446,18 @@ export function decodeMacosDriverKitRumbleReport(
   bytes: Uint8Array,
 ): MacosDriverKitRumbleReport {
   return decodeHidGamepadRumbleReport(bytes);
+}
+
+export function encodeMacosDriverKitLightReport(
+  effectOrReport: HidGamepadLightEffect | MacosDriverKitLightReport,
+): Uint8Array {
+  return encodeHidGamepadLightReport(effectOrReport);
+}
+
+export function decodeMacosDriverKitLightReport(
+  bytes: Uint8Array,
+): MacosDriverKitLightReport {
+  return decodeHidGamepadLightReport(bytes);
 }
 
 export function macosDriverKitInputReportBytesFromNativeBridgeMessage(
@@ -510,7 +547,7 @@ export function formatMacosDriverKitHidDescriptorForCpp(
 ): string {
   return formatCppByteArray(
     symbolName,
-    macosDriverKitHidReportDescriptorWithRumble,
+    macosDriverKitHidReportDescriptorWithFeedback,
     12,
   );
 }
@@ -520,7 +557,7 @@ export function formatMacosDriverKitPlayStationHidDescriptorForCpp(
 ): string {
   return formatCppByteArray(
     symbolName,
-    macosDriverKitPlayStationHidReportDescriptorWithRumble,
+    macosDriverKitPlayStationHidReportDescriptorWithFeedback,
     12,
   );
 }
@@ -530,7 +567,7 @@ export function formatMacosDriverKitSwitchHidDescriptorForCpp(
 ): string {
   return formatCppByteArray(
     symbolName,
-    macosDriverKitSwitchHidReportDescriptorWithRumble,
+    macosDriverKitSwitchHidReportDescriptorWithFeedback,
     12,
   );
 }
@@ -688,10 +725,15 @@ export function createMacosDriverKitAssetManifest(
     hidReportDescriptorWithRumbleBytes: Array.from(
       reportSpec.descriptorWithRumble,
     ),
+    hidReportDescriptorWithFeedbackBytes: Array.from(
+      reportSpec.descriptorWithFeedback,
+    ),
     inputReportByteLength: reportSpec.inputReportByteLength,
     inputReportId: reportSpec.inputReportId,
     rumbleReportByteLength: macosDriverKitRumbleReportByteLength,
     rumbleReportId: macosDriverKitRumbleReportId,
+    lightReportByteLength: macosDriverKitLightReportByteLength,
+    lightReportId: macosDriverKitLightReportId,
     requiredEntitlements: [
       "com.apple.developer.driverkit",
       "com.apple.developer.driverkit.family.hid.virtual.device",
@@ -752,11 +794,18 @@ export function createMacosDriverKitDriverHeader(
     "    uint32_t length,",
     "    bool *hasReport",
     "  );",
+    "  kern_return_t copyLightReport(",
+    "    uint8_t *bytes,",
+    "    uint32_t length,",
+    "    bool *hasReport",
+    "  );",
     "",
     "private:",
     `  uint8_t inputReport[${reportSpec.inputReportByteLength}];`,
     `  uint8_t rumbleReport[${macosDriverKitRumbleReportByteLength}];`,
+    `  uint8_t lightReport[${macosDriverKitLightReportByteLength}];`,
     "  bool hasRumbleReport;",
+    "  bool hasLightReport;",
     "};",
     "",
     `#endif  // ${guard}`,
@@ -787,7 +836,7 @@ export function createMacosDriverKitDriverSource(
     "",
     formatCppByteArray(
       "openControllerHidReportDescriptor",
-      reportSpec.descriptorWithRumble,
+      reportSpec.descriptorWithFeedback,
       12,
     ),
     "",
@@ -803,6 +852,8 @@ export function createMacosDriverKitDriverSource(
     `static const uint8_t openControllerInputReportId = ${reportSpec.inputReportId};`,
     `static const uint8_t openControllerRumbleReportId = ${macosDriverKitRumbleReportId};`,
     `static const uint32_t openControllerRumbleReportLength = ${macosDriverKitRumbleReportByteLength};`,
+    `static const uint8_t openControllerLightReportId = ${macosDriverKitLightReportId};`,
+    `static const uint32_t openControllerLightReportLength = ${macosDriverKitLightReportByteLength};`,
     "",
     `OSDefineMetaClassAndStructors(${className}, IOUserHIDDevice)`,
     "",
@@ -818,7 +869,9 @@ export function createMacosDriverKitDriverSource(
     "    sizeof(inputReport)",
     "  );",
     "  memset(rumbleReport, 0, sizeof(rumbleReport));",
+    "  memset(lightReport, 0, sizeof(lightReport));",
     "  hasRumbleReport = false;",
+    "  hasLightReport = false;",
     "  return true;",
     "}",
     "",
@@ -912,22 +965,25 @@ export function createMacosDriverKitDriverSource(
     "    return kIOReturnUnsupported;",
     "  }",
     "",
-    "  if ((options & 0xff) != openControllerRumbleReportId) {",
+    "  const uint8_t reportId = (uint8_t)(options & 0xff);",
+    "  if (reportId != openControllerRumbleReportId &&",
+    "      reportId != openControllerLightReportId) {",
     "    return kIOReturnUnsupported;",
     "  }",
     "",
-    "  const uint64_t bytesRead = report->readBytes(",
-    "    0,",
-    "    rumbleReport,",
-    "    sizeof(rumbleReport)",
-    "  );",
+    "  uint8_t *targetReport = reportId == openControllerRumbleReportId ?",
+    "    rumbleReport : lightReport;",
+    "  const uint32_t targetLength = reportId == openControllerRumbleReportId ?",
+    "    openControllerRumbleReportLength : openControllerLightReportLength;",
+    "  const uint64_t bytesRead = report->readBytes(0, targetReport, targetLength);",
     "  kern_return_t result = kIOReturnSuccess;",
     "",
-    "  if (bytesRead != openControllerRumbleReportLength ||",
-    "      rumbleReport[0] != openControllerRumbleReportId) {",
+    "  if (bytesRead != targetLength || targetReport[0] != reportId) {",
     "    result = kIOReturnBadArgument;",
-    "  } else {",
+    "  } else if (reportId == openControllerRumbleReportId) {",
     "    hasRumbleReport = true;",
+    "  } else {",
+    "    hasLightReport = true;",
     "  }",
     "",
     "  if (action != nullptr) {",
@@ -972,6 +1028,27 @@ export function createMacosDriverKitDriverSource(
     "",
     "  memcpy(bytes, rumbleReport, sizeof(rumbleReport));",
     "  hasRumbleReport = false;",
+    "  *hasReport = true;",
+    "  return kIOReturnSuccess;",
+    "}",
+    "",
+    `kern_return_t ${className}::copyLightReport(`,
+    "  uint8_t *bytes,",
+    "  uint32_t length,",
+    "  bool *hasReport",
+    ")",
+    "{",
+    "  if (bytes == nullptr || hasReport == nullptr || length != sizeof(lightReport)) {",
+    "    return kIOReturnBadArgument;",
+    "  }",
+    "",
+    "  if (!hasLightReport) {",
+    "    *hasReport = false;",
+    "    return kIOReturnSuccess;",
+    "  }",
+    "",
+    "  memcpy(bytes, lightReport, sizeof(lightReport));",
+    "  hasLightReport = false;",
     "  *hasReport = true;",
     "  return kIOReturnSuccess;",
     "}",
@@ -1088,8 +1165,8 @@ function formatMacosDriverKitSetupReadme(
     "This folder contains generated OpenController source material for a macOS",
     "DriverKit virtual HID gamepad backend.",
     `The generated DriverKit device uses the ${plan.reportProfile} HID report profile`,
-    "with rumble output support and stores the latest rumble report for a signed",
-    "host bridge to publish through OpenController feedback events.",
+    "with rumble and light output support and stores the latest output reports",
+    "for a signed host bridge to publish through OpenController feedback events.",
     "",
     "No privileged system changes were made when this kit was generated.",
     "",
