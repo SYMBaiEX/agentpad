@@ -44,6 +44,9 @@ import { encodeHidGamepadReport } from "@opencontroller/core/hid";
 const adapter = new HidGamepadReportAdapter({
   onReport({ controllerId, bytes }) {
     console.log(controllerId, bytes);
+  },
+  onFeedback(event) {
+    console.log("rumble", event.weakMotor, event.strongMotor);
   }
 });
 
@@ -195,3 +198,28 @@ Helpers can report host haptics back to the SDK by emitting an
 `opencontroller.bridge.feedback` JSONL message whose `reportFormat` is
 `"hid-gamepad-rumble"`; process adapters surface those messages through
 `controller.onFeedback(...)`.
+
+In-process HID report adapters can surface the same output report without JSONL:
+
+```ts
+import { HidGamepadReportAdapter, createController } from "@opencontroller/core";
+import { encodeHidGamepadRumbleReport } from "@opencontroller/core/hid";
+
+const adapter = new HidGamepadReportAdapter();
+const controller = await createController({
+  profile: "xbox",
+  adapter,
+  replay: false
+});
+
+controller.onFeedback((event) => {
+  console.log(event.type, event.weakMotor, event.strongMotor);
+});
+
+adapter.receiveOutputReport(
+  encodeHidGamepadRumbleReport({
+    weakMotor: 0.25,
+    strongMotor: 0.8
+  })
+);
+```

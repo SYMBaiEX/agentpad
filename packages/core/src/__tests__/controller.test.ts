@@ -580,16 +580,26 @@ describe("controller runtime", () => {
     const hidGamepad = new HidGamepadReportAdapter().capabilities();
     const hidPlayStation =
       new HidPlayStationExtendedReportAdapter().capabilities();
-    expect(hidGamepad.reportFormats).toEqual(["hid-gamepad"]);
+    expect(hidGamepad.reportFormats).toEqual([
+      "hid-gamepad",
+      "hid-gamepad-rumble",
+    ]);
     expect(hidGamepad.outputFormats).toContain("hid-gamepad-report");
     expect(hidGamepad.supportsStateSync).toBe(true);
-    expect(hidPlayStation.reportFormats).toEqual(["hid-playstation-extended"]);
+    expect(hidGamepad.supportsRumble).toBe(true);
+    expect(hidGamepad.feedbackTypes).toEqual(["rumble"]);
+    expect(hidPlayStation.reportFormats).toEqual([
+      "hid-playstation-extended",
+      "hid-gamepad-rumble",
+    ]);
     expect(hidPlayStation.outputFormats).toContain(
       "hid-playstation-extended-report",
     );
     expect(hidPlayStation.supportedProfiles).toEqual(["playstation"]);
     expect(hidPlayStation.supportsTouchpad).toBe(true);
     expect(hidPlayStation.supportsGyro).toBe(true);
+    expect(hidPlayStation.supportsRumble).toBe(true);
+    expect(hidPlayStation.feedbackTypes).toEqual(["rumble"]);
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
     expect(nativeBridge.reportFormats).toEqual([
@@ -773,9 +783,13 @@ describe("controller runtime", () => {
       replay: false,
     });
 
-    expect(hidGamepad.capabilities().reportFormats).toEqual(["hid-gamepad"]);
+    expect(hidGamepad.capabilities().reportFormats).toEqual([
+      "hid-gamepad",
+      "hid-gamepad-rumble",
+    ]);
     expect(playstation.capabilities().reportFormats).toEqual([
       "hid-playstation-extended",
+      "hid-gamepad-rumble",
     ]);
 
     await hidGamepad.disconnect();
@@ -814,6 +828,56 @@ describe("controller runtime", () => {
     expect(report.leftStickX).toBe(32767);
     expect(report.leftStickY).toBe(32767);
 
+    await controller.disconnect();
+  });
+
+  test("surfaces HID gamepad rumble output reports as feedback", async () => {
+    const optionFeedbackEvents: ControllerFeedbackEvent[] = [];
+    const listenerFeedbackEvents: ControllerFeedbackEvent[] = [];
+    const adapter = new HidGamepadReportAdapter({
+      onFeedback(event) {
+        optionFeedbackEvents.push(event);
+      },
+    });
+    const controller = await createController({
+      id: "hid-player",
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+    const unsubscribe = controller.onFeedback((event) => {
+      listenerFeedbackEvents.push(event);
+    });
+
+    const bytes = encodeHidGamepadRumbleReport({
+      weakMotor: 0.25,
+      strongMotor: 0.5,
+      leftTriggerMotor: 0.75,
+      rightTriggerMotor: 1,
+    });
+    const event = adapter.receiveOutputReport(bytes, {
+      timestamp: 123,
+      durationMs: 60,
+    });
+
+    expect(event).toMatchObject({
+      type: "rumble",
+      controllerId: "hid-player",
+      timestamp: 123,
+      weakMotor: 64 / 255,
+      strongMotor: 128 / 255,
+      leftTriggerMotor: 191 / 255,
+      rightTriggerMotor: 1,
+      durationMs: 60,
+      source: "hid-gamepad-report",
+      reportFormat: "hid-gamepad-rumble",
+      reportId: hidGamepadRumbleReportId,
+    });
+    expect(optionFeedbackEvents).toEqual([event]);
+    expect(listenerFeedbackEvents).toEqual([event]);
+    expect(decodeHidGamepadRumbleReport(bytes).strongMotor).toBe(128);
+
+    unsubscribe();
     await controller.disconnect();
   });
 
@@ -947,6 +1011,49 @@ describe("controller runtime", () => {
     });
     expect(report.accelerationZ).toBe(9830);
     expect(report.gyroscopeZ).toBe(-9830);
+
+    await controller.disconnect();
+  });
+
+  test("surfaces PlayStation HID rumble output reports as feedback", async () => {
+    const feedbackEvents: ControllerFeedbackEvent[] = [];
+    const adapter = new HidPlayStationExtendedReportAdapter();
+    const controller = await createController({
+      id: "ps-player",
+      profile: "playstation",
+      adapter,
+      replay: false,
+    });
+    controller.onFeedback((event) => {
+      feedbackEvents.push(event);
+    });
+
+    const event = adapter.receiveRumbleReport(
+      {
+        weakMotor: 0.1,
+        strongMotor: 0.2,
+        leftTriggerMotor: 0.3,
+        rightTriggerMotor: 0.4,
+      },
+      {
+        timestamp: 456,
+        source: "signed-host-bridge",
+      },
+    );
+
+    expect(event).toMatchObject({
+      type: "rumble",
+      controllerId: "ps-player",
+      timestamp: 456,
+      weakMotor: 26 / 255,
+      strongMotor: 51 / 255,
+      leftTriggerMotor: 77 / 255,
+      rightTriggerMotor: 102 / 255,
+      source: "signed-host-bridge",
+      reportFormat: "hid-gamepad-rumble",
+      reportId: hidGamepadRumbleReportId,
+    });
+    expect(feedbackEvents).toEqual([event]);
 
     await controller.disconnect();
   });

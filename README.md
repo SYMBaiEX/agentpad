@@ -375,6 +375,9 @@ const adapter = new HidGamepadReportAdapter({
   onReport({ bytes }) {
     // Send bytes directly to an in-process virtual HID bridge.
     console.log(bytes);
+  },
+  onFeedback(event) {
+    console.log("host rumble", event.weakMotor, event.strongMotor);
   }
 });
 ```
@@ -384,7 +387,9 @@ The report shape includes 16 buttons, four signed stick axes, and two trigger
 axes. OpenController also defines a compact vendor output report for rumble
 channels so native drivers have a shared haptics contract to implement. Native
 helpers can also send rumble feedback back to agents through
-`controller.onFeedback(...)`. See [HID Gamepad Reports](docs/hid-gamepad-reports.md).
+`controller.onFeedback(...)`; in-process HID adapters can surface the same
+events through `adapter.receiveOutputReport(bytes)`. See
+[HID Gamepad Reports](docs/hid-gamepad-reports.md).
 
 ### Native Bridge JSONL
 

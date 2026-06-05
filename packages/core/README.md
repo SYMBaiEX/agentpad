@@ -184,6 +184,9 @@ const hid = new HidGamepadReportAdapter({
   onReport({ bytes }) {
     console.log("hid", bytes);
   },
+  onFeedback(event) {
+    console.log("hid rumble", event.weakMotor, event.strongMotor);
+  },
 });
 
 const playstation = new HidPlayStationExtendedReportAdapter({
@@ -196,7 +199,10 @@ const playstation = new HidPlayStationExtendedReportAdapter({
 Use `xinput-report` for the compact 12-byte XInput compatibility payload,
 `hid-gamepad-report` for the 13-byte descriptor-backed generic HID gamepad
 payload, and `hid-playstation-extended-report` for the 47-byte PlayStation
-profile payload that carries touchpad contacts and motion vectors.
+profile payload that carries touchpad contacts and motion vectors. The HID
+report adapters also accept the shared 5-byte rumble output report through
+`adapter.receiveOutputReport(bytes)` and surface it through
+`controller.onFeedback(...)`.
 
 ## Capability Metadata
 
