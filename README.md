@@ -73,7 +73,8 @@ device bridges where the operating system requires them.
 - Canonical HID gamepad report descriptor and input report encoder
 - PlayStation extended HID report bytes for touchpad contacts and motion vectors
 - Versioned JSONL native bridge protocol with XInput/HID payloads and optional
-  profile-specific HID payloads plus touchpad/motion/status extensions
+  profile-specific HID payloads plus connect/disconnect lifecycle messages and
+  touchpad/motion/status extensions
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, native backend doctor, native bridge smoke tests, dry-run tests, overlay, replay, and starter action maps
@@ -705,6 +706,11 @@ important boundary for virtual controller emulation: native drivers generally
 want the current complete gamepad state, not only an event like "A was pressed."
 Process-backed native helpers can additionally opt into feedback events so games
 and host drivers can send haptics back to AI agents.
+
+Native bridge streams start with an `opencontroller.bridge.connect` message for
+each controller before state reports begin. The message carries the controller
+ID, profile, available report formats, and helper feedback channels so native
+bridges can create or select the right virtual device before input bytes arrive.
 
 Every adapter exposes capability metadata through `controller.capabilities()`.
 Agents can inspect supported profiles, command types, output formats, report

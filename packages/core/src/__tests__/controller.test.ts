@@ -16,6 +16,7 @@ import {
   createActionMap,
   createController,
   createControllerHub,
+  createNativeBridgeConnectMessage,
   createNativeBridgeLightFeedbackMessage,
   createNativeBridgeRumbleFeedbackMessage,
   createNativeBridgeStateMessage,
@@ -1463,6 +1464,33 @@ describe("controller runtime", () => {
     });
   });
 
+  test("round-trips native bridge connect lifecycle messages", async () => {
+    const controller = await createController({
+      id: "connect-player",
+      profile: "playstation",
+      adapter: "dry-run",
+      replay: false,
+    });
+
+    const message = createNativeBridgeConnectMessage(controller.getState(), {
+      timestamp: 123,
+      feedbackTypes: ["rumble", "lights", "rumble"],
+    });
+    const parsed = parseNativeBridgeMessage(JSON.stringify(message));
+
+    expect(parsed).toEqual({
+      type: "opencontroller.bridge.connect",
+      version: 1,
+      controllerId: "connect-player",
+      profile: "playstation",
+      timestamp: 123,
+      reportFormats: ["xinput", "hid-gamepad", "hid-playstation-extended"],
+      feedbackTypes: ["rumble", "lights"],
+    });
+
+    await controller.disconnect();
+  });
+
   test("round-trips native bridge light feedback messages", () => {
     const message = createNativeBridgeLightFeedbackMessage({
       controllerId: "player-1",
@@ -1666,10 +1694,17 @@ describe("controller runtime", () => {
       0,
     );
 
-    const legacyStateMessage = legacyLines
-      .map(parseNativeBridgeMessage)
+    const legacyMessages = legacyLines.map(parseNativeBridgeMessage);
+    const legacyConnectMessage = legacyMessages.find(
+      (message) => message.type === "opencontroller.bridge.connect",
+    );
+    const legacyStateMessage = legacyMessages
       .filter((message) => message.type === "opencontroller.bridge.state")
       .at(-1);
+    expect(legacyConnectMessage).toMatchObject({
+      type: "opencontroller.bridge.connect",
+      reportFormats: ["xinput", "hid-gamepad"],
+    });
     expect(legacyStateMessage?.type).toBe("opencontroller.bridge.state");
     if (
       !legacyStateMessage ||
@@ -1869,12 +1904,25 @@ describe("controller runtime", () => {
     await controller.press("A", 5);
 
     const messages = lines.map(parseNativeBridgeMessage);
+    const connect = messages[0];
     const aPressed = messages.find(
       (message) =>
         message.type === "opencontroller.bridge.state" &&
         (message.report.buttons & xInputButtonBits.A) !== 0,
     );
 
+    expect(connect).toMatchObject({
+      type: "opencontroller.bridge.connect",
+      controllerId: "player-1",
+      profile: "xbox",
+      reportFormats: ["xinput", "hid-gamepad"],
+      feedbackTypes: [],
+    });
+    expect(
+      messages.filter(
+        (message) => message.type === "opencontroller.bridge.connect",
+      ),
+    ).toHaveLength(1);
     expect(aPressed?.type).toBe("opencontroller.bridge.state");
     if (!aPressed || aPressed.type !== "opencontroller.bridge.state") {
       throw new Error("Expected an A-pressed native bridge state message");
@@ -1957,6 +2005,12 @@ describe("controller runtime", () => {
     await controller.disconnect();
 
     const messages = lines.map(parseNativeBridgeMessage);
+    expect(messages[0]).toMatchObject({
+      type: "opencontroller.bridge.connect",
+      controllerId: "player-1",
+      profile: "xbox",
+      feedbackTypes: [],
+    });
     const aPressed = messages.find(
       (message) =>
         message.type === "opencontroller.bridge.state" &&

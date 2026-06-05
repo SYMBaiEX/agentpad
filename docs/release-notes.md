@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added `opencontroller.bridge.connect` lifecycle messages for native bridge
+  streams so host helpers can create/select virtual devices before state
+  reports arrive, with advertised report formats and feedback channels.
 - Added `ControllerState.feedback` tracking for latest host rumble/light output
   and replay `feedback` events written to `events.jsonl` plus
   `feedback.jsonl`.
@@ -49,7 +52,7 @@
   encoded as combined cardinal D-pad state and report bits.
 - D-pad helper commands now honor disabled-button, disabled-combo, and
   max-button-hold safety policies through their underlying `DPAD_*` buttons.
-- Prepared workspace package manifests for the next `0.1.12` npm patch release.
+- Prepared workspace package manifests for the next `0.1.13` npm patch release.
 - Added a guarded `publish:npm` helper that publishes packages in dependency
   order and supports npm two-factor `--otp` codes.
 - `CODE_OF_CONDUCT.md` added for open-source community participation.

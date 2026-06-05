@@ -2,7 +2,9 @@ import { spawn as spawnChildProcess } from "node:child_process";
 import { Readable } from "node:stream";
 import {
   type CreateNativeBridgeStateMessageOptions,
+  type NativeBridgeConnectReportFormat,
   type NativeBridgeMessage,
+  createNativeBridgeConnectMessage,
   createNativeBridgeDisconnectMessage,
   createNativeBridgeStateMessage,
   nativeBridgeFeedbackMessageToControllerFeedback,
@@ -54,6 +56,7 @@ export type NativeProcessBridgeAdapterOptions = {
   args?: string[];
   cwd?: string;
   env?: Record<string, string | undefined>;
+  includeConnectMessage?: boolean;
   includeState?: boolean;
   includeExtensions?: boolean;
   includeProfileHidReport?: boolean;
@@ -79,6 +82,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
   private readonly feedbackEvents = new EventEmitter<{
     feedback: ControllerFeedbackEvent;
   }>();
+  private readonly connectedControllerIds = new Set<string>();
   private process: NativeProcessBridgeProcess | undefined;
   private exitCode: number | undefined;
   private connected = false;
@@ -122,6 +126,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
 
   async syncState(state: ControllerState): Promise<void> {
     this.assertConnected();
+    await this.emitConnectIfNeeded(state);
     this.controllerId = state.id;
     await this.emit(
       createNativeBridgeStateMessage(state, this.stateMessageOptions()),
@@ -148,6 +153,8 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
       await this.process?.stdin.end?.();
       await this.waitForExit();
     } finally {
+      this.connectedControllerIds.clear();
+      this.controllerId = undefined;
       this.connected = false;
       this.process = undefined;
     }
@@ -215,6 +222,43 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
     this.messages.push(message);
     await process.stdin.write(line);
     await process.stdin.flush?.();
+  }
+
+  private async emitConnectIfNeeded(state: ControllerState): Promise<void> {
+    if (
+      this.options.includeConnectMessage === false ||
+      this.connectedControllerIds.has(state.id)
+    ) {
+      return;
+    }
+
+    await this.emit(
+      createNativeBridgeConnectMessage(state, {
+        reportFormats: this.connectReportFormats(state),
+        feedbackTypes: [
+          ...(this.options.supportsRumble ? (["rumble"] as const) : []),
+          ...(this.options.supportsLights ? (["lights"] as const) : []),
+        ],
+      }),
+    );
+    this.connectedControllerIds.add(state.id);
+  }
+
+  private connectReportFormats(
+    state: ControllerState,
+  ): NativeBridgeConnectReportFormat[] {
+    return [
+      "xinput",
+      "hid-gamepad",
+      ...(this.options.includeProfileHidReport !== false &&
+      state.profile === "playstation"
+        ? (["hid-playstation-extended"] as const)
+        : []),
+      ...(this.options.includeProfileHidReport !== false &&
+      state.profile === "switch"
+        ? (["hid-switch-extended"] as const)
+        : []),
+    ];
   }
 
   private async waitForExit(): Promise<void> {

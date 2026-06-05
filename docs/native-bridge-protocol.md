@@ -11,7 +11,7 @@ The current protocol is intentionally small:
 - report payload: 12-byte XInput-compatible report encoded as base64
 - extensions: optional touchpad, motion, and device-status side channels
 - feedback: optional native-helper JSONL output for host haptics such as rumble
-- lifecycle: state messages followed by an optional disconnect message
+- lifecycle: connect messages, state messages, and an optional disconnect message
 
 This protocol is the contract for Linux `uinput`, Windows virtual gamepad/HID,
 and macOS bridge packages. The TypeScript SDK does not install a driver by
@@ -81,6 +81,34 @@ controller.onFeedback((event) => {
   }
 });
 ```
+
+## Connect Message
+
+Native bridge adapters emit one connect message per controller before the first
+state message for that controller. Helpers can use it to create or select a
+virtual device before input reports arrive.
+
+```json
+{
+  "type": "opencontroller.bridge.connect",
+  "version": 1,
+  "controllerId": "player-1",
+  "profile": "xbox",
+  "timestamp": 1770000000000,
+  "reportFormats": ["xinput", "hid-gamepad"],
+  "feedbackTypes": ["rumble", "lights"]
+}
+```
+
+`reportFormats` lists the input payloads the stream can emit. PlayStation
+controllers also include `hid-playstation-extended`; Switch controllers include
+`hid-switch-extended`. `feedbackTypes` lists host output channels the helper can
+send back to the SDK through feedback JSONL. Helpers that do not need lifecycle
+metadata can ignore connect messages.
+
+Set `includeConnectMessage: false` on `NativeBridgeAdapter` or
+`NativeProcessBridgeAdapter` only for legacy helpers that cannot ignore unknown
+JSONL records.
 
 ## State Message
 
@@ -324,6 +352,10 @@ if (message.type === "opencontroller.bridge.state") {
   const xinputBytes = nativeBridgeMessageToReportBytes(message);
   const hidBytes = nativeBridgeMessageToHidGamepadReportBytes(message);
   // Write the payload required by the platform virtual-device backend.
+}
+
+if (message.type === "opencontroller.bridge.connect") {
+  // Prepare, select, or label the virtual device before state reports arrive.
 }
 
 if (message.type === "opencontroller.bridge.feedback") {

@@ -32,7 +32,8 @@ await controller.disconnect();
 
 `createNativeHostBridgeAdapter()` resolves the current platform, spawns the
 matching host bridge helper, streams OpenController native bridge JSONL to its
-stdin, and sends a disconnect message before closing the stream.
+stdin, sends an `opencontroller.bridge.connect` lifecycle message before the
+first state report, and sends a disconnect message before closing the stream.
 
 ## Override Backend Paths
 

@@ -789,6 +789,8 @@ describe("macOS DriverKit helpers", () => {
     expect(calls[0]?.env?.OPENCONTROLLER_DRIVERKIT_SERVICE_NAME).toBe(
       "ExampleOpenControllerDriver",
     );
+    expect(writes[0]).toContain("opencontroller.bridge.connect");
+    expect(writes[0]).toContain('"feedbackTypes":["rumble","lights"]');
     expect(writes.some((line) => line.includes('"hidReportBase64"'))).toBe(
       true,
     );

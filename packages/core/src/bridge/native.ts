@@ -49,6 +49,10 @@ export type NativeBridgeHidReportFormat = "hid-gamepad";
 export type NativeBridgeProfileHidReportFormat =
   | "hid-playstation-extended"
   | "hid-switch-extended";
+export type NativeBridgeConnectReportFormat =
+  | NativeBridgeReportFormat
+  | NativeBridgeHidReportFormat
+  | NativeBridgeProfileHidReportFormat;
 export type NativeBridgeFeedbackType = "rumble" | "lights";
 export type NativeBridgeFeedbackReportFormat =
   | "hid-gamepad-rumble"
@@ -107,6 +111,16 @@ export type NativeBridgeStateMessage = {
   state?: ControllerState;
 };
 
+export type NativeBridgeConnectMessage = {
+  type: "opencontroller.bridge.connect";
+  version: typeof nativeBridgeProtocolVersion;
+  controllerId: string;
+  profile: ControllerProfileName;
+  timestamp: number;
+  reportFormats: NativeBridgeConnectReportFormat[];
+  feedbackTypes: NativeBridgeFeedbackType[];
+};
+
 export type NativeBridgeDisconnectMessage = {
   type: "opencontroller.bridge.disconnect";
   version: typeof nativeBridgeProtocolVersion;
@@ -152,9 +166,16 @@ export type NativeBridgeFeedbackMessage =
   | NativeBridgeLightFeedbackMessage;
 
 export type NativeBridgeMessage =
+  | NativeBridgeConnectMessage
   | NativeBridgeStateMessage
   | NativeBridgeDisconnectMessage
   | NativeBridgeFeedbackMessage;
+
+export type CreateNativeBridgeConnectMessageOptions = {
+  timestamp?: number;
+  reportFormats?: readonly NativeBridgeConnectReportFormat[];
+  feedbackTypes?: readonly NativeBridgeFeedbackType[];
+};
 
 export type CreateNativeBridgeStateMessageOptions = {
   includeState?: boolean;
@@ -218,6 +239,36 @@ export function createNativeBridgeStateMessage(
     ...(extensions ? { extensions } : {}),
     ...(includeState ? { state } : {}),
   };
+}
+
+export function createNativeBridgeConnectMessage(
+  state: ControllerState,
+  options: CreateNativeBridgeConnectMessageOptions = {},
+): NativeBridgeConnectMessage {
+  return {
+    type: "opencontroller.bridge.connect",
+    version: nativeBridgeProtocolVersion,
+    controllerId: state.id,
+    profile: state.profile,
+    timestamp: options.timestamp ?? Date.now(),
+    reportFormats: uniqueNativeBridgeConnectReportFormats(
+      options.reportFormats ?? defaultNativeBridgeConnectReportFormats(state),
+    ),
+    feedbackTypes: uniqueNativeBridgeFeedbackTypes(options.feedbackTypes ?? []),
+  };
+}
+
+export function defaultNativeBridgeConnectReportFormats(
+  state: Pick<ControllerState, "profile">,
+): NativeBridgeConnectReportFormat[] {
+  return [
+    "xinput",
+    "hid-gamepad",
+    ...(state.profile === "playstation"
+      ? (["hid-playstation-extended"] as const)
+      : []),
+    ...(state.profile === "switch" ? (["hid-switch-extended"] as const) : []),
+  ];
 }
 
 export function createNativeBridgeProfileHidReportPayload(
@@ -555,6 +606,10 @@ export function isNativeBridgeMessage(
     return true;
   }
 
+  if (value.type === "opencontroller.bridge.connect") {
+    return isNativeBridgeConnectMessage(value);
+  }
+
   if (value.type === "opencontroller.bridge.feedback") {
     return isNativeBridgeFeedbackMessage(value);
   }
@@ -568,6 +623,23 @@ export function isNativeBridgeMessage(
     hasValidOptionalHidReport(value) &&
     hasValidOptionalProfileHidReport(value) &&
     hasValidOptionalStateExtensions(value)
+  );
+}
+
+export function isNativeBridgeConnectMessage(
+  value: unknown,
+): value is NativeBridgeConnectMessage {
+  return (
+    isRecord(value) &&
+    value.version === nativeBridgeProtocolVersion &&
+    value.type === "opencontroller.bridge.connect" &&
+    typeof value.controllerId === "string" &&
+    typeof value.profile === "string" &&
+    typeof value.timestamp === "number" &&
+    Array.isArray(value.reportFormats) &&
+    value.reportFormats.every(isNativeBridgeConnectReportFormat) &&
+    Array.isArray(value.feedbackTypes) &&
+    value.feedbackTypes.every(isNativeBridgeFeedbackType)
   );
 }
 
@@ -608,6 +680,35 @@ export function isNativeBridgeFeedbackMessage(
     isByteNumber(value.playerIndex) &&
     isByteNumber(value.playerLightMask)
   );
+}
+
+function uniqueNativeBridgeConnectReportFormats(
+  reportFormats: readonly NativeBridgeConnectReportFormat[],
+): NativeBridgeConnectReportFormat[] {
+  return Array.from(new Set(reportFormats));
+}
+
+function uniqueNativeBridgeFeedbackTypes(
+  feedbackTypes: readonly NativeBridgeFeedbackType[],
+): NativeBridgeFeedbackType[] {
+  return Array.from(new Set(feedbackTypes));
+}
+
+function isNativeBridgeConnectReportFormat(
+  value: unknown,
+): value is NativeBridgeConnectReportFormat {
+  return (
+    value === "xinput" ||
+    value === "hid-gamepad" ||
+    value === "hid-playstation-extended" ||
+    value === "hid-switch-extended"
+  );
+}
+
+function isNativeBridgeFeedbackType(
+  value: unknown,
+): value is NativeBridgeFeedbackType {
+  return value === "rumble" || value === "lights";
 }
 
 function isXInputReport(value: unknown): value is XInputGamepadReport {

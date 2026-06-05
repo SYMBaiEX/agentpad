@@ -48,6 +48,9 @@ export const linuxUinputButtonMap: Array<{
 export function linuxEventsFromNativeBridgeMessage(
   message: NativeBridgeMessage,
 ): LinuxInputEventPlan[] {
+  if (message.type === "opencontroller.bridge.connect") {
+    return [];
+  }
   if (message.type === "opencontroller.bridge.disconnect") {
     return linuxNeutralEvents();
   }
