@@ -169,6 +169,7 @@ export class NativeProcessBridgeAdapter implements ControllerAdapter {
       supportsLights,
       supportsTouchpad: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportsVirtualDevice,
       supportedCommands: controllerCommandTypes,
       requiresNativeInstall: this.options.requiresNativeInstall ?? true,

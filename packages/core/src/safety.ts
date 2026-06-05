@@ -169,6 +169,7 @@ export class SafetyGuard {
       case "setStick":
       case "touchpad":
       case "motion":
+      case "setStatus":
       case "wait":
       case "neutral":
         return;

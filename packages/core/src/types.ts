@@ -39,6 +39,29 @@ export type ControllerTouchpadContactInput = {
   pressure?: number;
 };
 
+export type ControllerBatteryState = {
+  level: number;
+  charging: boolean;
+  wired: boolean;
+  low: boolean;
+};
+
+export type ControllerConnectionHealth = {
+  quality: number;
+  latencyMs: number;
+  packetLoss: number;
+};
+
+export type ControllerDeviceStatus = {
+  battery: ControllerBatteryState;
+  connection: ControllerConnectionHealth;
+};
+
+export type ControllerDeviceStatusPatch = {
+  battery?: Partial<ControllerBatteryState>;
+  connection?: Partial<ControllerConnectionHealth>;
+};
+
 export type ControllerButtonStateInput =
   | boolean
   | {
@@ -65,6 +88,7 @@ export type ControllerStatePatch = {
     gyroscope?: ControllerVector3;
     orientation?: ControllerVector3;
   };
+  status?: ControllerDeviceStatusPatch;
 };
 
 export type ControllerCommand =
@@ -120,6 +144,10 @@ export type ControllerCommand =
   | {
       type: "setState";
       state: ControllerStatePatch;
+    }
+  | {
+      type: "setStatus";
+      status: ControllerDeviceStatusPatch;
     }
   | {
       type: "combo";
@@ -211,6 +239,7 @@ export type ControllerState = {
     gyroscope: ControllerVector3;
     orientation: ControllerVector3;
   };
+  status: ControllerDeviceStatus;
   updatedAt: number;
 };
 
@@ -291,6 +320,7 @@ export type ControllerAdapterCapabilities = {
   supportsLights: boolean;
   supportsTouchpad: boolean;
   supportsGyro: boolean;
+  supportsDeviceStatus: boolean;
   supportsStateSync: boolean;
   supportsXInputReports: boolean;
   supportsNativeBridge: boolean;

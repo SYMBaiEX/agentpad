@@ -114,6 +114,7 @@ export class WebSocketAdapter implements ControllerAdapter {
       supportsStateSync: true,
       supportsTouchpad: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportsVirtualDevice: false,
       supportedCommands: controllerCommandTypes,
       outputFormats: [

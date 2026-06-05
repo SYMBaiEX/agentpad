@@ -29,11 +29,16 @@ await controller.moveStick("LEFT", { x: 0.75, y: 0 });
 await controller.setButton("LB", true);
 await controller.setTrigger("RT", 0.25);
 await controller.setDpad("UP_RIGHT");
+await controller.setStatus({
+  battery: { level: 0.7, charging: true, wired: false },
+  connection: { quality: 0.98, latencyMs: 4, packetLoss: 0 },
+});
 await controller.setState({
   buttons: { LB: true },
   triggers: { RT: 0.1 },
   sticks: { LEFT: { x: 0.4, y: 0 } },
   dpad: "NEUTRAL",
+  status: { battery: { low: false } },
 });
 await controller.neutral();
 await controller.disconnect();
@@ -139,6 +144,31 @@ await controller.setState({
 and the runtime emits one normalized command, one replay entry, and one state
 sync snapshot.
 
+## Device Status
+
+```ts
+await controller.setStatus({
+  battery: {
+    level: 0.42,
+    charging: false,
+    wired: false,
+    low: true,
+  },
+  connection: {
+    quality: 0.86,
+    latencyMs: 18,
+    packetLoss: 0.01,
+  },
+});
+
+console.log(controller.getState().status);
+```
+
+Status patches are normalized into `0..1` battery, connection quality, and
+packet-loss values with non-negative latency. They travel through state
+snapshots, replay logs, WebSocket messages, and native bridge `extensions`
+without changing neutral controller input state.
+
 ## Touchpad And Motion
 
 ```ts
@@ -221,6 +251,7 @@ const capabilities = controller.capabilities();
 console.log(capabilities.supportedProfiles);
 console.log(capabilities.outputFormats);
 console.log(capabilities.reportFormats);
+console.log(capabilities.supportsDeviceStatus);
 
 if (
   capabilities.feedbackTypes.includes("rumble") ||
@@ -253,7 +284,7 @@ The native bridge helpers emit JSONL messages such as
 `opencontroller.bridge.state`, `opencontroller.bridge.feedback`, and
 `opencontroller.bridge.disconnect`. State messages include XInput/HID payloads,
 PlayStation profile HID payloads for touchpad/motion data, Switch profile HID
-payloads for motion data, and optional touchpad/motion `extensions`. Platform
+payloads for motion data, and optional touchpad/motion/status `extensions`. Platform
 packages consume those messages to drive Linux `uinput`, Windows VHF, or macOS
 DriverKit host bridges.
 

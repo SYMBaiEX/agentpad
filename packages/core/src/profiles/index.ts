@@ -1,6 +1,7 @@
 import { ProfileError } from "../errors";
 import type {
   ControllerCommand,
+  ControllerDeviceStatusPatch,
   ControllerProfileName,
   ControllerStatePatch,
   DpadCardinalDirection,
@@ -343,6 +344,17 @@ export function normalizeCommand(
         ...(universal ? { universal } : {}),
       };
     }
+    case "setStatus":
+      return {
+        id,
+        controllerId,
+        profile: profile.name,
+        command: {
+          ...command,
+          status: normalizeControllerDeviceStatusPatch(command.status),
+        },
+        timestamp,
+      };
     case "combo": {
       const buttons = command.buttons.map((button) =>
         resolveButton(profile, button),
@@ -513,7 +525,57 @@ function normalizeControllerStatePatch(
     };
   }
 
+  if (patch.status) {
+    normalized.status = normalizeControllerDeviceStatusPatch(patch.status);
+  }
+
   return normalized;
+}
+
+function normalizeControllerDeviceStatusPatch(
+  status: ControllerDeviceStatusPatch,
+): ControllerDeviceStatusPatch {
+  return {
+    ...(status.battery
+      ? {
+          battery: {
+            ...(status.battery.level !== undefined
+              ? { level: clamp(status.battery.level, 0, 1) }
+              : {}),
+            ...(status.battery.charging !== undefined
+              ? { charging: status.battery.charging }
+              : {}),
+            ...(status.battery.wired !== undefined
+              ? { wired: status.battery.wired }
+              : {}),
+            ...(status.battery.low !== undefined
+              ? { low: status.battery.low }
+              : {}),
+          },
+        }
+      : {}),
+    ...(status.connection
+      ? {
+          connection: {
+            ...(status.connection.quality !== undefined
+              ? { quality: clamp(status.connection.quality, 0, 1) }
+              : {}),
+            ...(status.connection.latencyMs !== undefined
+              ? {
+                  latencyMs: clamp(
+                    status.connection.latencyMs,
+                    0,
+                    Number.POSITIVE_INFINITY,
+                  ),
+                }
+              : {}),
+            ...(status.connection.packetLoss !== undefined
+              ? { packetLoss: clamp(status.connection.packetLoss, 0, 1) }
+              : {}),
+          },
+        }
+      : {}),
+  };
 }
 
 function normalizeTouchpadContacts(

@@ -191,6 +191,7 @@ export class HidGamepadReportAdapter implements ControllerAdapter {
       supportsStateSync: true,
       supportsRumble: true,
       supportsLights: true,
+      supportsDeviceStatus: true,
       outputFormats: ["controller-state", "hid-gamepad-report"],
       reportFormats: [
         "hid-gamepad",
@@ -387,6 +388,7 @@ export class HidPlayStationExtendedReportAdapter implements ControllerAdapter {
       supportsLights: true,
       supportsTouchpad: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportedProfiles: ["playstation"],
       outputFormats: ["controller-state", "hid-playstation-extended-report"],
       reportFormats: [
@@ -583,6 +585,7 @@ export class HidSwitchExtendedReportAdapter implements ControllerAdapter {
       supportsRumble: true,
       supportsLights: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportedProfiles: ["switch"],
       outputFormats: ["controller-state", "hid-switch-extended-report"],
       reportFormats: [

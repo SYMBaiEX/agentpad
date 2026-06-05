@@ -2,6 +2,8 @@ import { EventEmitter, type Unsubscribe } from "./events";
 import { type ControllerProfile, dpadDirections } from "./profiles";
 import type {
   ControllerButtonStateInput,
+  ControllerDeviceStatus,
+  ControllerDeviceStatusPatch,
   ControllerState,
   ControllerStatePatch,
   ControllerTouchpadContactInput,
@@ -90,6 +92,11 @@ export class ControllerStateStore {
     return this.commit();
   }
 
+  setStatus(status: ControllerDeviceStatusPatch): ControllerState {
+    this.setStatusInPlace(status);
+    return this.commit();
+  }
+
   applyPatch(patch: ControllerStatePatch): ControllerState {
     if (patch.buttons) {
       for (const [button, value] of Object.entries(patch.buttons)) {
@@ -126,6 +133,10 @@ export class ControllerStateStore {
 
     if (patch.motion) {
       this.setMotionInPlace(patch.motion);
+    }
+
+    if (patch.status) {
+      this.setStatusInPlace(patch.status);
     }
 
     return this.commit();
@@ -223,6 +234,41 @@ export class ControllerStateStore {
     }
   }
 
+  private setStatusInPlace(status: ControllerDeviceStatusPatch): void {
+    if (status.battery) {
+      if (status.battery.level !== undefined) {
+        this.state.status.battery.level = clampNormalized(status.battery.level);
+      }
+      if (status.battery.charging !== undefined) {
+        this.state.status.battery.charging = status.battery.charging;
+      }
+      if (status.battery.wired !== undefined) {
+        this.state.status.battery.wired = status.battery.wired;
+      }
+      if (status.battery.low !== undefined) {
+        this.state.status.battery.low = status.battery.low;
+      }
+    }
+
+    if (status.connection) {
+      if (status.connection.quality !== undefined) {
+        this.state.status.connection.quality = clampNormalized(
+          status.connection.quality,
+        );
+      }
+      if (status.connection.latencyMs !== undefined) {
+        this.state.status.connection.latencyMs = nonNegativeFinite(
+          status.connection.latencyMs,
+        );
+      }
+      if (status.connection.packetLoss !== undefined) {
+        this.state.status.connection.packetLoss = clampNormalized(
+          status.connection.packetLoss,
+        );
+      }
+    }
+  }
+
   neutral(): ControllerState {
     for (const button of Object.keys(this.state.buttons)) {
       this.state.buttons[button] = false;
@@ -313,11 +359,13 @@ export function createInitialControllerState(
       gyroscope: neutralVector3(),
       orientation: neutralVector3(),
     },
+    status: createDefaultControllerDeviceStatus(),
     updatedAt: Date.now(),
   };
 }
 
 export function cloneState(state: ControllerState): ControllerState {
+  const status = state.status ?? createDefaultControllerDeviceStatus();
   return {
     ...state,
     buttons: {
@@ -352,6 +400,30 @@ export function cloneState(state: ControllerState): ControllerState {
         ...state.motion.orientation,
       },
     },
+    status: {
+      battery: {
+        ...status.battery,
+      },
+      connection: {
+        ...status.connection,
+      },
+    },
+  };
+}
+
+export function createDefaultControllerDeviceStatus(): ControllerDeviceStatus {
+  return {
+    battery: {
+      level: 1,
+      charging: false,
+      wired: true,
+      low: false,
+    },
+    connection: {
+      quality: 1,
+      latencyMs: 0,
+      packetLoss: 0,
+    },
   };
 }
 
@@ -368,6 +440,20 @@ function normalizeButtonStateInput(value: ControllerButtonStateInput): {
   pressure?: number;
 } {
   return typeof value === "boolean" ? { pressed: value } : value;
+}
+
+function clampNormalized(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, value));
+}
+
+function nonNegativeFinite(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, value);
 }
 
 function dpadKeyFromButton(

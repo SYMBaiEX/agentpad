@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/cli",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Command line tools for OpenController.",
   "type": "module",
   "license": "MIT",
@@ -34,12 +34,12 @@
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "^0.1.10",
-    "@opencontroller/native": "^0.1.10",
-    "@opencontroller/native-linux-uinput": "^0.1.10",
-    "@opencontroller/native-macos-driverkit": "^0.1.10",
-    "@opencontroller/native-windows-virtual-gamepad": "^0.1.10",
-    "@opencontroller/overlay": "^0.1.10"
+    "@opencontroller/core": "^0.1.11",
+    "@opencontroller/native": "^0.1.11",
+    "@opencontroller/native-linux-uinput": "^0.1.11",
+    "@opencontroller/native-macos-driverkit": "^0.1.11",
+    "@opencontroller/native-windows-virtual-gamepad": "^0.1.11",
+    "@opencontroller/overlay": "^0.1.11"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",

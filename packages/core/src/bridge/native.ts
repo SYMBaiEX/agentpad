@@ -29,6 +29,7 @@ import {
   encodeXInputReport,
 } from "../hid/xinput";
 import type {
+  ControllerDeviceStatus,
   ControllerFeedbackEvent,
   ControllerProfileName,
   ControllerState,
@@ -78,6 +79,7 @@ export type NativeBridgeMotionExtension = {
 export type NativeBridgeStateExtensions = {
   touchpad?: NativeBridgeTouchpadExtension;
   motion?: NativeBridgeMotionExtension;
+  status?: ControllerDeviceStatus;
 };
 
 export type NativeBridgeProfileHidReportPayload = {
@@ -271,6 +273,8 @@ export function createNativeBridgeStateExtensions(
       orientation: { ...state.motion.orientation },
     };
   }
+
+  extensions.status = cloneControllerDeviceStatus(state.status);
 
   return Object.keys(extensions).length > 0 ? extensions : undefined;
 }
@@ -688,7 +692,9 @@ function isNativeBridgeStateExtensions(
   return (
     (value.touchpad === undefined ||
       isNativeBridgeTouchpadExtension(value.touchpad)) &&
-    (value.motion === undefined || isNativeBridgeMotionExtension(value.motion))
+    (value.motion === undefined ||
+      isNativeBridgeMotionExtension(value.motion)) &&
+    (value.status === undefined || isControllerDeviceStatus(value.status))
   );
 }
 
@@ -727,6 +733,55 @@ function isNativeBridgeMotionExtension(
     isVector3(value.gyroscope) &&
     isVector3(value.orientation)
   );
+}
+
+function isControllerDeviceStatus(
+  value: unknown,
+): value is ControllerDeviceStatus {
+  return (
+    isRecord(value) &&
+    isRecord(value.battery) &&
+    isRecord(value.connection) &&
+    isNormalizedNumber(value.battery.level) &&
+    typeof value.battery.charging === "boolean" &&
+    typeof value.battery.wired === "boolean" &&
+    typeof value.battery.low === "boolean" &&
+    isNormalizedNumber(value.connection.quality) &&
+    typeof value.connection.latencyMs === "number" &&
+    Number.isFinite(value.connection.latencyMs) &&
+    value.connection.latencyMs >= 0 &&
+    isNormalizedNumber(value.connection.packetLoss)
+  );
+}
+
+function cloneControllerDeviceStatus(
+  status: ControllerDeviceStatus | undefined,
+): ControllerDeviceStatus {
+  const source = status ?? defaultControllerDeviceStatus();
+  return {
+    battery: {
+      ...source.battery,
+    },
+    connection: {
+      ...source.connection,
+    },
+  };
+}
+
+function defaultControllerDeviceStatus(): ControllerDeviceStatus {
+  return {
+    battery: {
+      level: 1,
+      charging: false,
+      wired: true,
+      low: false,
+    },
+    connection: {
+      quality: 1,
+      latencyMs: 0,
+      packetLoss: 0,
+    },
+  };
 }
 
 function isVector3(value: unknown): value is ControllerVector3 {

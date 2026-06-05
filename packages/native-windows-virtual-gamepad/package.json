@@ -1,6 +1,6 @@
 {
   "name": "@opencontroller/native-windows-virtual-gamepad",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Windows VHF/HID virtual gamepad helpers, XUSB compatibility helpers, and diagnostics for OpenController.",
   "type": "module",
   "license": "MIT",
@@ -59,7 +59,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@opencontroller/core": "^0.1.10"
+    "@opencontroller/core": "^0.1.11"
   },
   "devDependencies": {
     "@types/bun": "^1.2.15",

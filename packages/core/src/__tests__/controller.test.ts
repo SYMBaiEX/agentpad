@@ -267,6 +267,110 @@ describe("controller runtime", () => {
     await controller.disconnect();
   });
 
+  test("tracks virtual device battery and connection status", async () => {
+    const adapter = new DryRunAdapter();
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    expect(controller.getState().status).toEqual({
+      battery: {
+        level: 1,
+        charging: false,
+        wired: true,
+        low: false,
+      },
+      connection: {
+        quality: 1,
+        latencyMs: 0,
+        packetLoss: 0,
+      },
+    });
+
+    await controller.setStatus({
+      battery: {
+        level: 1.5,
+        charging: true,
+        wired: false,
+        low: true,
+      },
+      connection: {
+        quality: -0.2,
+        latencyMs: -4,
+        packetLoss: 2,
+      },
+    });
+
+    expect(adapter.history.at(-1)?.command).toEqual({
+      type: "setStatus",
+      status: {
+        battery: {
+          level: 1,
+          charging: true,
+          wired: false,
+          low: true,
+        },
+        connection: {
+          quality: 0,
+          latencyMs: 0,
+          packetLoss: 1,
+        },
+      },
+    });
+    expect(controller.getState().status).toEqual({
+      battery: {
+        level: 1,
+        charging: true,
+        wired: false,
+        low: true,
+      },
+      connection: {
+        quality: 0,
+        latencyMs: 0,
+        packetLoss: 1,
+      },
+    });
+
+    await controller.setState({
+      buttons: {
+        A: true,
+      },
+      status: {
+        battery: {
+          level: 0.25,
+          low: false,
+        },
+        connection: {
+          quality: 0.75,
+          latencyMs: 12,
+          packetLoss: 0.05,
+        },
+      },
+    });
+
+    expect(controller.getState().status).toEqual({
+      battery: {
+        level: 0.25,
+        charging: true,
+        wired: false,
+        low: false,
+      },
+      connection: {
+        quality: 0.75,
+        latencyMs: 12,
+        packetLoss: 0.05,
+      },
+    });
+
+    await controller.neutral();
+    expect(controller.getState().status.battery.level).toBe(0.25);
+    expect(controller.getState().status.connection.latencyMs).toBe(12);
+
+    await controller.disconnect();
+  });
+
   test("sets PlayStation touchpad and motion state in a patch", async () => {
     const adapter = new DryRunAdapter();
     const controller = await createController({
@@ -576,6 +680,7 @@ describe("controller runtime", () => {
     expect(dryRun.supportedCommands).toContain("motion");
     expect(dryRun.supportsTouchpad).toBe(true);
     expect(dryRun.supportsGyro).toBe(true);
+    expect(dryRun.supportsDeviceStatus).toBe(true);
     expect(dryRun.outputFormats).toEqual([
       "normalized-command",
       "controller-state",
@@ -586,11 +691,13 @@ describe("controller runtime", () => {
     expect(websocket.outputFormats).toContain("websocket-json");
     expect(websocket.supportsTouchpad).toBe(true);
     expect(websocket.supportsGyro).toBe(true);
+    expect(websocket.supportsDeviceStatus).toBe(true);
     expect(websocket.transport).toBe("websocket");
 
     expect(xinput.reportFormats).toEqual(["xinput"]);
     expect(xinput.supportsTouchpad).toBe(false);
     expect(xinput.supportsGyro).toBe(false);
+    expect(xinput.supportsDeviceStatus).toBe(true);
     expect(xinput.outputFormats).toContain("xinput-report");
 
     const hidGamepad = new HidGamepadReportAdapter().capabilities();
@@ -606,6 +713,7 @@ describe("controller runtime", () => {
     expect(hidGamepad.supportsStateSync).toBe(true);
     expect(hidGamepad.supportsRumble).toBe(true);
     expect(hidGamepad.supportsLights).toBe(true);
+    expect(hidGamepad.supportsDeviceStatus).toBe(true);
     expect(hidGamepad.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(hidPlayStation.reportFormats).toEqual([
       "hid-playstation-extended",
@@ -620,6 +728,7 @@ describe("controller runtime", () => {
     expect(hidPlayStation.supportsGyro).toBe(true);
     expect(hidPlayStation.supportsRumble).toBe(true);
     expect(hidPlayStation.supportsLights).toBe(true);
+    expect(hidPlayStation.supportsDeviceStatus).toBe(true);
     expect(hidPlayStation.feedbackTypes).toEqual(["rumble", "lights"]);
     expect(hidSwitch.reportFormats).toEqual([
       "hid-switch-extended",
@@ -631,6 +740,7 @@ describe("controller runtime", () => {
     expect(hidSwitch.supportsGyro).toBe(true);
     expect(hidSwitch.supportsRumble).toBe(true);
     expect(hidSwitch.supportsLights).toBe(true);
+    expect(hidSwitch.supportsDeviceStatus).toBe(true);
     expect(hidSwitch.feedbackTypes).toEqual(["rumble", "lights"]);
 
     expect(nativeBridge.outputFormats).toContain("native-bridge-jsonl");
@@ -648,6 +758,7 @@ describe("controller runtime", () => {
     expect(nativeBridge.supportedCommands).toContain("motion");
     expect(nativeBridge.supportsTouchpad).toBe(true);
     expect(nativeBridge.supportsGyro).toBe(true);
+    expect(nativeBridge.supportsDeviceStatus).toBe(true);
 
     expect(nativeProcess.supportsVirtualDevice).toBe(true);
     expect(nativeProcess.supportsRumble).toBe(true);
@@ -657,6 +768,7 @@ describe("controller runtime", () => {
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-rumble");
     expect(nativeProcess.reportFormats).toContain("hid-gamepad-lights");
     expect(nativeProcess.supportsLights).toBe(true);
+    expect(nativeProcess.supportsDeviceStatus).toBe(true);
     expect(nativeProcess.transport).toBe("native-process");
     expect(nativeProcess.virtualDeviceKind).toBe("os-virtual-gamepad");
   });
@@ -1544,6 +1656,76 @@ describe("controller runtime", () => {
     expect(legacyStateMessage.profileHidReport).toBeUndefined();
 
     await legacyController.disconnect();
+    await controller.disconnect();
+  });
+
+  test("streams native bridge status extensions without full state", async () => {
+    const lines: string[] = [];
+    const adapter = new NativeBridgeAdapter({
+      includeState: false,
+      write(line) {
+        lines.push(line);
+      },
+    });
+    const controller = await createController({
+      profile: "xbox",
+      adapter,
+      replay: false,
+    });
+
+    await controller.setStatus({
+      battery: {
+        level: 0.42,
+        charging: true,
+        wired: false,
+        low: true,
+      },
+      connection: {
+        quality: 0.8,
+        latencyMs: 24,
+        packetLoss: 0.02,
+      },
+    });
+
+    const statusMessage = lines
+      .map(parseNativeBridgeMessage)
+      .find(
+        (message) =>
+          message.type === "opencontroller.bridge.state" &&
+          message.extensions?.status?.battery.level === 0.42,
+      );
+
+    expect(statusMessage?.type).toBe("opencontroller.bridge.state");
+    if (
+      !statusMessage ||
+      statusMessage.type !== "opencontroller.bridge.state"
+    ) {
+      throw new Error("Expected a native bridge status extension message");
+    }
+    expect(statusMessage.state).toBeUndefined();
+    expect(statusMessage.extensions?.status).toEqual({
+      battery: {
+        level: 0.42,
+        charging: true,
+        wired: false,
+        low: true,
+      },
+      connection: {
+        quality: 0.8,
+        latencyMs: 24,
+        packetLoss: 0.02,
+      },
+    });
+
+    const legacyMessage = createNativeBridgeStateMessage(
+      controller.getState(),
+      {
+        includeExtensions: false,
+        includeState: false,
+      },
+    );
+    expect(legacyMessage.extensions).toBeUndefined();
+
     await controller.disconnect();
   });
 

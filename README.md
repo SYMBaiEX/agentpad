@@ -62,6 +62,8 @@ device bridges where the operating system requires them.
   update
 - Cardinal and diagonal D-pad commands mapped into combined controller state and XInput/HID report bits
 - PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
+- Virtual device battery and connection-health status for agents, replay logs,
+  WebSocket streams, and native bridge JSONL extensions
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
@@ -69,7 +71,7 @@ device bridges where the operating system requires them.
 - Canonical HID gamepad report descriptor and input report encoder
 - PlayStation extended HID report bytes for touchpad contacts and motion vectors
 - Versioned JSONL native bridge protocol with XInput/HID payloads and optional
-  profile-specific HID payloads plus touchpad/motion extensions
+  profile-specific HID payloads plus touchpad/motion/status extensions
 - Controller hub for managing multiple virtual controllers
 - React and OBS-friendly overlays for showing controller state
 - CLI commands for doctor, native backend doctor, native bridge smoke tests, dry-run tests, overlay, replay, and starter action maps
@@ -135,7 +137,9 @@ JSONL protocol for native bridge processes, the first Linux `uinput` bridge
 package, Windows VHF host bridge helpers, and macOS DriverKit host bridge
 helpers. Touchpad and motion commands flow through the runtime, replay logs,
 dry-run, WebSocket state stream, native bridge extensions, and profile HID
-payloads today. Host rumble and light feedback flows back through HID adapters,
+payloads today. Virtual device battery and connection-health status flows
+through state snapshots, replay logs, WebSocket streams, and native bridge
+extensions. Host rumble and light feedback flows back through HID adapters,
 native bridge feedback JSONL, and `controller.onFeedback(...)`.
 
 The next milestone is turning those host bridge surfaces into signed,
@@ -347,11 +351,16 @@ await controller.setButton("LB", true);
 await controller.setStick("LEFT", { x: 0.75, y: -0.2 });
 await controller.setTrigger("RT", 0.4);
 await controller.setDpad("UP_RIGHT");
+await controller.setStatus({
+  battery: { level: 0.72, charging: true, wired: false },
+  connection: { quality: 0.95, latencyMs: 6, packetLoss: 0 }
+});
 await controller.setState({
   buttons: { LB: true },
   triggers: { RT: 0.2 },
   sticks: { LEFT: { x: 0.5, y: -0.2 } },
-  dpad: "NEUTRAL"
+  dpad: "NEUTRAL",
+  status: { battery: { low: false } }
 });
 await controller.setButton("LB", false);
 await controller.neutral();
@@ -360,8 +369,9 @@ await controller.neutral();
 Use `press`, `moveStick`, `trigger`, `dpad`, and `combo` for timed actions that
 return to neutral automatically. Use `setButton`, `setStick`, `setTrigger`, and
 `setDpad` when an agent needs to hold an exact controller state across planning
-steps. Use `setState` when one agent tick should update several controls
-atomically and avoid intermediate controller states.
+steps. Use `setStatus` for virtual battery and connection-health telemetry.
+Use `setState` when one agent tick should update several controls or status
+fields atomically and avoid intermediate controller states.
 
 ### Multiple Controllers
 
@@ -696,8 +706,8 @@ and host drivers can send haptics back to AI agents.
 
 Every adapter exposes capability metadata through `controller.capabilities()`.
 Agents can inspect supported profiles, command types, output formats, report
-formats, touchpad/motion support, feedback types, transport, and virtual-device
-kind before selecting a backend:
+formats, touchpad/motion/status support, feedback types, transport, and
+virtual-device kind before selecting a backend:
 
 ```ts
 const capabilities = controller.capabilities();
@@ -707,6 +717,9 @@ if (
   capabilities.virtualDeviceKind === "os-virtual-gamepad"
 ) {
   console.log("native gamepad path ready", capabilities.reportFormats);
+}
+if (capabilities.supportsDeviceStatus) {
+  console.log("status snapshots available", controller.getState().status);
 }
 ```
 

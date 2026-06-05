@@ -67,6 +67,7 @@ export class NativeBridgeAdapter implements ControllerAdapter {
       supportsNativeBridge: true,
       supportsTouchpad: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportedCommands: controllerCommandTypes,
       outputFormats: [
         "controller-state",

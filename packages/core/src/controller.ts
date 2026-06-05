@@ -3,6 +3,7 @@ import { ControllerRuntime } from "./runtime";
 import type {
   CommandContext,
   ControllerCommand,
+  ControllerDeviceStatusPatch,
   ControllerPressOptions,
   ControllerSetButtonOptions,
   ControllerStatePatch,
@@ -172,6 +173,13 @@ export class Controller {
     context?: CommandContext,
   ): Promise<void> {
     await this.runtime.send({ type: "setState", state }, context);
+  }
+
+  async setStatus(
+    status: ControllerDeviceStatusPatch,
+    context?: CommandContext,
+  ): Promise<void> {
+    await this.runtime.send({ type: "setStatus", status }, context);
   }
 
   async combo(

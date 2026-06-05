@@ -67,6 +67,7 @@ export class XInputReportAdapter implements ControllerAdapter {
     return createAdapterCapabilities({
       supportsStateSync: true,
       supportsXInputReports: true,
+      supportsDeviceStatus: true,
       outputFormats: ["controller-state", "xinput-report"],
       reportFormats: ["xinput"],
       transport: "callback",

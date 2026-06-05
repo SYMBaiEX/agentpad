@@ -39,6 +39,7 @@ export class DryRunAdapter implements ControllerAdapter {
       supportsStateSync: true,
       supportsTouchpad: true,
       supportsGyro: true,
+      supportsDeviceStatus: true,
       supportsVirtualDevice: false,
       supportedCommands: controllerCommandTypes,
       outputFormats: ["normalized-command", "controller-state"],

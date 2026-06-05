@@ -9,6 +9,7 @@ The current protocol is intentionally small:
 - version: `1`
 - report format: `xinput`
 - report payload: 12-byte XInput-compatible report encoded as base64
+- extensions: optional touchpad, motion, and device-status side channels
 - feedback: optional native-helper JSONL output for host haptics such as rumble
 - lifecycle: state messages followed by an optional disconnect message
 
@@ -190,8 +191,8 @@ Use `nativeBridgeMessageToProfileHidReportBytes(message)` to validate and
 decode `profileHidReportBase64`.
 
 When richer profile-specific state is active, state messages may also include an
-`extensions` object. This side channel is for bridge authors who want touchpad
-or motion data without enabling the full `state` payload:
+`extensions` object. This side channel is for bridge authors who want touchpad,
+motion, or virtual device status data without enabling the full `state` payload:
 
 ```json
 {
@@ -212,13 +213,27 @@ or motion data without enabling the full `state` payload:
       "acceleration": { "x": 0, "y": 0, "z": 1 },
       "gyroscope": { "x": 0.1, "y": 0, "z": 0 },
       "orientation": { "x": 0, "y": 0, "z": 0 }
+    },
+    "status": {
+      "battery": {
+        "level": 0.72,
+        "charging": true,
+        "wired": false,
+        "low": false
+      },
+      "connection": {
+        "quality": 0.95,
+        "latencyMs": 6,
+        "packetLoss": 0
+      }
     }
   }
 }
 ```
 
 Set `includeExtensions: false` when constructing a `NativeBridgeAdapter` or
-`NativeProcessBridgeAdapter` to suppress JSON touchpad/motion extensions. Set
+`NativeProcessBridgeAdapter` to suppress JSON touchpad/motion/status
+extensions. Set
 `includeProfileHidReport: false` to suppress profile-specific HID payloads if a
 legacy helper expects only the compact XInput/HID fields. Current Linux,
 Windows, and macOS helper templates ignore unknown JSON fields, so both
