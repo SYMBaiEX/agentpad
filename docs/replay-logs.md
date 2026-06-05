@@ -1,6 +1,7 @@
 # Replay Logs
 
-Replay logs are JSONL files that record commands, states, and errors.
+Replay logs are JSONL files that record commands, states, host feedback, and
+errors.
 
 ```ts
 const controller = await createController({
@@ -21,8 +22,17 @@ replays/session-001/
   events.jsonl
   commands.jsonl
   states.jsonl
+  feedback.jsonl
   errors.jsonl
 ```
+
+`events.jsonl` contains every replay event in timestamp order. The split files
+make common review tasks easier:
+
+- `commands.jsonl`: normalized controller commands with before/after state
+- `states.jsonl`: full state snapshots, including `status` and `feedback`
+- `feedback.jsonl`: host rumble/light output events plus `stateAfter`
+- `errors.jsonl`: command processing errors
 
 Inspect a replay:
 

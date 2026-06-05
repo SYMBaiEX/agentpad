@@ -243,6 +243,20 @@ the shared 5-byte rumble and 7-byte light/player-indicator output reports
 through `adapter.receiveOutputReport(bytes)` and surface it through
 `controller.onFeedback(...)`.
 
+## Host Feedback State
+
+```ts
+controller.onFeedback((event) => {
+  console.log("host output", event.type);
+  console.log(controller.getState().feedback);
+});
+```
+
+When a HID adapter or native process emits host feedback, the runtime updates
+`state.feedback.rumble` or `state.feedback.lights` before notifying controller
+listeners. Replay-enabled controllers also write one `feedback` event to
+`events.jsonl` and `feedback.jsonl` for each host output report.
+
 ## Capability Metadata
 
 ```ts

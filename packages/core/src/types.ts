@@ -62,6 +62,40 @@ export type ControllerDeviceStatusPatch = {
   connection?: Partial<ControllerConnectionHealth>;
 };
 
+export type ControllerRumbleFeedbackState = {
+  active: boolean;
+  weakMotor: number;
+  strongMotor: number;
+  leftTriggerMotor: number;
+  rightTriggerMotor: number;
+  updatedAt: number;
+  durationMs?: number;
+  source?: string;
+  reportFormat?: "hid-gamepad-rumble";
+  reportId?: number;
+  reportBase64?: string;
+};
+
+export type ControllerLightFeedbackState = {
+  active: boolean;
+  red: number;
+  green: number;
+  blue: number;
+  brightness: number;
+  playerIndex: number;
+  playerLightMask: number;
+  updatedAt: number;
+  source?: string;
+  reportFormat?: "hid-gamepad-lights";
+  reportId?: number;
+  reportBase64?: string;
+};
+
+export type ControllerFeedbackState = {
+  rumble: ControllerRumbleFeedbackState;
+  lights: ControllerLightFeedbackState;
+};
+
 export type ControllerButtonStateInput =
   | boolean
   | {
@@ -240,6 +274,7 @@ export type ControllerState = {
     orientation: ControllerVector3;
   };
   status: ControllerDeviceStatus;
+  feedback: ControllerFeedbackState;
   updatedAt: number;
 };
 
@@ -375,6 +410,13 @@ export type ReplayEvent =
       timestamp: number;
       controllerId: string;
       state: ControllerState;
+    }
+  | {
+      type: "feedback";
+      timestamp: number;
+      controllerId: string;
+      feedback: ControllerFeedbackEvent;
+      stateAfter: ControllerState;
     }
   | {
       type: "error";

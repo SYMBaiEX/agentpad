@@ -1,5 +1,5 @@
 import type { ControllerAdapter } from "./adapters";
-import type { Unsubscribe } from "./events";
+import { EventEmitter, type Unsubscribe } from "./events";
 import {
   type ControllerProfile,
   dpadButtons,
@@ -13,6 +13,7 @@ import { ControllerStateStore } from "./state";
 import type {
   CommandContext,
   ControllerCommand,
+  ControllerFeedbackEvent,
   ControllerState,
   CreateControllerOptions,
   FeedbackListener,
@@ -33,7 +34,11 @@ export class ControllerRuntime {
   readonly safety: SafetyGuard;
   private readonly queue = new CommandQueue();
   private readonly state: ControllerStateStore;
+  private readonly feedbackEvents = new EventEmitter<{
+    feedback: ControllerFeedbackEvent;
+  }>();
   private readonly replay?: ReplayLogger;
+  private feedbackUnsubscribe: Unsubscribe | undefined;
 
   constructor(options: ControllerRuntimeOptions) {
     this.id = options.id;
@@ -53,6 +58,9 @@ export class ControllerRuntime {
 
   async connect(): Promise<void> {
     await this.adapter.connect();
+    this.feedbackUnsubscribe = this.adapter.onFeedback?.((event) => {
+      this.handleFeedback(event);
+    });
     const next = this.state.setConnected(true);
     await this.replay?.start();
     await this.replay?.state(next);
@@ -85,7 +93,7 @@ export class ControllerRuntime {
   }
 
   onFeedback(listener: FeedbackListener): Unsubscribe {
-    return this.adapter.onFeedback?.(listener) ?? (() => {});
+    return this.feedbackEvents.on("feedback", listener);
   }
 
   capabilities() {
@@ -97,9 +105,20 @@ export class ControllerRuntime {
     if (this.safety.getConfig().neutralOnDisconnect) {
       await this.forceNeutral();
     }
+    this.feedbackUnsubscribe?.();
+    this.feedbackUnsubscribe = undefined;
     await this.adapter.disconnect();
     const next = this.state.setConnected(false);
     await this.replay?.state(next);
+  }
+
+  private handleFeedback(event: ControllerFeedbackEvent): void {
+    if (event.controllerId !== this.id) {
+      return;
+    }
+    const next = this.state.applyFeedback(event);
+    void this.replay?.feedback(event, next);
+    this.feedbackEvents.emit("feedback", event);
   }
 
   private async processCommand(

@@ -4,6 +4,8 @@ import type {
   ControllerButtonStateInput,
   ControllerDeviceStatus,
   ControllerDeviceStatusPatch,
+  ControllerFeedbackEvent,
+  ControllerFeedbackState,
   ControllerState,
   ControllerStatePatch,
   ControllerTouchpadContactInput,
@@ -94,6 +96,11 @@ export class ControllerStateStore {
 
   setStatus(status: ControllerDeviceStatusPatch): ControllerState {
     this.setStatusInPlace(status);
+    return this.commit();
+  }
+
+  applyFeedback(feedback: ControllerFeedbackEvent): ControllerState {
+    this.applyFeedbackInPlace(feedback);
     return this.commit();
   }
 
@@ -269,6 +276,69 @@ export class ControllerStateStore {
     }
   }
 
+  private applyFeedbackInPlace(feedback: ControllerFeedbackEvent): void {
+    if (feedback.type === "rumble") {
+      const weakMotor = clampNormalized(feedback.weakMotor);
+      const strongMotor = clampNormalized(feedback.strongMotor);
+      const leftTriggerMotor = clampNormalized(feedback.leftTriggerMotor);
+      const rightTriggerMotor = clampNormalized(feedback.rightTriggerMotor);
+      this.state.feedback.rumble = {
+        active:
+          weakMotor > 0 ||
+          strongMotor > 0 ||
+          leftTriggerMotor > 0 ||
+          rightTriggerMotor > 0,
+        weakMotor,
+        strongMotor,
+        leftTriggerMotor,
+        rightTriggerMotor,
+        updatedAt: feedback.timestamp,
+        ...(feedback.durationMs !== undefined
+          ? { durationMs: nonNegativeFinite(feedback.durationMs) }
+          : {}),
+        ...(feedback.source ? { source: feedback.source } : {}),
+        ...(feedback.reportFormat
+          ? { reportFormat: feedback.reportFormat }
+          : {}),
+        ...(feedback.reportId !== undefined
+          ? { reportId: feedback.reportId }
+          : {}),
+        ...(feedback.reportBase64
+          ? { reportBase64: feedback.reportBase64 }
+          : {}),
+      };
+      return;
+    }
+
+    const red = clampNormalized(feedback.red);
+    const green = clampNormalized(feedback.green);
+    const blue = clampNormalized(feedback.blue);
+    const brightness = clampNormalized(feedback.brightness);
+    const playerIndex = clampByte(feedback.playerIndex);
+    const playerLightMask = clampByte(feedback.playerLightMask);
+    this.state.feedback.lights = {
+      active:
+        brightness > 0 ||
+        red > 0 ||
+        green > 0 ||
+        blue > 0 ||
+        playerLightMask > 0,
+      red,
+      green,
+      blue,
+      brightness,
+      playerIndex,
+      playerLightMask,
+      updatedAt: feedback.timestamp,
+      ...(feedback.source ? { source: feedback.source } : {}),
+      ...(feedback.reportFormat ? { reportFormat: feedback.reportFormat } : {}),
+      ...(feedback.reportId !== undefined
+        ? { reportId: feedback.reportId }
+        : {}),
+      ...(feedback.reportBase64 ? { reportBase64: feedback.reportBase64 } : {}),
+    };
+  }
+
   neutral(): ControllerState {
     for (const button of Object.keys(this.state.buttons)) {
       this.state.buttons[button] = false;
@@ -360,12 +430,14 @@ export function createInitialControllerState(
       orientation: neutralVector3(),
     },
     status: createDefaultControllerDeviceStatus(),
+    feedback: createDefaultControllerFeedbackState(),
     updatedAt: Date.now(),
   };
 }
 
 export function cloneState(state: ControllerState): ControllerState {
   const status = state.status ?? createDefaultControllerDeviceStatus();
+  const feedback = state.feedback ?? createDefaultControllerFeedbackState();
   return {
     ...state,
     buttons: {
@@ -408,6 +480,14 @@ export function cloneState(state: ControllerState): ControllerState {
         ...status.connection,
       },
     },
+    feedback: {
+      rumble: {
+        ...feedback.rumble,
+      },
+      lights: {
+        ...feedback.lights,
+      },
+    },
   };
 }
 
@@ -423,6 +503,29 @@ export function createDefaultControllerDeviceStatus(): ControllerDeviceStatus {
       quality: 1,
       latencyMs: 0,
       packetLoss: 0,
+    },
+  };
+}
+
+export function createDefaultControllerFeedbackState(): ControllerFeedbackState {
+  return {
+    rumble: {
+      active: false,
+      weakMotor: 0,
+      strongMotor: 0,
+      leftTriggerMotor: 0,
+      rightTriggerMotor: 0,
+      updatedAt: 0,
+    },
+    lights: {
+      active: false,
+      red: 0,
+      green: 0,
+      blue: 0,
+      brightness: 0,
+      playerIndex: 0,
+      playerLightMask: 0,
+      updatedAt: 0,
     },
   };
 }
@@ -454,6 +557,13 @@ function nonNegativeFinite(value: number): number {
     return 0;
   }
   return Math.max(0, value);
+}
+
+function clampByte(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(255, Math.max(0, Math.trunc(value)));
 }
 
 function dpadKeyFromButton(

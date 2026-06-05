@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1041,6 +1042,18 @@ describe("controller runtime", () => {
     expect(optionFeedbackEvents).toEqual([event]);
     expect(listenerFeedbackEvents).toEqual([event]);
     expect(decodeHidGamepadRumbleReport(bytes).strongMotor).toBe(128);
+    expect(controller.getState().feedback.rumble).toMatchObject({
+      active: true,
+      weakMotor: 64 / 255,
+      strongMotor: 128 / 255,
+      leftTriggerMotor: 191 / 255,
+      rightTriggerMotor: 1,
+      updatedAt: 123,
+      durationMs: 60,
+      source: "hid-gamepad-report",
+      reportFormat: "hid-gamepad-rumble",
+      reportId: hidGamepadRumbleReportId,
+    });
 
     unsubscribe();
     await controller.disconnect();
@@ -1117,6 +1130,19 @@ describe("controller runtime", () => {
     expect(optionFeedbackEvents).toEqual([event]);
     expect(listenerFeedbackEvents).toEqual([event]);
     expect(decodeHidGamepadLightReport(bytes).playerLightMask).toBe(0b0101);
+    expect(controller.getState().feedback.lights).toMatchObject({
+      active: true,
+      red: 1,
+      green: 128 / 255,
+      blue: 64 / 255,
+      brightness: 191 / 255,
+      playerIndex: 2,
+      playerLightMask: 0b0101,
+      updatedAt: 124,
+      source: "host-lightbar",
+      reportFormat: "hid-gamepad-lights",
+      reportId: hidGamepadLightReportId,
+    });
 
     unsubscribe();
     await controller.disconnect();
@@ -2092,6 +2118,88 @@ describe("controller runtime", () => {
     const events = await readFile(join(dir, "events.jsonl"), "utf8");
     expect(events).toContain('"type":"command"');
     expect(events).toContain('"button":"CROSS"');
+  });
+
+  test("tracks and replays host feedback output state once per event", async () => {
+    const dir = await mkdtemp(
+      join(tmpdir(), "opencontroller-feedback-replay-"),
+    );
+    cleanupDirs.push(dir);
+    const adapter = new HidGamepadReportAdapter();
+    const controller = await createController({
+      id: "feedback-player",
+      profile: "xbox",
+      adapter,
+      replay: {
+        dir,
+      },
+    });
+    const listenerFeedbackEvents: ControllerFeedbackEvent[] = [];
+    const unsubscribeA = controller.onFeedback((event) => {
+      listenerFeedbackEvents.push(event);
+    });
+    const unsubscribeB = controller.onFeedback((event) => {
+      listenerFeedbackEvents.push(event);
+    });
+
+    const rumble = adapter.receiveRumbleReport(
+      {
+        weakMotor: 1,
+        strongMotor: 0.5,
+        leftTriggerMotor: 0.25,
+        rightTriggerMotor: 0,
+      },
+      { timestamp: 200, durationMs: 90 },
+    );
+    const lights = adapter.receiveLightReport(
+      {
+        red: 0.25,
+        green: 0.5,
+        blue: 1,
+        brightness: 0.75,
+        playerIndex: 4,
+        playerLightMask: 0b1111,
+      },
+      { timestamp: 201 },
+    );
+
+    expect(listenerFeedbackEvents).toEqual([rumble, rumble, lights, lights]);
+    expect(controller.getState().feedback.rumble).toMatchObject({
+      active: true,
+      weakMotor: 1,
+      strongMotor: 128 / 255,
+      leftTriggerMotor: 64 / 255,
+      rightTriggerMotor: 0,
+      updatedAt: 200,
+      durationMs: 90,
+    });
+    expect(controller.getState().feedback.lights).toMatchObject({
+      active: true,
+      red: 64 / 255,
+      green: 128 / 255,
+      blue: 1,
+      brightness: 191 / 255,
+      playerIndex: 4,
+      playerLightMask: 0b1111,
+      updatedAt: 201,
+    });
+
+    const feedbackPath = join(dir, "feedback.jsonl");
+    await waitFor(
+      () =>
+        existsSync(feedbackPath) &&
+        readFileSync(feedbackPath, "utf8").includes('"type":"lights"'),
+    );
+    const feedbackLines = readFileSync(feedbackPath, "utf8").trim().split("\n");
+    expect(feedbackLines).toHaveLength(2);
+    expect(feedbackLines[0]).toContain('"type":"feedback"');
+    expect(feedbackLines[0]).toContain('"feedback":{"type":"rumble"');
+    expect(feedbackLines[1]).toContain('"feedback":{"type":"lights"');
+    expect(feedbackLines[1]).toContain('"stateAfter"');
+
+    unsubscribeA();
+    unsubscribeB();
+    await controller.disconnect();
   });
 
   test("runs semantic action maps", async () => {

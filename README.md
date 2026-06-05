@@ -64,6 +64,8 @@ device bridges where the operating system requires them.
 - PlayStation touchpad and PlayStation/Switch motion state commands for browser, replay, and WebSocket integrations
 - Virtual device battery and connection-health status for agents, replay logs,
   WebSocket streams, and native bridge JSONL extensions
+- Host rumble/light output tracking in `state.feedback`, replay logs, and
+  `controller.onFeedback(...)`
 - Safety guardrails for rate limits, max hold durations, disabled buttons, repeated input loops, and neutral-on-error behavior
 - Replay logs for commands, state snapshots, annotations, and errors
 - Adapter model with dry-run, WebSocket, XInput report, native bridge, and native process output backends
@@ -463,10 +465,10 @@ The report shape includes 16 buttons, four signed stick axes, and two trigger
 axes. OpenController also defines compact vendor output reports for rumble
 channels and light/player indicators so native drivers have shared feedback
 contracts to implement. Native helpers can also send rumble and light feedback
-back to agents through
-`controller.onFeedback(...)`; in-process HID adapters can surface the same
-events through `adapter.receiveOutputReport(bytes)`. See
-[HID Gamepad Reports](docs/hid-gamepad-reports.md).
+back to agents through `controller.onFeedback(...)`; the runtime stores the
+latest host output in `controller.getState().feedback` and replay logs.
+In-process HID adapters can surface the same events through
+`adapter.receiveOutputReport(bytes)`. See [HID Gamepad Reports](docs/hid-gamepad-reports.md).
 
 ### Native Bridge JSONL
 
@@ -720,6 +722,11 @@ if (
 }
 if (capabilities.supportsDeviceStatus) {
   console.log("status snapshots available", controller.getState().status);
+}
+if (capabilities.feedbackTypes.includes("rumble")) {
+  controller.onFeedback((event) => {
+    console.log("latest host output", event.type, controller.getState().feedback);
+  });
 }
 ```
 

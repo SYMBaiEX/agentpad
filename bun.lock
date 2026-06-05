@@ -63,7 +63,7 @@
     },
     "packages/cli": {
       "name": "@opencontroller/cli",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "bin": {
         "opencontroller": "./dist/index.js",
       },
@@ -82,7 +82,7 @@
     },
     "packages/core": {
       "name": "@opencontroller/core",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "devDependencies": {
         "@types/bun": "^1.2.15",
         "typescript": "^5.8.3",
@@ -90,12 +90,12 @@
     },
     "packages/native": {
       "name": "@opencontroller/native",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
-        "@opencontroller/core": "^0.1.11",
-        "@opencontroller/native-linux-uinput": "^0.1.11",
-        "@opencontroller/native-macos-driverkit": "^0.1.11",
-        "@opencontroller/native-windows-virtual-gamepad": "^0.1.11",
+        "@opencontroller/core": "^0.1.12",
+        "@opencontroller/native-linux-uinput": "^0.1.12",
+        "@opencontroller/native-macos-driverkit": "^0.1.12",
+        "@opencontroller/native-windows-virtual-gamepad": "^0.1.12",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -104,14 +104,14 @@
     },
     "packages/native-linux-uinput": {
       "name": "@opencontroller/native-linux-uinput",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "bin": {
         "opencontroller-linux-uinput-build": "./dist/bin/build-helper.js",
         "opencontroller-linux-uinput-doctor": "./dist/bin/doctor.js",
         "opencontroller-linux-uinput-setup": "./dist/bin/setup.js",
       },
       "dependencies": {
-        "@opencontroller/core": "^0.1.11",
+        "@opencontroller/core": "^0.1.12",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -120,14 +120,14 @@
     },
     "packages/native-macos-driverkit": {
       "name": "@opencontroller/native-macos-driverkit",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "bin": {
         "opencontroller-macos-driverkit-assets": "./dist/bin/assets.js",
         "opencontroller-macos-driverkit-doctor": "./dist/bin/doctor.js",
         "opencontroller-macos-driverkit-setup": "./dist/bin/setup.js",
       },
       "dependencies": {
-        "@opencontroller/core": "^0.1.11",
+        "@opencontroller/core": "^0.1.12",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -136,14 +136,14 @@
     },
     "packages/native-windows-virtual-gamepad": {
       "name": "@opencontroller/native-windows-virtual-gamepad",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "bin": {
         "opencontroller-windows-gamepad-doctor": "./dist/bin/doctor.js",
         "opencontroller-windows-vhf-assets": "./dist/bin/vhf-assets.js",
         "opencontroller-windows-vhf-setup": "./dist/bin/setup.js",
       },
       "dependencies": {
-        "@opencontroller/core": "^0.1.11",
+        "@opencontroller/core": "^0.1.12",
       },
       "devDependencies": {
         "@types/bun": "^1.2.15",
@@ -152,7 +152,7 @@
     },
     "packages/overlay": {
       "name": "@opencontroller/overlay",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "@opencontroller/core": "workspace:*",
       },

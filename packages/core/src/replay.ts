@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type {
   CommandContext,
   ControllerCommand,
+  ControllerFeedbackEvent,
   ControllerProfileName,
   ControllerState,
   ReplayConfig,
@@ -73,6 +74,19 @@ export class ReplayLogger {
     });
   }
 
+  async feedback(
+    feedback: ControllerFeedbackEvent,
+    stateAfter: ControllerState,
+  ): Promise<void> {
+    await this.write({
+      type: "feedback",
+      timestamp: Date.now(),
+      controllerId: this.controllerId,
+      feedback,
+      stateAfter,
+    });
+  }
+
   async error(error: unknown, command?: ControllerCommand): Promise<void> {
     await this.write({
       type: "error",
@@ -114,6 +128,12 @@ export class ReplayLogger {
     if (event.type === "state") {
       await appendFile(
         join(this.dir, "states.jsonl"),
+        `${JSON.stringify(event)}\n`,
+      );
+    }
+    if (event.type === "feedback") {
+      await appendFile(
+        join(this.dir, "feedback.jsonl"),
         `${JSON.stringify(event)}\n`,
       );
     }
